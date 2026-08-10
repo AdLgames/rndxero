@@ -325,6 +325,10 @@ model XeroJournalLine {
   trackingCategory  String?
   trackingOption    String?
   sourceType        String
+  /**
+   * Heuristic suggestion only — see lib/xero/cost-categories.ts.
+   */
+  costCategory      String?
   syncedAt          DateTime @default(now())
 
   costAllocations CostAllocation[]
