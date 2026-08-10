@@ -9,5 +9,8 @@ export default defineConfig({
   test: {
     include: ["tests/**/*.test.ts"],
     setupFiles: ["dotenv/config"],
+    // Integration test files share tables and TRUNCATE them between tests;
+    // running files in parallel races those truncates against each other.
+    fileParallelism: false,
   },
 });
