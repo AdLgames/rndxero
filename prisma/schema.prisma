@@ -1,0 +1,20 @@
+// ClaimTrail schema.
+// Phase 1: skeleton only, enough to prove migrations work end to end.
+// The full evidence model (Project, EvidenceEntry, TimeEntry, CostAllocation,
+// Approval, PeriodSnapshot) is built out in Phase 2 — see PLAN.md.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../lib/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Company {
+  id        String   @id @default(cuid())
+  name      String
+  xeroTenantId String? @unique
+  createdAt DateTime @default(now())
+}
