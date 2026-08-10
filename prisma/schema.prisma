@@ -1,7 +1,11 @@
-// ClaimTrail schema.
-// Phase 1: skeleton only, enough to prove migrations work end to end.
-// The full evidence model (Project, EvidenceEntry, TimeEntry, CostAllocation,
-// Approval, PeriodSnapshot) is built out in Phase 2 — see PLAN.md.
+// ClaimTrail schema. See PLAN.md for the model rationale.
+//
+// Append-only tables (EvidenceEntry, EvidenceAttachment, TimeEntry,
+// CostAllocation, Approval, PeriodSnapshot) are additionally protected at
+// the database level — see prisma/migrations/*_evidence_model for the
+// triggers that reject UPDATE/DELETE on them. The Prisma layer never
+// issues update/delete against these tables; see lib/evidence and
+// lib/approvals.
 
 generator client {
   provider = "prisma-client"
@@ -12,9 +16,375 @@ datasource db {
   provider = "postgresql"
 }
 
-model Company {
+// --- Identity & access -------------------------------------------------
+
+enum MembershipRole {
+  ADMIN
+  CONTRIBUTOR
+  FINANCE_APPROVER
+  ADVISER
+}
+
+model User {
   id        String   @id @default(cuid())
+  email     String   @unique
   name      String
-  xeroTenantId String? @unique
   createdAt DateTime @default(now())
+
+  memberships         Membership[]
+  evidenceEntries     EvidenceEntry[]
+  timeEntriesAsPerson TimeEntry[]                    @relation("TimeEntryPerson")
+  timeEntriesAsAuthor TimeEntry[]                    @relation("TimeEntryAuthor")
+  costAllocations     CostAllocation[]
+  approvals           Approval[]
+  periodSnapshots     PeriodSnapshot[]
+  competentOn         ProjectCompetentProfessional[]
+  invitationsSentBy   Invitation[]                   @relation("InvitationInviter")
+}
+
+model Company {
+  id           String   @id @default(cuid())
+  name         String
+  xeroTenantId String?  @unique
+  createdAt    DateTime @default(now())
+
+  memberships       Membership[]
+  invitations       Invitation[]
+  projects          Project[]
+  accountingPeriods AccountingPeriod[]
+  xeroConnection    XeroConnection?
+  manualCostImports ManualCostImport[]
+  subscription      Subscription?
+}
+
+// A membership scopes a user's role to a company. Adviser memberships are
+// how the B2B2B channel works: one adviser user, many client-company
+// memberships, each independently scoped.
+model Membership {
+  id        String         @id @default(cuid())
+  userId    String
+  companyId String
+  role      MembershipRole
+  createdAt DateTime       @default(now())
+
+  user    User    @relation(fields: [userId], references: [id])
+  company Company @relation(fields: [companyId], references: [id])
+
+  @@unique([userId, companyId])
+}
+
+model Invitation {
+  id          String         @id @default(cuid())
+  companyId   String
+  email       String
+  role        MembershipRole
+  invitedById String
+  token       String         @unique
+  acceptedAt  DateTime?
+  createdAt   DateTime       @default(now())
+  expiresAt   DateTime
+
+  company   Company @relation(fields: [companyId], references: [id])
+  invitedBy User    @relation("InvitationInviter", fields: [invitedById], references: [id])
+}
+
+// --- Projects ------------------------------------------------------------
+
+enum ProjectStatus {
+  ACTIVE
+  COMPLETED
+  ABANDONED
+}
+
+model Project {
+  id        String        @id @default(cuid())
+  companyId String
+  name      String
+  startDate DateTime
+  endDate   DateTime?
+  status    ProjectStatus @default(ACTIVE)
+  createdAt DateTime      @default(now())
+
+  company                Company                        @relation(fields: [companyId], references: [id])
+  competentProfessionals ProjectCompetentProfessional[]
+  evidenceEntries        EvidenceEntry[]
+  timeEntries            TimeEntry[]
+  costAllocations        CostAllocation[]
+  periodSnapshots        PeriodSnapshot[]
+}
+
+// A named competent professional for a project. `userId` is optional
+// because the named person is not always a product user (e.g. a contractor
+// mentioned by name only) — HMRC wants the name, not necessarily an account.
+model ProjectCompetentProfessional {
+  id        String  @id @default(cuid())
+  projectId String
+  name      String
+  userId    String?
+
+  project Project @relation(fields: [projectId], references: [id])
+  user    User?   @relation(fields: [userId], references: [id])
+
+  @@unique([projectId, name])
+}
+
+model AccountingPeriod {
+  id        String   @id @default(cuid())
+  companyId String
+  label     String
+  startDate DateTime
+  endDate   DateTime
+  createdAt DateTime @default(now())
+
+  company         Company          @relation(fields: [companyId], references: [id])
+  periodSnapshots PeriodSnapshot[]
+
+  @@unique([companyId, startDate, endDate])
+}
+
+// --- Evidence (append-only) ----------------------------------------------
+
+enum EvidenceEntryType {
+  UNCERTAINTY_RAISED
+  APPROACH_ATTEMPTED
+  RESULT_OBSERVED
+  RESOLUTION
+  DECISION
+}
+
+model EvidenceEntry {
+  id         String            @id @default(cuid())
+  projectId  String
+  type       EvidenceEntryType
+  body       String
+  authorId   String
+  supersedes String?           @unique
+  createdAt  DateTime          @default(now())
+
+  project         Project              @relation(fields: [projectId], references: [id])
+  author          User                 @relation(fields: [authorId], references: [id])
+  supersededEntry EvidenceEntry?       @relation("EvidenceSupersession", fields: [supersedes], references: [id])
+  supersededBy    EvidenceEntry?       @relation("EvidenceSupersession")
+  attachments     EvidenceAttachment[]
+
+  @@index([projectId, createdAt])
+}
+
+// Attachments carry a content hash so a swapped file is detectable —
+// the hash is computed at upload time and never recomputed/trusted from
+// the client on read.
+model EvidenceAttachment {
+  id              String   @id @default(cuid())
+  evidenceEntryId String
+  filename        String
+  contentHash     String
+  storageUrl      String
+  sizeBytes       Int
+  mimeType        String
+  createdAt       DateTime @default(now())
+
+  evidenceEntry EvidenceEntry @relation(fields: [evidenceEntryId], references: [id])
+}
+
+enum TimeEntryBasis {
+  TIMESHEET
+  SAMPLED
+  ESTIMATED
+}
+
+// Hours are stored as integer minutes, never fractional floats.
+model TimeEntry {
+  id          String         @id @default(cuid())
+  projectId   String
+  personId    String
+  periodStart DateTime
+  periodEnd   DateTime
+  minutes     Int
+  basis       TimeEntryBasis
+  authorId    String
+  supersedes  String?        @unique
+  createdAt   DateTime       @default(now())
+
+  project         Project    @relation(fields: [projectId], references: [id])
+  person          User       @relation("TimeEntryPerson", fields: [personId], references: [id])
+  author          User       @relation("TimeEntryAuthor", fields: [authorId], references: [id])
+  supersededEntry TimeEntry? @relation("TimeEntrySupersession", fields: [supersedes], references: [id])
+  supersededBy    TimeEntry? @relation("TimeEntrySupersession")
+
+  @@index([projectId, periodStart])
+}
+
+enum CostAllocationSource {
+  XERO_JOURNAL_LINE
+  MANUAL_IMPORT
+}
+
+// Apportionment is stored in basis points (1/100 of a percent) as an
+// integer — never a float — and is always human-confirmed; nothing in
+// this codebase may write a CostAllocation without a rationale.
+model CostAllocation {
+  id                String               @id @default(cuid())
+  projectId         String
+  source            CostAllocationSource
+  xeroJournalLineId String?
+  manualCostLineId  String?
+  amountMinorUnits  Int
+  currency          String               @default("GBP")
+  apportionmentBps  Int
+  rationale         String
+  authorId          String
+  supersedes        String?              @unique
+  createdAt         DateTime             @default(now())
+
+  project         Project          @relation(fields: [projectId], references: [id])
+  author          User             @relation(fields: [authorId], references: [id])
+  xeroJournalLine XeroJournalLine? @relation(fields: [xeroJournalLineId], references: [id])
+  manualCostLine  ManualCostLine?  @relation(fields: [manualCostLineId], references: [id])
+  supersededEntry CostAllocation?  @relation("CostAllocationSupersession", fields: [supersedes], references: [id])
+  supersededBy    CostAllocation?  @relation("CostAllocationSupersession")
+
+  @@index([projectId, createdAt])
+}
+
+// --- Approvals & snapshots (append-only) ----------------------------------
+
+enum ApprovalTargetType {
+  TIME_ENTRY
+  COST_ALLOCATION
+  PERIOD_SNAPSHOT
+}
+
+enum ApprovalDecision {
+  APPROVED
+  QUERIED
+}
+
+model Approval {
+  id           String             @id @default(cuid())
+  targetType   ApprovalTargetType
+  targetId     String
+  decision     ApprovalDecision
+  snapshotHash String
+  comment      String?
+  approverId   String
+  createdAt    DateTime           @default(now())
+
+  approver User @relation(fields: [approverId], references: [id])
+
+  @@index([targetType, targetId])
+}
+
+// An immutable freeze of a project-period once signed off. `dataJson` is
+// the exact canonicalized payload that `snapshotHash` was computed over —
+// keeping both means the hash can always be independently re-verified.
+model PeriodSnapshot {
+  id                 String   @id @default(cuid())
+  projectId          String
+  accountingPeriodId String
+  snapshotHash       String
+  dataJson           Json
+  generatedById      String
+  createdAt          DateTime @default(now())
+
+  project          Project          @relation(fields: [projectId], references: [id])
+  accountingPeriod AccountingPeriod @relation(fields: [accountingPeriodId], references: [id])
+  generatedBy      User             @relation(fields: [generatedById], references: [id])
+
+  @@unique([projectId, accountingPeriodId])
+}
+
+// --- Xero (read-only mirror) ----------------------------------------------
+
+model XeroConnection {
+  id                    String   @id @default(cuid())
+  companyId             String   @unique
+  tenantId              String   @unique
+  accessTokenEncrypted  String
+  refreshTokenEncrypted String
+  expiresAt             DateTime
+  scopes                String
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id])
+}
+
+// Mirrors Xero's /Journals feed. This table is a cache, not a source of
+// truth — it may be dropped and rebuilt from Xero at any time, so it is
+// intentionally NOT append-only-enforced at the DB level like evidence is.
+model XeroJournalLine {
+  id                String   @id @default(cuid())
+  companyId         String
+  xeroJournalId     String
+  xeroJournalLineId String
+  journalDate       DateTime
+  accountCode       String
+  accountName       String
+  description       String?
+  netAmountMinor    Int
+  trackingCategory  String?
+  trackingOption    String?
+  sourceType        String
+  syncedAt          DateTime @default(now())
+
+  costAllocations CostAllocation[]
+
+  @@unique([companyId, xeroJournalLineId])
+  @@index([companyId, journalDate])
+}
+
+model XeroSyncCursor {
+  id                String   @id @default(cuid())
+  companyId         String   @unique
+  lastJournalNumber Int      @default(0)
+  updatedAt         DateTime @updatedAt
+}
+
+// --- Manual cost import (salary CSV, etc.) --------------------------------
+
+model ManualCostImport {
+  id           String   @id @default(cuid())
+  companyId    String
+  filename     String
+  importedById String
+  createdAt    DateTime @default(now())
+
+  company Company          @relation(fields: [companyId], references: [id])
+  lines   ManualCostLine[]
+}
+
+model ManualCostLine {
+  id                 String   @id @default(cuid())
+  manualCostImportId String
+  personName         String
+  periodStart        DateTime
+  periodEnd          DateTime
+  amountMinorUnits   Int
+  currency           String   @default("GBP")
+  description        String?
+
+  manualCostImport ManualCostImport @relation(fields: [manualCostImportId], references: [id])
+  costAllocations  CostAllocation[]
+}
+
+// --- Billing ---------------------------------------------------------------
+
+enum SubscriptionStatus {
+  TRIALING
+  ACTIVE
+  PAST_DUE
+  CANCELED
+}
+
+model Subscription {
+  id                   String             @id @default(cuid())
+  companyId            String             @unique
+  stripeCustomerId     String             @unique
+  stripeSubscriptionId String?            @unique
+  status               SubscriptionStatus @default(TRIALING)
+  seatCount            Int                @default(1)
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id])
 }
