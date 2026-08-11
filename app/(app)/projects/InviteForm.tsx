@@ -2,20 +2,27 @@
 
 import { useState } from "react";
 import type { MembershipRole } from "@/lib/generated/prisma/client";
-import { buttonPrimary, eyebrow, input, select } from "@/app/components/ui";
+import { SegmentedControl } from "@/app/components/SegmentedControl";
+import { badgeAccent, badgeNeutral, buttonSecondary, fieldLabel, input } from "@/app/components/ui";
 
-const ROLE_OPTIONS: Array<{ value: MembershipRole; label: string }> = [
-  { value: "ADVISER", label: "Adviser — free, read-only + export" },
-  { value: "CONTRIBUTOR", label: "Contributor" },
-  { value: "LEAD", label: "Lead" },
-  { value: "FINANCE", label: "Finance" },
-  { value: "OWNER", label: "Owner" },
-];
+const ROLE_LABEL: Record<MembershipRole, string> = {
+  OWNER: "Owner",
+  FINANCE: "Finance",
+  LEAD: "Lead",
+  CONTRIBUTOR: "Member",
+  ADVISER: "Adviser",
+};
 
-/** Inviting an adviser is free and prominent (BOARD-PLAN.md Phase 8.1) — Adviser is the default role, not buried in a list. */
-export function InviteForm({ companyId }: { companyId: string }) {
+interface Seat {
+  id: string;
+  name: string;
+  role: MembershipRole;
+}
+
+/** Inviting an adviser is free and prominent (BOARD-PLAN.md Phase 8.1) — the segmented control defaults to Adviser, not buried in a role list. */
+export function InviteForm({ companyId, seats }: { companyId: string; seats: Seat[] }) {
   const [email, setEmail] = useState("");
-  const [role, setRole] = useState<MembershipRole>("ADVISER");
+  const [segment, setSegment] = useState<"ADVISER" | "MEMBER">("ADVISER");
   const [status, setStatus] = useState<"idle" | "saving" | "done" | "error">("idle");
   const [error, setError] = useState("");
 
@@ -24,6 +31,7 @@ export function InviteForm({ companyId }: { companyId: string }) {
     setStatus("saving");
     setError("");
 
+    const role: MembershipRole = segment === "ADVISER" ? "ADVISER" : "CONTRIBUTOR";
     const response = await fetch("/api/invitations", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -42,36 +50,45 @@ export function InviteForm({ companyId }: { companyId: string }) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-3 border border-sage/50 bg-sage/5 p-4">
-      <div>
-        <h3 className={eyebrow}>Invite your accountant</h3>
-        <p className="mt-0.5 text-xs text-foreground/60">
-          Adviser seats are free — they never count toward your bill, however many you invite.
-        </p>
-      </div>
-
-      <div className="flex flex-wrap gap-2">
-        <input
-          type="email"
-          required
-          placeholder="them@theirfirm.com"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          className={`min-w-0 flex-1 ${input.replace("mt-1 ", "")}`}
+    <div className="rounded-[16px] border border-black/[.06] bg-surface-sunken p-6">
+      <h5 className="m-0 mb-[6px] text-[15px] font-[600] tracking-[-0.02em] text-text">Invite your accountant</h5>
+      <p className="m-0 mb-5 text-[13.5px] leading-[1.5] text-text-secondary">
+        Adviser seats are free — they never count toward your bill, however many you invite.
+      </p>
+      <form onSubmit={handleSubmit}>
+        <label className="mb-[14px] block">
+          <span className={fieldLabel}>Email</span>
+          <input type="email" required placeholder="them@theirfirm.com" value={email} onChange={(e) => setEmail(e.target.value)} className={input} />
+        </label>
+        <SegmentedControl
+          fullWidth
+          className="mb-[18px]"
+          segmentClassName="py-[7px]"
+          options={[
+            { value: "ADVISER", label: "Adviser" },
+            { value: "MEMBER", label: "Member" },
+          ]}
+          value={segment}
+          onChange={setSegment}
         />
-        <select value={role} onChange={(e) => setRole(e.target.value as MembershipRole)} className={select}>
-          {ROLE_OPTIONS.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
-        <button type="submit" disabled={status === "saving"} className={buttonPrimary}>
+        <button type="submit" disabled={status === "saving"} className={`${buttonSecondary} w-full`}>
           {status === "saving" ? "Sending…" : "Send invite"}
         </button>
+        {status === "done" && <p className="mt-2 text-[13px] font-[500] text-accent">Invitation sent.</p>}
+        {status === "error" && <p className="mt-2 text-[13px] text-red-700">{error}</p>}
+      </form>
+
+      <div className="my-6 h-px bg-black/[.06]" />
+
+      <div className="mb-[14px] text-[12.5px] text-text-tertiary">Seats</div>
+      <div className="flex flex-col gap-[13px]">
+        {seats.map((seat) => (
+          <div key={seat.id} className="flex items-center justify-between text-[13.5px] text-text">
+            <span>{seat.name}</span>
+            <span className={seat.role === "ADVISER" ? badgeAccent : badgeNeutral}>{ROLE_LABEL[seat.role]}</span>
+          </div>
+        ))}
       </div>
-      {status === "done" && <p className="text-sm font-semibold text-sage-dark">Invitation sent.</p>}
-      {status === "error" && <p className="text-sm text-red-700">{error}</p>}
-    </form>
+    </div>
   );
 }

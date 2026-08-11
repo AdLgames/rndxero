@@ -3,13 +3,12 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { getCurrentUser, SESSION_COOKIE_NAME } from "@/lib/auth/session";
 import { listCompanyProjects } from "@/lib/projects/repository";
-import { Panel } from "@/app/components/Panel";
-import { badgeNeutral, badgeSage, eyebrow } from "@/app/components/ui";
+import { badgeAccent, badgeNeutral, buttonPrimary } from "@/app/components/ui";
 import { ProjectForm } from "./ProjectForm";
 import { InviteForm } from "./InviteForm";
 
-function hoursLabel(minutes: number): string {
-  return `${(minutes / 60).toFixed(1)}h`;
+function hoursLabel(minutes: number): { value: string; unit: string } {
+  return { value: (minutes / 60).toFixed(0), unit: "h" };
 }
 
 export default async function ProjectsPage() {
@@ -46,57 +45,62 @@ export default async function ProjectsPage() {
   );
 
   return (
-    <div className="mx-auto w-full max-w-3xl px-6 py-16">
-      <p className={eyebrow}>01 · Projects</p>
-      <h1 className="mt-1 text-2xl font-bold text-foreground">Setup &amp; team</h1>
-      <p className="mt-2 max-w-xl text-sm text-foreground/60">
-        Every project is a claimable line of R&amp;D. Set who did the work and when it began; the rest is captured
-        week by week.
-      </p>
-
-      {companiesWithProjects.map(({ company, projectsWithHours, members }) => (
-        <section key={company.id} className="mt-10 border-t border-steel/30 pt-8">
-          <h2 className="text-lg font-bold text-foreground">{company.name}</h2>
-
-          <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
-            {projectsWithHours.map(({ project, minutes }) => (
-              <Panel key={project.id} className="p-3">
-                <p className="font-semibold text-foreground">{project.name}</p>
-                <p className="mt-1 text-xs text-foreground/60">
-                  Started {new Date(project.startDate).toLocaleDateString("en-GB")}
-                </p>
-                <p className="mt-1 text-xs text-foreground/60">
-                  {project.competentProfessionals.map((cp) => cp.name).join(", ") || "No competent professional named"}
-                </p>
-                <p className="mt-2 text-sm font-semibold text-steel-dark">{hoursLabel(minutes)} logged</p>
-              </Panel>
-            ))}
-            {projectsWithHours.length === 0 && <p className="text-sm text-foreground/50 sm:col-span-2">No projects yet.</p>}
-          </div>
-
-          <div className="mt-4">
-            <ProjectForm companyId={company.id} />
-          </div>
-
-          <div className="mt-8 border-t border-steel/20 pt-6">
-            <p className={eyebrow}>Team</p>
-            <ul className="mt-3 flex flex-wrap gap-2">
-              {members.map((m) => (
-                <li key={m.id} className={m.role === "ADVISER" ? badgeSage : badgeNeutral}>
-                  {m.user.name} · {m.role === "ADVISER" ? "Adviser (free)" : m.role.charAt(0) + m.role.slice(1).toLowerCase()}
-                </li>
-              ))}
-            </ul>
-            <div className="mt-4">
-              <InviteForm companyId={company.id} />
+    <div className="px-12 py-11">
+      {companiesWithProjects.map(({ company, projectsWithHours, members }, i) => (
+        <section key={company.id} className={i > 0 ? "mt-16 border-t border-black/[.06] pt-11" : ""}>
+          <div className="mb-8 flex items-end justify-between">
+            <div>
+              <h2 className="m-0 text-[30px] font-[640] tracking-[-0.028em] text-text">{companiesWithProjects.length > 1 ? company.name : "Projects"}</h2>
+              <p className="m-0 mt-[7px] max-w-[58ch] text-[15px] leading-[1.5] text-text-secondary">
+                Every project is a claimable line of R&amp;D. Set who did the work and when it began — the rest is
+                captured week by week.
+              </p>
             </div>
+            <a href={`#new-project-${company.id}`} className={buttonPrimary}>
+              New project
+            </a>
+          </div>
+
+          <div className="grid grid-cols-[1.6fr_1fr] items-start gap-7">
+            <div className="flex flex-col gap-3">
+              {projectsWithHours.map(({ project, minutes }) => {
+                const archived = project.status !== "ACTIVE";
+                const { value, unit } = hoursLabel(minutes);
+                return (
+                  <div key={project.id} className="flex items-center justify-between rounded-[14px] border border-black/[.06] bg-surface-sunken px-[22px] py-5">
+                    <div>
+                      <div className="flex items-center gap-[10px]">
+                        <h4 className={`m-0 text-[16.5px] font-[600] tracking-[-0.02em] ${archived ? "text-text-secondary" : "text-text"}`}>{project.name}</h4>
+                        <span className={archived ? badgeNeutral : badgeAccent}>{archived ? "Archived" : "Active"}</span>
+                      </div>
+                      <div className={`mt-[6px] text-[13px] ${archived ? "text-text-quaternary" : "text-text-tertiary"}`}>
+                        Started {new Date(project.startDate).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })} ·{" "}
+                        {project.competentProfessionals.map((cp) => cp.name).join(", ") || "no competent professional named"}
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className={`text-[21px] font-[600] tracking-[-0.025em] ${archived ? "text-text-secondary" : "text-text"}`}>
+                        {value}
+                        <span className={`text-[14px] font-[500] ${archived ? "text-text-quaternary" : "text-text-tertiary"}`}>{unit}</span>
+                      </div>
+                      <div className="text-[11.5px] text-text-quaternary">logged</div>
+                    </div>
+                  </div>
+                );
+              })}
+              {projectsWithHours.length === 0 && <p className="text-sm text-text-tertiary">No projects yet.</p>}
+
+              <div id={`new-project-${company.id}`} className="mt-1 scroll-mt-6">
+                <ProjectForm companyId={company.id} />
+              </div>
+            </div>
+
+            <InviteForm companyId={company.id} seats={members.map((m) => ({ id: m.id, name: m.user.name, role: m.role }))} />
           </div>
         </section>
       ))}
 
-      {companiesWithProjects.length === 0 && (
-        <p className="mt-8 text-sm text-foreground/60">You need to be a company owner to create projects.</p>
-      )}
+      {companiesWithProjects.length === 0 && <p className="text-sm text-text-secondary">You need to be a company owner to create projects.</p>}
     </div>
   );
 }

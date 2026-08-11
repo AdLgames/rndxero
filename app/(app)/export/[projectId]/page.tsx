@@ -4,8 +4,8 @@ import { prisma } from "@/lib/db";
 import { getCurrentUser, SESSION_COOKIE_NAME } from "@/lib/auth/session";
 import { AuthorizationError, authorize, canDo } from "@/lib/authz/service";
 import { getProjectClaimPack } from "@/lib/export/pack";
-import { Panel } from "@/app/components/Panel";
-import { buttonPrimary, buttonSecondary, eyebrow } from "@/app/components/ui";
+import { eyebrow } from "@/app/components/ui";
+import { ExportActions } from "./ExportActions";
 
 function hoursLabel(minutes: number): string {
   return `${(minutes / 60).toFixed(1)}h`;
@@ -28,20 +28,15 @@ export default async function ExportPage({ params }: { params: Promise<{ project
   } catch (error) {
     if (error instanceof AuthorizationError) {
       return (
-        <div className="mx-auto w-full max-w-2xl px-6 py-16">
-          <p className="text-sm text-foreground/60">You don&apos;t have access to export this project.</p>
+        <div className="px-12 py-11">
+          <p className="text-[15px] text-text-secondary">You don&apos;t have access to export this project.</p>
         </div>
       );
     }
     throw error;
   }
 
-  const includeCosts = await canDo(prisma, {
-    userId: currentUser.id,
-    companyId: project.companyId,
-    projectId,
-    action: "cost:read",
-  });
+  const includeCosts = await canDo(prisma, { userId: currentUser.id, companyId: project.companyId, projectId, action: "cost:read" });
   const pack = await getProjectClaimPack(prisma, { projectId, includeCosts });
 
   const weekKeys = new Set(pack.integrity.map((row) => row.weekKey));
@@ -50,79 +45,67 @@ export default async function ExportPage({ params }: { params: Promise<{ project
     pack.integrity.reduce((sum, row) => sum + row.amendments.length, 0) +
     pack.uncertainties.reduce((sum, u) => sum + u.chronology.reduce((s, e) => s + e.amendments.length, 0), 0);
 
-  const query = `?companyId=${project.companyId}`;
+  const downloadUrl = `/api/export/${projectId}?companyId=${project.companyId}`;
+  const filenameBase = `${project.name.replace(/[^a-z0-9]+/gi, "-")}-claim-pack`;
 
   return (
-    <div className="mx-auto w-full max-w-2xl px-6 py-16">
-      <p className={eyebrow}>06 · Export — {project.name}</p>
-      <h1 className="mt-1 text-2xl font-bold text-foreground">The evidence dossier</h1>
+    <div className="px-12 py-11">
+      <h2 className="m-0 text-[30px] font-[640] tracking-[-0.028em] text-text">{project.name}</h2>
+      <p className="m-0 mt-[7px] max-w-[62ch] text-[15px] leading-[1.5] text-text-secondary">
+        A claim pack for this project: the per-uncertainty evidence narrative, plan-vs-actual, and integrity
+        metadata.
+      </p>
 
-      <div className="mt-4 border border-sage-dark bg-sage/5 p-3 text-xs text-sage-dark">
-        This is a contemporaneous record of work and evidence, not a claim. It does not determine R&amp;D tax
-        relief eligibility, decide what qualifies as R&amp;D, or calculate any relief value.
+      <div className="mt-[10px] rounded-[10px] border border-accent-border bg-accent-wash px-4 py-3 text-[13px] leading-[1.5] text-text-secondary">
+        This is a contemporaneous record of work and evidence, not a claim. It does not determine R&amp;D tax relief
+        eligibility, decide what qualifies as R&amp;D, or calculate any relief value.
       </div>
 
-      <Panel className="mt-6 p-4">
-        <p className={eyebrow}>Live preview</p>
-        <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-2 text-sm sm:grid-cols-3">
-          <div>
-            <dt className="text-xs text-foreground/50">Weeks</dt>
-            <dd className="font-semibold text-foreground">{weekKeys.size}</dd>
-          </div>
-          <div>
-            <dt className="text-xs text-foreground/50">Uncertainties</dt>
-            <dd className="font-semibold text-foreground">{pack.uncertainties.length}</dd>
-          </div>
-          <div>
-            <dt className="text-xs text-foreground/50">Total hours</dt>
-            <dd className="font-semibold text-foreground">{hoursLabel(pack.totals.actualMinutes)}</dd>
-          </div>
-          <div>
-            <dt className="text-xs text-foreground/50">Planned</dt>
-            <dd className="font-semibold text-foreground">{hoursLabel(pack.totals.plannedMinutes)}</dd>
-          </div>
-          <div>
-            <dt className="text-xs text-foreground/50">Locked weeks</dt>
-            <dd className="font-semibold text-sage-dark">
-              {lockedWeeks} / {weekKeys.size}
-            </dd>
-          </div>
-          <div>
-            <dt className="text-xs text-foreground/50">Amendments</dt>
-            <dd className="font-semibold text-foreground">{amendmentCount}</dd>
-          </div>
-          {includeCosts && pack.totals.derivedCostMinorUnits !== null && (
-            <div>
-              <dt className="text-xs text-foreground/50">Derived cost</dt>
-              <dd className="font-semibold text-foreground">£{(pack.totals.derivedCostMinorUnits / 100).toFixed(2)}</dd>
-            </div>
-          )}
-        </dl>
-      </Panel>
+      <div className="mt-8 grid grid-cols-[1fr_1fr] items-start gap-[26px]">
+        <div className="rounded-[16px] border border-black/[.06] bg-surface-sunken p-[26px]">
+          <h5 className="m-0 mb-[6px] text-[15px] font-[600] tracking-[-0.02em] text-text">What to export</h5>
+          <p className="m-0 mb-5 text-[13.5px] leading-[1.5] text-text-secondary">
+            Includes every logged week, planned-vs-actual, corrections and amendments, competent professionals, and
+            uncertainty narratives for this project.
+          </p>
+          <ExportActions downloadUrl={downloadUrl} filenameBase={filenameBase} />
+        </div>
 
-      <div className="mt-6 flex flex-wrap gap-2">
-        <a href={`/api/export/${projectId}${query}&format=pdf`} className={buttonPrimary}>
-          Download PDF
-        </a>
-        <a href={`/api/export/${projectId}${query}&format=csv`} className={buttonSecondary}>
-          Download CSV
-        </a>
-        <a href={`/api/export/${projectId}${query}&format=json`} className={buttonSecondary}>
-          Download JSON
-        </a>
+        <div className="rounded-[16px] border border-black/[.06] bg-surface-sunken p-[26px]">
+          <p className={`m-0 mb-1 ${eyebrow}`}>Preview</p>
+          <p className="m-0 mb-4 text-[15.5px] font-[600] tracking-[-0.02em] text-text">{project.name}</p>
+          <dl className="m-0">
+            {[
+              ["Weeks covered", weekKeys.size.toString()],
+              ["Uncertainties", pack.uncertainties.length.toString()],
+              ["Total logged", hoursLabel(pack.totals.actualMinutes)],
+              ["Planned", hoursLabel(pack.totals.plannedMinutes)],
+              ["Locked weeks", `${lockedWeeks} / ${weekKeys.size}`],
+              ["Amendments", amendmentCount.toString()],
+              ...(includeCosts && pack.totals.derivedCostMinorUnits !== null
+                ? ([["Derived cost", `£${(pack.totals.derivedCostMinorUnits / 100).toFixed(2)}`]] as const)
+                : []),
+            ].map(([key, value], i, arr) => (
+              <div key={key} className={`flex items-center justify-between py-[11px] text-[14px] ${i < arr.length - 1 ? "border-b border-black/[.05]" : ""}`}>
+                <dt className="text-text-secondary">{key}</dt>
+                <dd className="m-0 font-[500] text-text">{value}</dd>
+              </div>
+            ))}
+          </dl>
+        </div>
       </div>
 
-      <p className={`mt-8 ${eyebrow}`}>Uncertainty narratives</p>
-      <ul className="mt-2 flex flex-col gap-3">
+      <p className={`mt-9 mb-3 ${eyebrow}`}>Uncertainty narratives</p>
+      <ul className="m-0 flex list-none flex-col gap-[10px] p-0">
         {pack.uncertainties.map((u) => (
-          <Panel key={u.id} as="li" className="p-3 text-sm">
-            <p className="font-semibold text-foreground">{u.title}</p>
-            <p className="mt-1 text-foreground/60">
+          <li key={u.id} className="rounded-[14px] border border-black/[.06] bg-surface-sunken px-[18px] py-4">
+            <p className="m-0 text-[14.5px] font-[600] tracking-[-0.02em] text-text">{u.title}</p>
+            <p className="m-0 mt-1 text-[13px] text-text-tertiary">
               {u.outcome} · {hoursLabel(u.totalMinutes)} attributed · {u.chronology.length} entr{u.chronology.length === 1 ? "y" : "ies"}
             </p>
-          </Panel>
+          </li>
         ))}
-        {pack.uncertainties.length === 0 && <li className="text-sm text-foreground/50">No uncertainties recorded yet.</li>}
+        {pack.uncertainties.length === 0 && <li className="text-[14px] text-text-secondary">No uncertainties recorded yet.</li>}
       </ul>
     </div>
   );

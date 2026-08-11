@@ -4,8 +4,6 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { getCurrentUser, SESSION_COOKIE_NAME } from "@/lib/auth/session";
 import { canDo, listAccessibleProjectIds } from "@/lib/authz/service";
-import { Panel } from "@/app/components/Panel";
-import { eyebrow } from "@/app/components/ui";
 
 export default async function ExportIndexPage() {
   const cookieStore = await cookies();
@@ -32,23 +30,24 @@ export default async function ExportIndexPage() {
   const allProjects = projectsByCompany.flat();
 
   return (
-    <div className="mx-auto w-full max-w-2xl px-6 py-16">
-      <p className={eyebrow}>06 · Export</p>
-      <h1 className="mt-1 text-2xl font-bold text-foreground">The evidence dossier</h1>
-      <p className="mt-2 text-sm text-foreground/60">
-        A claim pack per project: the per-uncertainty evidence narrative, plan-vs-actual, and integrity metadata.
+    <div className="px-12 py-11">
+      <h2 className="m-0 text-[30px] font-[640] tracking-[-0.028em] text-text">Export</h2>
+      <p className="m-0 mt-[7px] max-w-[58ch] text-[15px] leading-[1.5] text-text-secondary">
+        Hand an adviser a complete, dated record. Pick a project to assemble its evidence dossier.
       </p>
 
-      <ul className="mt-6 flex flex-col gap-2">
+      <div className="mt-8 flex flex-col gap-[10px]">
         {allProjects.map((project) => (
-          <Panel key={project.id} as="li" className="p-3 text-sm">
-            <Link href={`/export/${project.id}`} className="font-semibold text-foreground hover:text-steel-dark">
-              {project.name}
-            </Link>
-          </Panel>
+          <Link
+            key={project.id}
+            href={`/export/${project.id}`}
+            className="flex items-center justify-between rounded-[14px] border border-black/[.06] bg-surface-sunken px-[22px] py-[18px] text-[15px] font-[600] tracking-[-0.02em] text-text transition-colors duration-150 hover:bg-surface-header"
+          >
+            {project.name}
+          </Link>
         ))}
-        {allProjects.length === 0 && <li className="text-sm text-foreground/50">No projects you can export yet.</li>}
-      </ul>
+        {allProjects.length === 0 && <p className="text-[14px] text-text-secondary">No projects you can export yet.</p>}
+      </div>
     </div>
   );
 }

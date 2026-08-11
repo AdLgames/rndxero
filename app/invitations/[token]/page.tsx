@@ -2,8 +2,8 @@
 
 import { use, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Panel } from "../../components/Panel";
-import { buttonPrimary, eyebrow, input } from "../../components/ui";
+import { PublicHeader } from "../../components/PublicHeader";
+import { buttonPrimary, input } from "../../components/ui";
 
 export default function AcceptInvitationPage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = use(params);
@@ -32,26 +32,21 @@ export default function AcceptInvitationPage({ params }: { params: Promise<{ tok
   }
 
   return (
-    <div className="flex flex-1 items-center justify-center">
-      <Panel as="main" className="w-full max-w-sm p-8">
-        <p className={eyebrow}>Trace</p>
-        <h1 className="mt-1 text-xl font-bold text-foreground">Join</h1>
-        <p className="mt-2 text-sm text-foreground/60">Enter your name to accept the invitation.</p>
-        <form onSubmit={handleSubmit} className="mt-6 flex flex-col gap-3">
-          <input
-            type="text"
-            required
-            placeholder="Your name"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            className={input.replace("mt-1 ", "")}
-          />
-          <button type="submit" disabled={status === "saving"} className={`${buttonPrimary} py-2.5`}>
-            {status === "saving" ? "Joining…" : "Accept invitation"}
-          </button>
-          {status === "error" && <p className="text-sm text-red-700">{error}</p>}
-        </form>
-      </Panel>
+    <div className="flex flex-1 flex-col">
+      <PublicHeader />
+      <main className="flex flex-1 items-center justify-center px-6 py-16">
+        <div className="w-full max-w-[380px] rounded-[16px] border border-black/[.06] bg-white p-8 shadow-[0_1px_3px_rgba(0,0,0,.035),0_16px_40px_-16px_rgba(0,0,0,.12)]">
+          <h2 className="m-0 text-[19px] font-[640] tracking-[-0.02em] text-text">Join</h2>
+          <p className="m-0 mt-2 text-[13.5px] leading-[1.5] text-text-secondary">Enter your name to accept the invitation.</p>
+          <form onSubmit={handleSubmit} className="mt-6 flex flex-col gap-3">
+            <input type="text" required placeholder="Your name" value={name} onChange={(e) => setName(e.target.value)} className={input} />
+            <button type="submit" disabled={status === "saving"} className={`${buttonPrimary} w-full py-[11px]`}>
+              {status === "saving" ? "Joining…" : "Accept invitation"}
+            </button>
+            {status === "error" && <p className="m-0 text-[13px] text-red-700">{error}</p>}
+          </form>
+        </div>
+      </main>
     </div>
   );
 }

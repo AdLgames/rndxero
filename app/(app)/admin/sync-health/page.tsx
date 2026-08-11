@@ -18,35 +18,31 @@ export default async function SyncHealthPage() {
   const health = await getSyncHealthForCompanies(prisma, companyIds);
 
   return (
-    <div className="mx-auto w-full max-w-2xl px-6 py-16">
-      <h1 className="text-xl font-semibold text-black dark:text-zinc-50">Xero sync health</h1>
-      <div className="mt-6 flex flex-col gap-3">
+    <div className="px-12 py-11">
+      <h2 className="m-0 text-[30px] font-[640] tracking-[-0.028em] text-text">Xero sync health</h2>
+      <div className="mt-8 flex flex-col gap-[10px]">
         {health.map((row) => (
-          <div key={row.companyId} className="rounded border border-black/[.08] p-4 text-sm dark:border-white/[.08]">
-            <p className="font-medium text-black dark:text-zinc-50">{row.companyName}</p>
+          <div key={row.companyId} className="rounded-[14px] border border-black/[.06] bg-surface-sunken px-[22px] py-5">
+            <p className="m-0 text-[15px] font-[600] tracking-[-0.02em] text-text">{row.companyName}</p>
             {row.connected ? (
               <>
-                <p className="mt-1 text-zinc-600 dark:text-zinc-400">
+                <p className="m-0 mt-[6px] text-[13px] text-text-tertiary">
                   Tenant: {row.tenantId} · Token expires {row.tokenExpiresAt?.toISOString()}
                   {row.tokenExpiringSoon && (
-                    <span className="ml-2 rounded bg-amber-100 px-2 py-0.5 text-xs text-amber-900 dark:bg-amber-900/40 dark:text-amber-200">
-                      expiring soon
-                    </span>
+                    <span className="ml-2 rounded-full bg-[#FDF3E7] px-[9px] py-[3px] text-[11px] font-[590] text-[#8A5A15]">expiring soon</span>
                   )}
                 </p>
-                <p className="mt-1 text-zinc-600 dark:text-zinc-400">
+                <p className="m-0 mt-1 text-[13px] text-text-tertiary">
                   Last synced journal #{row.lastJournalNumber ?? "—"}
                   {row.lastSyncedAt ? ` at ${row.lastSyncedAt.toISOString()}` : " (never synced)"}
                 </p>
               </>
             ) : (
-              <p className="mt-1 text-zinc-600 dark:text-zinc-400">Not connected to Xero.</p>
+              <p className="m-0 mt-[6px] text-[13px] text-text-tertiary">Not connected to Xero.</p>
             )}
           </div>
         ))}
-        {health.length === 0 && (
-          <p className="text-sm text-zinc-600 dark:text-zinc-400">No companies to show.</p>
-        )}
+        {health.length === 0 && <p className="text-[14px] text-text-secondary">No companies to show.</p>}
       </div>
     </div>
   );

@@ -2,7 +2,6 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { getCurrentUser, SESSION_COOKIE_NAME } from "@/lib/auth/session";
-import { eyebrow } from "@/app/components/ui";
 import { FinanceWeeksClient, type SubmissionRow } from "./FinanceWeeksClient";
 
 export default async function FinancePage() {
@@ -21,10 +20,9 @@ export default async function FinancePage() {
 
   if (financeCompanyIds.length === 0) {
     return (
-      <div className="mx-auto w-full max-w-3xl px-6 py-16">
-        <p className={eyebrow}>05 · Finance</p>
-        <h1 className="mt-1 text-2xl font-bold text-foreground">Lock settled weeks</h1>
-        <p className="mt-4 text-sm text-foreground/60">
+      <div className="mx-auto max-w-[880px] px-12 py-13">
+        <h2 className="m-0 text-[30px] font-[640] tracking-[-0.028em] text-text">Finance</h2>
+        <p className="m-0 mt-3 text-[15px] leading-[1.5] text-text-secondary">
           You need to be an Owner or Finance member of a company to lock weeks or review amendments.
         </p>
       </div>
@@ -107,16 +105,13 @@ export default async function FinancePage() {
   }));
 
   return (
-    <div className="mx-auto w-full max-w-3xl px-6 py-16">
-      <p className={eyebrow}>05 · Finance</p>
-      <h1 className="mt-1 text-2xl font-bold text-foreground">Lock settled weeks</h1>
-      <p className="mt-2 text-sm text-foreground/60">
-        Lock weeks once they&apos;re settled. Once locked, the only way to correct one is an attributed amendment —
-        the original stays exactly as submitted.
+    <div className="mx-auto max-w-[880px] px-12 py-13">
+      <h2 className="m-0 text-[30px] font-[640] tracking-[-0.028em] text-text">Finance</h2>
+      <p className="m-0 mt-3 mb-8 text-[15px] leading-[1.5] text-text-secondary">
+        Lock weeks once they&apos;re settled. After that the only correction is an attributed amendment — the
+        original stays exactly as submitted.
       </p>
-      <div className="mt-6">
-        <FinanceWeeksClient submissions={rows} />
-      </div>
+      <FinanceWeeksClient submissions={rows} />
     </div>
   );
 }

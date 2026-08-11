@@ -45,34 +45,34 @@ export function ProjectForm({ companyId }: { companyId: string }) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-3 border border-steel/30 bg-white p-4">
-      <label className={fieldLabel}>
-        Project name
-        <input type="text" required value={name} onChange={(e) => setName(e.target.value)} className={input} />
-      </label>
-
-      <label className={fieldLabel}>
-        Start date
-        <input type="date" required value={startDate} onChange={(e) => setStartDate(e.target.value)} className={input} />
-      </label>
-
-      <label className={fieldLabel}>
-        Competent professional(s)
+    <form onSubmit={handleSubmit} className="rounded-[16px] border border-black/[.06] bg-white p-6">
+      <h5 className="m-0 mb-[18px] text-[15px] font-[600] tracking-[-0.02em] text-text">New project</h5>
+      <div className="mb-4 grid grid-cols-[1fr_170px] gap-4">
+        <label className="block">
+          <span className={fieldLabel}>Project name</span>
+          <input type="text" required placeholder="Adaptive gripper control" value={name} onChange={(e) => setName(e.target.value)} className={input} />
+        </label>
+        <label className="block">
+          <span className={fieldLabel}>Start date</span>
+          <input type="date" required value={startDate} onChange={(e) => setStartDate(e.target.value)} className={input} />
+        </label>
+      </div>
+      <label className="mb-2 block">
+        <span className={fieldLabel}>Competent professionals</span>
         <input
           type="text"
           required
-          placeholder="e.g. Dr. Ada Lovelace, Bo Chen"
+          placeholder="Ada Lovelace, Bo Chen"
           value={competentProfessionals}
           onChange={(e) => setCompetentProfessionals(e.target.value)}
           className={input}
         />
-        <span className="mt-1 block text-xs normal-case text-foreground/50">Comma-separated names.</span>
       </label>
-
-      <button type="submit" disabled={status === "saving"} className={`${buttonPrimary} mt-1`}>
+      <p className="m-0 mb-5 text-[12.5px] text-text-quaternary">The people whose judgement resolved the uncertainty.</p>
+      <button type="submit" disabled={status === "saving"} className={buttonPrimary}>
         Create project
       </button>
-      {status === "error" && <p className="text-sm text-red-700">{error}</p>}
+      {status === "error" && <p className="mt-2 text-sm text-red-700">{error}</p>}
     </form>
   );
 }

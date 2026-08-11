@@ -1,8 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Panel } from "@/app/components/Panel";
-import { buttonPrimary, buttonSecondary, eyebrow, input, select } from "@/app/components/ui";
+import { buttonPrimary, buttonGhost, fieldLabel, input as inputClass } from "@/app/components/ui";
 
 export interface UncertaintyOption {
   id: string;
@@ -37,38 +36,39 @@ export interface VersionHistoryEntry {
   totalPlannedMinutes: number;
 }
 
-interface Row {
-  key: string;
-  uncertaintyId: string;
-  userId: string;
-  weekKey: string;
-  hours: string;
+function fmtHours(hours: number): string {
+  const rounded = Math.round(hours * 100) / 100;
+  return Number.isInteger(rounded) ? rounded.toString() : rounded.toFixed(2).replace(/0$/, "");
 }
 
-function hoursLabel(minutes: number): string {
-  return (minutes / 60).toFixed(2).replace(/\.?0+$/, "") || "0";
+function fmtMinutes(minutes: number): string {
+  return fmtHours(minutes / 60);
 }
 
 function formatMoney(minorUnits: number): string {
   return `£${(minorUnits / 100).toFixed(2)}`;
 }
 
-let rowKeySeq = 0;
-function newRowKey() {
-  rowKeySeq += 1;
-  return `row-${rowKeySeq}`;
-}
-
+/**
+ * The matrix collapses per-allocation user assignment (which the previous
+ * row-builder exposed) to a single unassigned figure per uncertainty/week
+ * while it's open for editing — the same simplification the design
+ * handoff's mockup makes. Saving preserves every allocation for weeks
+ * outside this matrix's visible window exactly as they were, including
+ * their original assignee, so revising a few weeks never wipes the rest
+ * of the plan.
+ */
 export function PlannerClient({
   companyId,
   projectId,
   canWrite,
   canViewCosts,
   uncertainties,
-  members,
   currentPlan,
   plannedCostMinorUnits,
-  variance,
+  weekKeys,
+  currentWeekKey,
+  actualMinutesByWeek,
   versionHistory,
 }: {
   companyId: string;
@@ -76,63 +76,86 @@ export function PlannerClient({
   canWrite: boolean;
   canViewCosts: boolean;
   uncertainties: UncertaintyOption[];
-  members: MemberOption[];
   currentPlan: CurrentPlanData | null;
   plannedCostMinorUnits: number | null;
-  variance: VarianceRow[];
-  versionCount: number;
+  weekKeys: string[];
+  currentWeekKey: string;
+  actualMinutesByWeek: Record<string, number>;
   versionHistory: VersionHistoryEntry[];
 }) {
-  const [builderOpen, setBuilderOpen] = useState(false);
-  const [rows, setRows] = useState<Row[]>(() =>
-    currentPlan
-      ? currentPlan.allocations.map((a) => ({
-          key: newRowKey(),
-          uncertaintyId: a.uncertaintyId,
-          userId: a.userId ?? "",
-          weekKey: a.weekKey,
-          hours: hoursLabel(a.plannedMinutes),
-        }))
-      : []
-  );
+  const weekKeySet = new Set(weekKeys);
+
+  const [cells, setCells] = useState<Record<string, Record<string, string>>>(() => {
+    const map: Record<string, Record<string, string>> = {};
+    for (const u of uncertainties) map[u.id] = {};
+    for (const a of currentPlan?.allocations ?? []) {
+      if (!weekKeySet.has(a.weekKey) || !map[a.uncertaintyId]) continue;
+      const perUncertainty = map[a.uncertaintyId];
+      const existing = Number(perUncertainty[a.weekKey] ?? "0");
+      perUncertainty[a.weekKey] = String(existing + a.plannedMinutes / 60);
+    }
+    return map;
+  });
+
+  const [addingUncertainty, setAddingUncertainty] = useState(false);
+  const [newTitle, setNewTitle] = useState("");
+  const [newBaseline, setNewBaseline] = useState("");
+  const [addStatus, setAddStatus] = useState<"idle" | "saving" | "error">("idle");
+  const [addError, setAddError] = useState("");
+
   const [note, setNote] = useState("");
   const [status, setStatus] = useState<"idle" | "saving" | "error">("idle");
   const [error, setError] = useState("");
 
-  function addRow() {
-    setRows((prev) => [
-      ...prev,
-      { key: newRowKey(), uncertaintyId: uncertainties[0]?.id ?? "", userId: "", weekKey: "", hours: "" },
-    ]);
+  function setCell(uncertaintyId: string, weekKey: string, value: string) {
+    setCells((prev) => ({ ...prev, [uncertaintyId]: { ...prev[uncertaintyId], [weekKey]: value } }));
   }
 
-  function updateRow(key: string, patch: Partial<Row>) {
-    setRows((prev) => prev.map((r) => (r.key === key ? { ...r, ...patch } : r)));
+  function rowTotalHours(uncertaintyId: string): number {
+    return weekKeys.reduce((sum, wk) => sum + (Number(cells[uncertaintyId]?.[wk]) || 0), 0);
   }
 
-  function removeRow(key: string) {
-    setRows((prev) => prev.filter((r) => r.key !== key));
+  const grandTotalHours = uncertainties.reduce((sum, u) => sum + rowTotalHours(u.id), 0);
+
+  async function addUncertainty() {
+    setAddStatus("saving");
+    setAddError("");
+    try {
+      if (!newTitle.trim() || !newBaseline.trim()) throw new Error("Title and baseline are required");
+      const response = await fetch("/api/capture/uncertainty", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ companyId, projectId, title: newTitle.trim(), baseline: newBaseline.trim() }),
+      });
+      if (!response.ok) {
+        const body = (await response.json().catch(() => ({}))) as { error?: string };
+        throw new Error(body.error ?? "Could not add uncertainty");
+      }
+      window.location.reload();
+    } catch (e) {
+      setAddError(e instanceof Error ? e.message : "Could not add uncertainty");
+      setAddStatus("error");
+    }
   }
 
-  async function submitPlan() {
+  async function savePlan() {
     setStatus("saving");
     setError("");
     try {
-      if (rows.length === 0) throw new Error("Add at least one allocation");
       if (currentPlan && !note.trim()) throw new Error("A note explaining the revision is required");
 
-      const allocations = rows.map((r) => {
-        const hours = Number(r.hours);
-        if (!r.uncertaintyId) throw new Error("Every row needs an uncertainty");
-        if (!/^\d{4}-W\d{2}$/.test(r.weekKey)) throw new Error(`"${r.weekKey}" isn't a valid week key (e.g. 2026-W33)`);
-        if (Number.isNaN(hours) || hours <= 0) throw new Error("Every row needs a positive number of hours");
-        return {
-          uncertaintyId: r.uncertaintyId,
-          userId: r.userId || undefined,
-          weekKey: r.weekKey,
-          plannedMinutes: Math.round(hours * 60),
-        };
-      });
+      const editedAllocations = uncertainties.flatMap((u) =>
+        weekKeys
+          .map((weekKey) => ({ weekKey, hours: Number(cells[u.id]?.[weekKey]) || 0 }))
+          .filter((a) => a.hours > 0)
+          .map((a) => ({ uncertaintyId: u.id, weekKey: a.weekKey, plannedMinutes: Math.round(a.hours * 60) }))
+      );
+      const untouchedAllocations = (currentPlan?.allocations ?? [])
+        .filter((a) => !weekKeySet.has(a.weekKey))
+        .map((a) => ({ uncertaintyId: a.uncertaintyId, userId: a.userId ?? undefined, weekKey: a.weekKey, plannedMinutes: a.plannedMinutes }));
+
+      const allocations = [...untouchedAllocations, ...editedAllocations];
+      if (allocations.length === 0) throw new Error("Add at least one planned hour");
 
       const response = await fetch("/api/plan/versions", {
         method: "POST",
@@ -150,150 +173,143 @@ export function PlannerClient({
     }
   }
 
+  const gridColumns = `1fr repeat(${weekKeys.length}, 86px) 96px`;
+
   return (
-    <div className="flex flex-col gap-8">
-      <Panel className="p-4">
-        <p className={eyebrow}>Current plan</p>
-        {currentPlan ? (
-          <div className="mt-2 text-sm text-foreground/80">
-            <p>
-              Version {currentPlan.versionNumber} · {hoursLabel(currentPlan.totalPlannedMinutes)}h planned
-              {canViewCosts && plannedCostMinorUnits !== null ? ` · ${formatMoney(plannedCostMinorUnits)} derived cost` : ""}
-            </p>
-            {currentPlan.note && <p className="mt-1 text-foreground/50">&quot;{currentPlan.note}&quot;</p>}
-          </div>
-        ) : (
-          <p className="mt-2 text-sm text-foreground/60">No plan yet.</p>
-        )}
-      </Panel>
-
-      <section>
-        <p className={eyebrow}>Plan vs actual</p>
-        {variance.length === 0 ? (
-          <p className="mt-2 text-sm text-foreground/60">Nothing planned or logged yet.</p>
-        ) : (
-          <div className="mt-2 overflow-x-auto border border-steel/30">
-            <table className="w-full text-left text-sm">
-              <thead>
-                <tr className="border-b border-steel/30 bg-steel/5 text-xs font-semibold uppercase tracking-wide text-steel-dark">
-                  <th className="px-2 py-1.5">Uncertainty</th>
-                  <th className="px-2 py-1.5">Week</th>
-                  <th className="px-2 py-1.5 text-right">Planned</th>
-                  <th className="px-2 py-1.5 text-right">Logged so far</th>
-                  <th className="px-2 py-1.5 text-right">Variance</th>
-                </tr>
-              </thead>
-              <tbody>
-                {variance.map((row, i) => (
-                  <tr key={`${row.uncertaintyTitle}-${row.weekKey}-${i}`} className="border-b border-steel/10">
-                    <td className="px-2 py-1.5 text-foreground">{row.uncertaintyTitle}</td>
-                    <td className="px-2 py-1.5 text-foreground/60">{row.weekKey}</td>
-                    <td className="px-2 py-1.5 text-right text-foreground/60">{hoursLabel(row.plannedMinutes)}h</td>
-                    <td className="px-2 py-1.5 text-right font-semibold text-sage-dark">{hoursLabel(row.actualMinutes)}h</td>
-                    <td className={`px-2 py-1.5 text-right ${row.varianceMinutes < 0 ? "text-red-700" : "text-steel-dark"}`}>
-                      {row.varianceMinutes > 0 ? "+" : ""}
-                      {hoursLabel(row.varianceMinutes)}h
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-        <p className="mt-1 text-xs text-foreground/50">
-          Actuals only include weeks where someone tagged hours to that specific uncertainty in capture — a blank
-          isn&apos;t necessarily zero effort, just untagged.
+    <div className="flex flex-col gap-6">
+      {(currentPlan || (canViewCosts && plannedCostMinorUnits !== null)) && (
+        <p className="m-0 text-[13px] text-text-tertiary">
+          {currentPlan ? `Version ${currentPlan.versionNumber} · ${fmtMinutes(currentPlan.totalPlannedMinutes)}h planned` : "No plan yet"}
+          {canViewCosts && plannedCostMinorUnits !== null ? ` · ${formatMoney(plannedCostMinorUnits)} derived cost` : ""}
+          {currentPlan?.note ? ` — "${currentPlan.note}"` : ""}
         </p>
-      </section>
-
-      {versionHistory.length > 0 && (
-        <section>
-          <p className={eyebrow}>Version history</p>
-          <ul className="mt-2 flex flex-col gap-1 text-sm text-foreground/60">
-            {versionHistory.map((v) => (
-              <li key={v.versionNumber}>
-                Version {v.versionNumber} · {hoursLabel(v.totalPlannedMinutes)}h planned ·{" "}
-                {v.supersededAt ? "superseded" : "current"}
-                {v.note ? ` — "${v.note}"` : ""}
-              </li>
-            ))}
-          </ul>
-        </section>
       )}
 
-      {canWrite && (
-        <section>
-          <p className={eyebrow}>{currentPlan ? "Revise the plan" : "Build a plan"}</p>
+      {uncertainties.length === 0 ? (
+        <p className="text-[14px] text-text-secondary">No uncertainties yet — add one below to start planning.</p>
+      ) : (
+        <div className="overflow-x-auto rounded-[16px] border border-black/[.06]">
+          <div className="min-w-[640px]">
+            <div className="grid items-center bg-surface-header px-[22px] py-[13px] text-[12.5px] text-text-tertiary" style={{ gridTemplateColumns: gridColumns }}>
+              <span>Uncertainty</span>
+              {weekKeys.map((wk) => (
+                <span key={wk} className="text-center">
+                  {wk.slice(6)}
+                </span>
+              ))}
+              <span className="text-right">Planned</span>
+            </div>
 
-          {!builderOpen ? (
-            <button type="button" onClick={() => setBuilderOpen(true)} className={`${buttonSecondary} mt-2`}>
-              {currentPlan ? "Start a revision" : "Add allocations"}
-            </button>
-          ) : (
-            <div className="mt-2 flex flex-col gap-3">
-              <div className="flex flex-col gap-2">
-                {rows.map((row) => (
-                  <div key={row.key} className="flex flex-wrap items-center gap-2 border border-steel/20 p-2">
-                    <select value={row.uncertaintyId} onChange={(e) => updateRow(row.key, { uncertaintyId: e.target.value })} className={select}>
-                      {uncertainties.map((u) => (
-                        <option key={u.id} value={u.id}>
-                          {u.title}
-                        </option>
-                      ))}
-                    </select>
-                    <select value={row.userId} onChange={(e) => updateRow(row.key, { userId: e.target.value })} className={select}>
-                      <option value="">Unassigned</option>
-                      {members.map((m) => (
-                        <option key={m.userId} value={m.userId}>
-                          {m.name}
-                        </option>
-                      ))}
-                    </select>
-                    <input
-                      type="text"
-                      placeholder="2026-W33"
-                      value={row.weekKey}
-                      onChange={(e) => updateRow(row.key, { weekKey: e.target.value })}
-                      className="w-24 border border-steel/40 bg-white px-2 py-1 text-sm text-foreground"
-                    />
+            {uncertainties.map((uncertainty) => (
+              <div
+                key={uncertainty.id}
+                className="grid items-center border-t border-black/[.05] px-[22px] py-[14px]"
+                style={{ gridTemplateColumns: gridColumns }}
+              >
+                <span className="pr-5 text-[14px] leading-[1.4] text-text">{uncertainty.title}</span>
+                {weekKeys.map((wk) => (
+                  <span key={wk} className="flex justify-center">
                     <input
                       type="number"
                       min="0"
                       step="0.25"
-                      placeholder="hrs"
-                      value={row.hours}
-                      onChange={(e) => updateRow(row.key, { hours: e.target.value })}
-                      className="w-20 border border-steel/40 bg-white px-2 py-1 text-sm text-foreground"
+                      disabled={!canWrite}
+                      value={cells[uncertainty.id]?.[wk] ?? ""}
+                      onChange={(e) => setCell(uncertainty.id, wk, e.target.value)}
+                      className="w-[46px] rounded-[8px] border border-black/[.11] bg-white px-1 py-[8px] text-center text-[13.5px] text-text outline-none transition-colors duration-150 focus-visible:border-accent focus-visible:shadow-[0_0_0_3px_rgba(14,122,88,.15)] disabled:bg-control-track disabled:text-text-quaternary"
                     />
-                    <button type="button" onClick={() => removeRow(row.key)} className="text-xs font-semibold uppercase text-foreground/50 underline">
-                      Remove
-                    </button>
-                  </div>
+                  </span>
                 ))}
-                <button type="button" onClick={addRow} className="self-start text-xs font-semibold uppercase tracking-wide text-steel-dark underline">
-                  + Add row
-                </button>
+                <span className="text-right text-[16px] font-[600] tracking-[-0.02em] text-text">{fmtHours(rowTotalHours(uncertainty.id))}h</span>
               </div>
+            ))}
 
-              {currentPlan && (
-                <textarea
-                  value={note}
-                  onChange={(e) => setNote(e.target.value)}
-                  placeholder="Why is this plan being revised?"
-                  rows={2}
-                  className={input.replace("mt-1 ", "")}
+            <div className="grid items-center bg-accent-wash px-[22px] py-[15px]" style={{ gridTemplateColumns: gridColumns }}>
+              <span className="text-[14px] font-[590] text-text">Logged so far</span>
+              {weekKeys.map((wk) => {
+                const isPast = wk <= currentWeekKey;
+                return (
+                  <span key={wk} className={`text-center text-[13.5px] font-[590] ${isPast ? "text-accent" : "text-text-disabled"}`}>
+                    {isPast ? fmtMinutes(actualMinutesByWeek[wk] ?? 0) : "—"}
+                  </span>
+                );
+              })}
+              <span className="text-right text-[16px] font-[600] tracking-[-0.02em] text-accent">
+                {fmtMinutes(weekKeys.filter((wk) => wk <= currentWeekKey).reduce((sum, wk) => sum + (actualMinutesByWeek[wk] ?? 0), 0))}h
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {canWrite && (
+        <div>
+          {!addingUncertainty ? (
+            <button type="button" onClick={() => setAddingUncertainty(true)} className={buttonGhost}>
+              + Add uncertainty
+            </button>
+          ) : (
+            <div className="flex flex-col gap-3 rounded-[14px] border border-black/[.06] bg-surface-sunken p-4">
+              <label className="block">
+                <span className={fieldLabel}>Title</span>
+                <input type="text" value={newTitle} onChange={(e) => setNewTitle(e.target.value)} placeholder="What's uncertain" className={inputClass} />
+              </label>
+              <label className="block">
+                <span className={fieldLabel}>Baseline</span>
+                <input
+                  type="text"
+                  value={newBaseline}
+                  onChange={(e) => setNewBaseline(e.target.value)}
+                  placeholder="What existing knowledge/practice doesn't already solve this"
+                  className={inputClass}
                 />
-              )}
-
-              <div>
-                <button type="button" disabled={status === "saving"} onClick={submitPlan} className={buttonPrimary}>
-                  {status === "saving" ? "Saving…" : currentPlan ? "Save revision" : "Save plan"}
+              </label>
+              <div className="flex items-center gap-3">
+                <button type="button" disabled={addStatus === "saving"} onClick={addUncertainty} className={buttonPrimary}>
+                  {addStatus === "saving" ? "Adding…" : "Add"}
                 </button>
-                {status === "error" && <p className="mt-1 text-sm text-red-700">{error}</p>}
+                <button type="button" onClick={() => setAddingUncertainty(false)} className={buttonGhost}>
+                  Cancel
+                </button>
               </div>
+              {addStatus === "error" && <p className="m-0 text-[13px] text-red-700">{addError}</p>}
             </div>
           )}
-        </section>
+        </div>
+      )}
+
+      {canWrite && uncertainties.length > 0 && (
+        <div className="flex flex-col gap-3 border-t border-black/[.06] pt-5">
+          {currentPlan && (
+            <label className="block max-w-[440px]">
+              <span className={fieldLabel}>Why is this plan being revised?</span>
+              <input type="text" value={note} onChange={(e) => setNote(e.target.value)} placeholder="Required for a revision" className={inputClass} />
+            </label>
+          )}
+          <div className="flex items-center justify-between">
+            <span className="text-[14.5px] text-text-secondary">
+              Total planned <span className="font-[590] text-text">{fmtHours(grandTotalHours)}h</span>
+            </span>
+            <button type="button" disabled={status === "saving"} onClick={savePlan} className={buttonPrimary}>
+              {status === "saving" ? "Saving…" : currentPlan ? "Save revision" : "Save plan"}
+            </button>
+          </div>
+          {status === "error" && <p className="m-0 text-[13px] text-red-700">{error}</p>}
+        </div>
+      )}
+
+      {versionHistory.length > 1 && (
+        <div className="border-t border-black/[.06] pt-5">
+          <p className="m-0 mb-2 text-[12.5px] text-text-tertiary">Version history</p>
+          <ul className="m-0 flex list-none flex-col gap-1 p-0 text-[13px] text-text-secondary">
+            {versionHistory.map((v) => (
+              <li key={v.versionNumber}>
+                Version {v.versionNumber} · {fmtMinutes(v.totalPlannedMinutes)}h planned · {v.supersededAt ? "superseded" : "current"}
+                {v.note ? ` — "${v.note}"` : ""}
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
     </div>
   );

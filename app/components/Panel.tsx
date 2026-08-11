@@ -1,6 +1,6 @@
 import type { ElementType, ReactNode } from "react";
 
-/** A registration-marked, square-cornered container — the base card shape everywhere in Trace's blueprint system. */
+/** The base card shape everywhere in Trace: hairline border, 16px radius, no shadow (inner cards never shadow — only the screen shell does). */
 export function Panel({
   as: Tag = "div",
   className = "",
@@ -10,13 +10,5 @@ export function Panel({
   className?: string;
   children: ReactNode;
 }) {
-  return (
-    <Tag className={`relative border border-steel/40 bg-white ${className}`}>
-      <span className="corner-mark corner-mark-tl" />
-      <span className="corner-mark corner-mark-tr" />
-      <span className="corner-mark corner-mark-bl" />
-      <span className="corner-mark corner-mark-br" />
-      {children}
-    </Tag>
-  );
+  return <Tag className={`rounded-[16px] border border-black/[.06] bg-surface-sunken ${className}`}>{children}</Tag>;
 }

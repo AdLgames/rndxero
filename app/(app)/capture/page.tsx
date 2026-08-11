@@ -5,7 +5,7 @@ import { getCurrentUser, SESSION_COOKIE_NAME } from "@/lib/auth/session";
 import { listAccessibleProjectIds } from "@/lib/authz/service";
 import { getIsoWeekKey, getWeekBoundaries } from "@/lib/capture/week-key";
 import { getOpenUncertainties, getPrefillMinutes } from "@/lib/capture/repository";
-import { eyebrow } from "@/app/components/ui";
+import { badgeAccent } from "@/app/components/ui";
 import { CaptureClient, type ProjectCaptureData } from "./CaptureClient";
 
 const WEEK_KEY_PATTERN = /^\d{4}-W\d{2}$/;
@@ -23,7 +23,7 @@ export default async function CapturePage({
 
   const params = await searchParams;
   const weekKey = params.week && WEEK_KEY_PATTERN.test(params.week) ? params.week : getIsoWeekKey(new Date());
-  const { start } = getWeekBoundaries(weekKey);
+  const { start, end } = getWeekBoundaries(weekKey);
   const previousWeekKey = getIsoWeekKey(new Date(start.getTime() - 24 * 60 * 60 * 1000));
 
   // Every company the user belongs to, not just one — someone can be a
@@ -43,7 +43,7 @@ export default async function CapturePage({
 
   const projects: ProjectCaptureData[] = await Promise.all(
     activeProjects.map(async (project) => {
-      const [uncertainties, prefillMinutes, existingSubmission] = await Promise.all([
+      const [uncertainties, prefillMinutes, existingSubmission, repoLink] = await Promise.all([
         getOpenUncertainties(prisma, project.id),
         getPrefillMinutes(prisma, { projectId: project.id, userId: currentUser.id, previousWeekKey }),
         prisma.weeklySubmission.findUnique({
@@ -51,7 +51,15 @@ export default async function CapturePage({
             projectId_userId_weekKey: { projectId: project.id, userId: currentUser.id, weekKey },
           },
         }),
+        prisma.githubRepoLink.findFirst({ where: { projectId: project.id } }),
       ]);
+
+      // Commit-signal footer: how many suggestions this repo's webhook produced this week.
+      const commitCount = repoLink
+        ? await prisma.suggestion.count({
+            where: { repoLinkId: repoLink.id, createdAt: { gte: start, lt: end } },
+          })
+        : 0;
 
       return {
         projectId: project.id,
@@ -62,20 +70,21 @@ export default async function CapturePage({
         existing: existingSubmission
           ? { minutes: existingSubmission.minutes, basis: existingSubmission.basis, locked: existingSubmission.lockedAt !== null }
           : null,
+        commitSignal: repoLink && commitCount > 0 ? { repoFullName: repoLink.repoFullName, count: commitCount } : null,
       };
     })
   );
 
   return (
-    <div className="mx-auto w-full max-w-2xl px-6 py-16">
-      <p className={eyebrow}>02 · Capture</p>
-      <h1 className="mt-1 text-2xl font-bold text-foreground">This week&apos;s R&amp;D time</h1>
-      <p className="mt-2 text-sm text-foreground/60">
-        Week {weekKey}. Confirm what you worked on — takes under a minute.
-      </p>
-      <div className="mt-6">
-        <CaptureClient weekKey={weekKey} projects={projects} />
+    <div className="mx-auto max-w-[800px] px-12 py-13">
+      <div className="mb-2 flex items-center gap-3">
+        <h2 className="m-0 text-[30px] font-[640] tracking-[-0.028em] text-text">This week</h2>
+        <span className={badgeAccent}>{weekKey}</span>
       </div>
+      <p className="m-0 mb-[34px] text-[15px] leading-[1.5] text-text-secondary">
+        Confirm what you worked on. Under a minute — refine hours any time before the week is locked.
+      </p>
+      <CaptureClient weekKey={weekKey} projects={projects} />
     </div>
   );
 }

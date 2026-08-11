@@ -1,8 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Panel } from "@/app/components/Panel";
-import { buttonPrimary, buttonSecondary, eyebrow } from "@/app/components/ui";
+import { badgeNeutral, buttonPrimary, eyebrow, input } from "@/app/components/ui";
 
 export interface ProjectGithubData {
   projectId: string;
@@ -15,7 +14,15 @@ export interface ProjectGithubData {
   uncertainties: Array<{ id: string; title: string }>;
 }
 
-function RepoLinkForm({ project, webhookUrl, onLinked }: { project: ProjectGithubData; webhookUrl: string; onLinked: (link: { id: string; repoFullName: string; webhookSecret: string }) => void }) {
+function RepoLinkForm({
+  project,
+  webhookUrl,
+  onLinked,
+}: {
+  project: ProjectGithubData;
+  webhookUrl: string;
+  onLinked: (link: { id: string; repoFullName: string; webhookSecret: string }) => void;
+}) {
   const [repoFullName, setRepoFullName] = useState("");
   const [status, setStatus] = useState<"idle" | "saving" | "error">("idle");
   const [error, setError] = useState("");
@@ -43,20 +50,14 @@ function RepoLinkForm({ project, webhookUrl, onLinked }: { project: ProjectGithu
   return (
     <div className="flex flex-col gap-2">
       <div className="flex gap-2">
-        <input
-          type="text"
-          placeholder="owner/repo"
-          value={repoFullName}
-          onChange={(e) => setRepoFullName(e.target.value)}
-          className="min-w-0 flex-1 border border-steel/40 bg-white px-2 py-1 text-sm text-foreground"
-        />
-        <button type="button" disabled={status === "saving"} onClick={submit} className={`${buttonPrimary} px-3 py-1 text-xs`}>
-          Link repo
+        <input type="text" placeholder="owner/repo" value={repoFullName} onChange={(e) => setRepoFullName(e.target.value)} className={`${input} flex-1`} />
+        <button type="button" disabled={status === "saving"} onClick={submit} className={buttonPrimary}>
+          {status === "saving" ? "Linking…" : "Link repo"}
         </button>
       </div>
-      {status === "error" && <p className="text-xs text-red-700">{error}</p>}
-      <p className="text-xs text-foreground/50">
-        Webhook URL for GitHub&apos;s repo settings: <code className="break-all">{webhookUrl}</code>
+      {status === "error" && <p className="m-0 text-[13px] text-red-700">{error}</p>}
+      <p className="m-0 text-[12.5px] text-text-quaternary">
+        Webhook URL for GitHub&apos;s repo settings: <code className="break-all text-text-tertiary">{webhookUrl}</code>
       </p>
     </div>
   );
@@ -114,15 +115,15 @@ function SuggestionRow({
   }
 
   return (
-    <Panel as="li" className="p-3 text-sm">
-      <p className="text-foreground">{suggestion.summary}</p>
-      <p className="mt-0.5 text-xs text-foreground/50">{suggestion.externalRef}</p>
+    <li className="rounded-[14px] border border-black/[.06] bg-white p-[14px]">
+      <p className="m-0 text-[13.5px] text-text">{suggestion.summary}</p>
+      <p className="m-0 mt-[3px] text-[12px] text-text-quaternary">{suggestion.externalRef}</p>
 
-      <div className="mt-2 flex flex-wrap items-center gap-2">
+      <div className="mt-[10px] flex flex-wrap items-center gap-2">
         <select
           value={uncertaintyId}
           onChange={(e) => setUncertaintyId(e.target.value)}
-          className="border border-steel/40 bg-white px-2 py-1 text-xs text-foreground"
+          className="rounded-[8px] border border-black/[.11] bg-white px-2 py-[6px] text-[12.5px] text-text outline-none"
         >
           {project.uncertainties.length === 0 && <option value="">No open uncertainties</option>}
           {project.uncertainties.map((u) => (
@@ -135,17 +136,17 @@ function SuggestionRow({
           type="text"
           value={weekKey}
           onChange={(e) => setWeekKey(e.target.value)}
-          className="w-24 border border-steel/40 bg-white px-2 py-1 text-xs text-foreground"
+          className="w-[92px] rounded-[8px] border border-black/[.11] bg-white px-2 py-[6px] text-[12.5px] text-text outline-none"
         />
-        <button type="button" disabled={busy || !uncertaintyId} onClick={confirm} className={`${buttonPrimary} px-2 py-1 text-xs`}>
+        <button type="button" disabled={busy || !uncertaintyId} onClick={confirm} className="rounded-[8px] bg-accent px-3 py-[6px] text-[12.5px] font-[590] text-white transition-colors duration-150 hover:bg-accent-hover disabled:opacity-50">
           Confirm
         </button>
-        <button type="button" disabled={busy} onClick={dismiss} className={`${buttonSecondary} px-2 py-1 text-xs`}>
+        <button type="button" disabled={busy} onClick={dismiss} className="rounded-[8px] border border-black/[.11] bg-white px-3 py-[6px] text-[12.5px] font-[590] text-text transition-colors duration-150 hover:bg-[#FAFAFA] disabled:opacity-50">
           Dismiss
         </button>
       </div>
-      {error && <p className="mt-1 text-xs text-red-700">{error}</p>}
-    </Panel>
+      {error && <p className="m-0 mt-[6px] text-[12.5px] text-red-700">{error}</p>}
+    </li>
   );
 }
 
@@ -171,15 +172,15 @@ export function GithubClient({
   }
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-[14px]">
       {projects.map((project) => (
-        <Panel key={project.projectId} as="section" className="p-4">
-          <h2 className="text-base font-bold text-foreground">{project.projectName}</h2>
+        <section key={project.projectId} className="rounded-[16px] border border-black/[.06] bg-surface-sunken p-6">
+          <h4 className="m-0 mb-4 text-[16.5px] font-[600] tracking-[-0.02em] text-text">{project.projectName}</h4>
 
           {project.canManageRepos && (
-            <div className="mt-3">
+            <div>
               {project.repoLinks.length > 0 && (
-                <ul className="mb-2 flex flex-col gap-1 text-xs text-foreground/60">
+                <ul className="m-0 mb-3 flex list-none flex-col gap-1 p-0 text-[12.5px] text-text-tertiary">
                   {project.repoLinks.map((link) => (
                     <li key={link.id}>
                       {link.repoFullName} — secret: <code className="break-all">{link.webhookSecret}</code>
@@ -192,17 +193,19 @@ export function GithubClient({
           )}
 
           {project.canReviewSuggestions && (
-            <div className="mt-4 border-t border-steel/20 pt-3">
-              <p className={eyebrow}>Pending suggestions ({project.suggestions.length})</p>
-              <ul className="mt-2 flex flex-col gap-2">
+            <div className="mt-5 border-t border-black/[.055] pt-4">
+              <p className={eyebrow}>
+                Pending suggestions <span className={`${badgeNeutral} ml-1`}>{project.suggestions.length}</span>
+              </p>
+              <ul className="m-0 mt-3 flex list-none flex-col gap-2 p-0">
                 {project.suggestions.map((s) => (
                   <SuggestionRow key={s.id} suggestion={s} project={project} currentWeekKey={currentWeekKey} onResolved={(id) => resolveSuggestion(project.projectId, id)} />
                 ))}
-                {project.suggestions.length === 0 && <li className="text-xs text-foreground/50">Nothing pending.</li>}
+                {project.suggestions.length === 0 && <li className="text-[13px] text-text-quaternary">Nothing pending.</li>}
               </ul>
             </div>
           )}
-        </Panel>
+        </section>
       ))}
     </div>
   );

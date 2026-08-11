@@ -1,13 +1,23 @@
+import Link from "next/link";
 import { cookies } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { getCurrentUser, SESSION_COOKIE_NAME } from "@/lib/auth/session";
-import { AuthorizationError, authorize, canDo } from "@/lib/authz/service";
+import { AuthorizationError, authorize, canDo, listAccessibleProjectIds } from "@/lib/authz/service";
+import { getIsoWeekKey, shiftWeekKey } from "@/lib/capture/week-key";
 import { computePlannedCostMinorUnits, getPlanVsActual, getCurrentPlanVersion, listPlanVersions } from "@/lib/plan/repository";
-import { eyebrow } from "@/app/components/ui";
-import { PlannerClient, type UncertaintyOption, type MemberOption, type CurrentPlanData, type VarianceRow } from "./PlannerClient";
+import { PlannerClient, type UncertaintyOption, type CurrentPlanData, type VarianceRow } from "./PlannerClient";
 
-export default async function PlannerPage({ params }: { params: Promise<{ projectId: string }> }) {
+const WEEK_SPAN = 5;
+const WEEK_KEY_PATTERN = /^\d{4}-W\d{2}$/;
+
+export default async function PlannerPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ projectId: string }>;
+  searchParams: Promise<{ from?: string }>;
+}) {
   const { projectId } = await params;
 
   const cookieStore = await cookies();
@@ -24,30 +34,43 @@ export default async function PlannerPage({ params }: { params: Promise<{ projec
   } catch (error) {
     if (error instanceof AuthorizationError) {
       return (
-        <div className="mx-auto w-full max-w-2xl px-6 py-16">
-          <p className="text-sm text-foreground/60">You don&apos;t have access to this project&apos;s plan.</p>
+        <div className="px-12 py-11">
+          <p className="text-[15px] text-text-secondary">You don&apos;t have access to this project&apos;s plan.</p>
         </div>
       );
     }
     throw error;
   }
 
-  const canWrite = await canDo(prisma, {
-    userId: currentUser.id,
-    companyId: project.companyId,
-    projectId,
-    action: "plan:write",
-  });
-  const canViewCosts = await canDo(prisma, {
-    userId: currentUser.id,
-    companyId: project.companyId,
-    projectId,
-    action: "cost:read",
-  });
+  const canWrite = await canDo(prisma, { userId: currentUser.id, companyId: project.companyId, projectId, action: "plan:write" });
+  const canViewCosts = await canDo(prisma, { userId: currentUser.id, companyId: project.companyId, projectId, action: "cost:read" });
 
-  const [uncertainties, members, currentPlan, versions] = await Promise.all([
+  const currentWeekKey = getIsoWeekKey(new Date());
+  const searchParamsResolved = await searchParams;
+  const fromWeekKey = searchParamsResolved.from && WEEK_KEY_PATTERN.test(searchParamsResolved.from) ? searchParamsResolved.from : currentWeekKey;
+  const weekKeys = Array.from({ length: WEEK_SPAN }, (_, i) => shiftWeekKey(fromWeekKey, i));
+  const prevFrom = shiftWeekKey(fromWeekKey, -WEEK_SPAN);
+  const nextFrom = shiftWeekKey(fromWeekKey, WEEK_SPAN);
+
+  const accessibleProjectIds = await listAccessibleProjectIds(prisma, { userId: currentUser.id, companyId: project.companyId });
+  const siblingProjects = await prisma.project.findMany({
+    where: { id: { in: accessibleProjectIds }, companyId: project.companyId },
+    orderBy: { name: "asc" },
+    select: { id: true, name: true },
+  });
+  const readableSiblings = (
+    await Promise.all(
+      siblingProjects.map(async (p) => ({
+        p,
+        readable: await canDo(prisma, { userId: currentUser.id, companyId: project.companyId, projectId: p.id, action: "plan:read" }),
+      }))
+    )
+  )
+    .filter((s) => s.readable)
+    .map((s) => s.p);
+
+  const [uncertainties, currentPlan, versions] = await Promise.all([
     prisma.uncertainty.findMany({ where: { projectId }, orderBy: { createdAt: "asc" } }),
-    prisma.projectMember.findMany({ where: { projectId }, include: { user: { select: { id: true, name: true } } } }),
     getCurrentPlanVersion(prisma, projectId),
     listPlanVersions(prisma, projectId),
   ]);
@@ -62,12 +85,13 @@ export default async function PlannerPage({ params }: { params: Promise<{ projec
       weeks: await getPlanVsActual(prisma, { projectId, uncertaintyId: u.id }),
     }))
   );
-  const varianceRows: VarianceRow[] = varianceByUncertainty.flatMap((u) =>
-    u.weeks.map((w) => ({ uncertaintyTitle: u.uncertaintyTitle, ...w }))
-  );
+  const varianceRows: VarianceRow[] = varianceByUncertainty.flatMap((u) => u.weeks.map((w) => ({ uncertaintyTitle: u.uncertaintyTitle, ...w })));
+  const actualMinutesByWeek: Record<string, number> = {};
+  for (const row of varianceRows) {
+    actualMinutesByWeek[row.weekKey] = (actualMinutesByWeek[row.weekKey] ?? 0) + row.actualMinutes;
+  }
 
   const uncertaintyOptions: UncertaintyOption[] = uncertainties.map((u) => ({ id: u.id, title: u.title }));
-  const memberOptions: MemberOption[] = members.map((m) => ({ userId: m.user.id, name: m.user.name }));
 
   const currentPlanData: CurrentPlanData | null = currentPlan
     ? {
@@ -84,35 +108,64 @@ export default async function PlannerPage({ params }: { params: Promise<{ projec
     : null;
 
   return (
-    <div className="mx-auto w-full max-w-3xl px-6 py-16">
-      <p className={eyebrow}>04 · Planner — {project.name}</p>
-      <h1 className="mt-1 text-2xl font-bold text-foreground">Propose hours per uncertainty</h1>
-      <p className="mt-2 text-sm text-foreground/60">
-        This product records proposed hours and what was actually logged. It doesn&apos;t decide what qualifies as
-        R&amp;D or calculate relief.
-      </p>
-
-      <div className="mt-6">
-        <PlannerClient
-          companyId={project.companyId}
-          projectId={projectId}
-          canWrite={canWrite}
-          canViewCosts={canViewCosts}
-          uncertainties={uncertaintyOptions}
-          members={memberOptions}
-          currentPlan={currentPlanData}
-          plannedCostMinorUnits={plannedCostMinorUnits}
-          variance={varianceRows}
-          versionCount={versions.length}
-          versionHistory={versions.map((v) => ({
-            versionNumber: v.versionNumber,
-            note: v.note,
-            createdAt: v.createdAt.toISOString(),
-            supersededAt: v.supersededAt ? v.supersededAt.toISOString() : null,
-            totalPlannedMinutes: v.plannedAllocations.reduce((sum, a) => sum + a.plannedMinutes, 0),
-          }))}
-        />
+    <div className="px-12 py-11">
+      <div className="mb-7 flex items-end justify-between gap-6">
+        <div>
+          <h2 className="m-0 text-[30px] font-[640] tracking-[-0.028em] text-text">{project.name}</h2>
+          <p className="m-0 mt-[7px] max-w-[58ch] text-[15px] leading-[1.5] text-text-secondary">
+            Propose hours per uncertainty, per week. Trace compares them to what gets logged.
+          </p>
+        </div>
+        {siblingProjects.length > 1 && (
+          <div className="inline-flex shrink-0 items-center rounded-[10px] bg-control-track p-[3px]">
+            {readableSiblings.map((p) => (
+              <Link
+                key={p.id}
+                href={`/planner/${p.id}`}
+                className={`rounded-[8px] px-[15px] py-[7px] text-[13px] transition-all duration-150 ease-out ${
+                  p.id === projectId ? "bg-white font-[590] text-text shadow-[0_1px_3px_rgba(0,0,0,.09)]" : "font-[500] text-text-secondary hover:text-text"
+                }`}
+              >
+                {p.name}
+              </Link>
+            ))}
+          </div>
+        )}
       </div>
+
+      <div className="mb-5 flex items-center justify-between">
+        <div className="inline-flex items-center rounded-[10px] bg-control-track p-[3px]">
+          <Link href={`/planner/${projectId}?from=${prevFrom}`} aria-label="Previous weeks" className="rounded-[8px] px-3 py-[7px] text-[13px] font-[500] text-text-secondary transition-colors duration-150 hover:text-text">
+            ←
+          </Link>
+          <span className="px-3 py-[7px] text-[13px] font-[590] text-text">
+            {weekKeys[0]} – {weekKeys[weekKeys.length - 1]}
+          </span>
+          <Link href={`/planner/${projectId}?from=${nextFrom}`} aria-label="Next weeks" className="rounded-[8px] px-3 py-[7px] text-[13px] font-[500] text-text-secondary transition-colors duration-150 hover:text-text">
+            →
+          </Link>
+        </div>
+      </div>
+
+      <PlannerClient
+        companyId={project.companyId}
+        projectId={projectId}
+        canWrite={canWrite}
+        canViewCosts={canViewCosts}
+        uncertainties={uncertaintyOptions}
+        currentPlan={currentPlanData}
+        plannedCostMinorUnits={plannedCostMinorUnits}
+        weekKeys={weekKeys}
+        currentWeekKey={currentWeekKey}
+        actualMinutesByWeek={actualMinutesByWeek}
+        versionHistory={versions.map((v) => ({
+          versionNumber: v.versionNumber,
+          note: v.note,
+          createdAt: v.createdAt.toISOString(),
+          supersededAt: v.supersededAt ? v.supersededAt.toISOString() : null,
+          totalPlannedMinutes: v.plannedAllocations.reduce((sum, a) => sum + a.plannedMinutes, 0),
+        }))}
+      />
     </div>
   );
 }

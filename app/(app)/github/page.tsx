@@ -4,7 +4,6 @@ import { prisma } from "@/lib/db";
 import { getCurrentUser, SESSION_COOKIE_NAME } from "@/lib/auth/session";
 import { canDo, listAccessibleProjectIds } from "@/lib/authz/service";
 import { getIsoWeekKey } from "@/lib/capture/week-key";
-import { eyebrow } from "@/app/components/ui";
 import { GithubClient, type ProjectGithubData } from "./GithubClient";
 
 export default async function GithubPage() {
@@ -60,20 +59,17 @@ export default async function GithubPage() {
   const currentWeekKey = getIsoWeekKey(new Date());
 
   return (
-    <div className="mx-auto w-full max-w-3xl px-6 py-16">
-      <p className={eyebrow}>GitHub</p>
-      <h1 className="mt-1 text-2xl font-bold text-foreground">Suggestions, never evidence on their own</h1>
-      <p className="mt-2 text-sm text-foreground/60">
+    <div className="mx-auto max-w-[800px] px-12 py-13">
+      <h2 className="m-0 text-[30px] font-[640] tracking-[-0.028em] text-text">GitHub</h2>
+      <p className="m-0 mt-[7px] mb-8 text-[15px] leading-[1.5] text-text-secondary">
         Commits and pull requests never become evidence on their own — link a repo, and anything it sends over shows
         up here as a suggestion until a human confirms it against a specific uncertainty.
       </p>
 
-      <div className="mt-6">
-        <GithubClient projects={projects} webhookUrl={webhookUrl} currentWeekKey={currentWeekKey} />
-      </div>
+      <GithubClient projects={projects} webhookUrl={webhookUrl} currentWeekKey={currentWeekKey} />
 
       {projects.length === 0 && (
-        <p className="mt-4 text-sm text-foreground/50">No projects you can manage GitHub links or suggestions for.</p>
+        <p className="mt-4 text-[14px] text-text-secondary">No projects you can manage GitHub links or suggestions for.</p>
       )}
     </div>
   );

@@ -1,11 +1,9 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import Link from "next/link";
 import type { UncertaintyNoteType } from "@/lib/generated/prisma/client";
-import { getIsoWeekKey, shiftWeekKey } from "@/lib/capture/week-key";
+import { getIsoWeekKey } from "@/lib/capture/week-key";
 import type { BoardData, BoardNote } from "@/lib/board/repository";
-import { badgeSage, chip, eyebrow } from "@/app/components/ui";
 
 export interface LaneUncertaintyOption {
   id: string;
@@ -13,19 +11,18 @@ export interface LaneUncertaintyOption {
 }
 
 /**
- * Only steel + sage exist in this palette, so five progress states are
- * told apart by weight/texture, not five different hues: no progress is
- * a bare outline, tried-something a light steel fill, blocker a solid
- * steel fill, hit-a-wall a diagonal steel hatch (the strongest visual
- * treatment — the best evidence available, not a warning sign), solved
- * it sage, matching sage's reserved role as the "solved" highlight.
+ * One accent, five steps — the board's progress ramp encodes state as
+ * opacity rather than a second hue (design handoff, "Board" section).
+ * Colour alone isn't enough for colour-blind users or screen readers, so
+ * every bar also carries a full text label surfaced as both a visible
+ * tooltip and an aria-label.
  */
-const TYPE_STYLE: Record<UncertaintyNoteType, { swatch: string; label: string }> = {
-  NO_PROGRESS: { swatch: "border border-steel/40", label: "No progress" },
-  ATTEMPT: { swatch: "bg-steel/40", label: "Tried something" },
-  BLOCKER: { swatch: "bg-steel", label: "Blocker" },
-  FAILED_ATTEMPT: { swatch: "bg-steel bg-[repeating-linear-gradient(45deg,transparent,transparent_2px,rgba(255,255,255,0.6)_2px,rgba(255,255,255,0.6)_3px)]", label: "Hit a wall" },
-  RESOLUTION: { swatch: "bg-sage", label: "Solved it" },
+const TYPE_STYLE: Record<UncertaintyNoteType, { ramp: string; label: string }> = {
+  NO_PROGRESS: { ramp: "#D8D8DC", label: "No progress" },
+  ATTEMPT: { ramp: "rgba(14,122,88,.38)", label: "Tried something" },
+  BLOCKER: { ramp: "rgba(14,122,88,.58)", label: "Blocker" },
+  FAILED_ATTEMPT: { ramp: "rgba(14,122,88,.78)", label: "Hit a wall" },
+  RESOLUTION: { ramp: "#0E7A58", label: "Solved it" },
 };
 
 const TYPE_PRIORITY: UncertaintyNoteType[] = ["FAILED_ATTEMPT", "BLOCKER", "RESOLUTION", "ATTEMPT", "NO_PROGRESS"];
@@ -39,7 +36,13 @@ function dominantType(notes: BoardNote[]): UncertaintyNoteType | null {
 
 function hoursLabel(minutes: number): string {
   const h = minutes / 60;
-  return (Number.isInteger(h) ? h.toString() : h.toFixed(1)) + "h";
+  return Number.isInteger(h) ? h.toString() : h.toFixed(1);
+}
+
+/** 34h fills the 104px plot; anything above clamps to full height rather than overflowing. */
+function barHeight(minutes: number): number {
+  const hours = Math.min(minutes / 60, 34);
+  return Math.round((hours / 34) * 104);
 }
 
 function NoteDetail({
@@ -84,19 +87,19 @@ function NoteDetail({
   }
 
   return (
-    <div className="border border-steel bg-white p-3 text-sm shadow-lg">
-      <p className={eyebrow}>
+    <div className="rounded-[10px] border border-black/[.06] bg-surface-sunken p-[10px] text-left">
+      <p className="m-0 text-[11px] font-[590] text-text-tertiary">
         {TYPE_STYLE[note.type].label} {note.locked ? "· sealed" : ""}
       </p>
-      <p className="mt-1 text-foreground/60">{note.uncertaintyTitle}</p>
-      <p className="mt-1 text-foreground">{note.bodyPreview}</p>
+      <p className="m-0 mt-[3px] text-[12.5px] text-text-secondary">{note.uncertaintyTitle}</p>
+      <p className="m-0 mt-1 text-[13px] leading-[1.4] text-text">{note.bodyPreview}</p>
 
       {canRemap && !note.locked && (
-        <div className="mt-2 flex items-center gap-2 border-t border-steel/20 pt-2">
+        <div className="mt-2 flex items-center gap-[6px] border-t border-black/[.06] pt-2">
           <select
             value={target}
             onChange={(e) => setTarget(e.target.value)}
-            className="border border-steel/40 bg-white px-2 py-1 text-xs text-foreground"
+            className="min-w-0 flex-1 rounded-[7px] border border-black/[.11] bg-white px-[7px] py-1 text-[12px] text-text outline-none"
           >
             {uncertainties.map((u) => (
               <option key={u.id} value={u.id}>
@@ -108,24 +111,23 @@ function NoteDetail({
             type="button"
             disabled={busy || target === note.uncertaintyId}
             onClick={move}
-            className="border border-steel bg-steel px-2 py-1 text-xs font-semibold text-white disabled:opacity-50"
+            className="shrink-0 rounded-[7px] bg-accent px-[9px] py-1 text-[12px] font-[590] text-white transition-colors duration-150 hover:bg-accent-hover disabled:opacity-50"
           >
-            {busy ? "Moving…" : "Move here"}
+            {busy ? "Moving…" : "Move"}
           </button>
         </div>
       )}
-      {error && <p className="mt-1 text-xs text-red-700">{error}</p>}
+      {error && <p className="m-0 mt-1 text-[12px] text-red-700">{error}</p>}
     </div>
   );
 }
 
-function WeekCell({
+function WeekColumn({
   weekKey,
   isCurrentWeek,
   plannedMinutes,
   actualMinutes,
   notes,
-  maxMinutes,
   companyId,
   projectId,
   canRemap,
@@ -137,80 +139,69 @@ function WeekCell({
   plannedMinutes: number;
   actualMinutes: number;
   notes: BoardNote[];
-  maxMinutes: number;
   companyId: string;
   projectId: string;
   canRemap: boolean;
   uncertainties: LaneUncertaintyOption[];
   onRemapped: () => void;
 }) {
-  const [openNoteId, setOpenNoteId] = useState<string | null>(null);
-  const isEmpty = plannedMinutes === 0 && actualMinutes === 0 && notes.length === 0;
-  const anyLocked = notes.some((n) => n.locked);
-  const scale = (minutes: number) => (maxMinutes === 0 ? 0 : Math.max(2, Math.round((minutes / maxMinutes) * 36)));
-  const actualFill = dominantType(notes);
-
-  const visibleNotes = notes.slice(0, 3);
-  const overflowCount = notes.length - visibleNotes.length;
-  const openNote = notes.find((n) => n.id === openNoteId) ?? null;
+  const [open, setOpen] = useState(false);
+  const dominant = dominantType(notes);
+  const stateLabel = dominant ? TYPE_STYLE[dominant].label : "No progress";
+  const actualColor = dominant ? TYPE_STYLE[dominant].ramp : TYPE_STYLE.NO_PROGRESS.ramp;
+  const hasNotes = notes.length > 0;
+  const label = `${weekKey}: ${hoursLabel(plannedMinutes)}h planned, ${hoursLabel(actualMinutes)}h logged, ${stateLabel}`;
 
   return (
     <div
-      className={`relative w-[92px] shrink-0 border p-1 ${
-        anyLocked
-          ? "border-sage bg-sage/5"
-          : isCurrentWeek
-            ? "border-sage/60 bg-sage/5"
-            : isEmpty
-              ? "border-dashed border-steel/25"
-              : "border-steel/25"
+      className={`group relative flex w-[26px] shrink-0 flex-col items-center gap-2 ${
+        isCurrentWeek ? "-my-[6px] rounded-[10px] bg-accent-wash py-[6px]" : ""
       }`}
     >
-      {!isEmpty && (
-        <div className="relative h-10 w-full">
-          <div
-            className="absolute bottom-0 left-0 w-3 border border-dashed border-steel/50"
-            style={{ height: scale(plannedMinutes) }}
-            title={`Planned: ${hoursLabel(plannedMinutes)}`}
-          />
-          <div
-            className={`absolute bottom-0 left-4 w-3 ${actualFill ? TYPE_STYLE[actualFill].swatch : "bg-steel/60"}`}
-            style={{ height: scale(actualMinutes) }}
-            title={`Actual: ${hoursLabel(actualMinutes)}`}
-          />
-        </div>
-      )}
+      <button
+        type="button"
+        onClick={() => hasNotes && setOpen((o) => !o)}
+        aria-label={label}
+        className="relative h-[104px] w-full cursor-default rounded-[4px] outline-none focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2"
+        style={{ cursor: hasNotes ? "pointer" : "default" }}
+      >
+        <span
+          className="absolute bottom-0 left-1/2 w-[14px] -translate-x-1/2 rounded-[7px] bg-track"
+          style={{ height: barHeight(plannedMinutes) }}
+        />
+        <span
+          className="absolute bottom-0 left-1/2 w-[14px] -translate-x-1/2 rounded-[7px]"
+          style={{ height: barHeight(actualMinutes), background: actualColor }}
+        />
+      </button>
 
-      {notes.length > 0 && (
-        <div className="mt-1 flex flex-wrap gap-0.5">
-          {visibleNotes.map((note) => (
-            <button
-              key={note.id}
-              type="button"
-              onClick={() => setOpenNoteId(openNoteId === note.id ? null : note.id)}
-              className={`h-3 w-3 ${TYPE_STYLE[note.type].swatch} ${note.locked ? "ring-1 ring-sage-dark" : ""}`}
-              title={TYPE_STYLE[note.type].label}
-            />
-          ))}
-          {overflowCount > 0 && <span className="text-[10px] leading-3 text-foreground/50">+{overflowCount}</span>}
-        </div>
-      )}
+      <span className={`text-[11px] ${isCurrentWeek ? "font-[590] text-accent" : "text-text-quaternary"}`}>{weekKey.slice(6)}</span>
 
-      <p className={`mt-0.5 text-[10px] ${isCurrentWeek ? "font-bold text-sage-dark" : "text-foreground/40"}`}>{weekKey.slice(6)}</p>
+      <div
+        role="tooltip"
+        className="pointer-events-none absolute bottom-[calc(100%+8px)] left-1/2 z-20 -translate-x-1/2 whitespace-nowrap rounded-[6px] bg-text px-[9px] py-[5px] text-[11px] text-white opacity-0 transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100"
+      >
+        {label}
+      </div>
 
-      {openNote && (
-        <div className="absolute left-0 top-full z-10 mt-1 w-56">
-          <NoteDetail
-            note={openNote}
-            companyId={companyId}
-            projectId={projectId}
-            canRemap={canRemap}
-            uncertainties={uncertainties}
-            onRemapped={() => {
-              setOpenNoteId(null);
-              onRemapped();
-            }}
-          />
+      {open && hasNotes && (
+        <div className="absolute left-1/2 top-[calc(100%+8px)] z-30 w-60 -translate-x-1/2">
+          <div className="flex flex-col gap-2 rounded-[12px] border border-black/[.06] bg-white p-2 shadow-[0_4px_16px_rgba(0,0,0,.14)]">
+            {notes.map((note) => (
+              <NoteDetail
+                key={note.id}
+                note={note}
+                companyId={companyId}
+                projectId={projectId}
+                canRemap={canRemap}
+                uncertainties={uncertainties}
+                onRemapped={() => {
+                  setOpen(false);
+                  onRemapped();
+                }}
+              />
+            ))}
+          </div>
         </div>
       )}
     </div>
@@ -221,7 +212,6 @@ function Lane({
   lane,
   weekKeys,
   currentWeekKey,
-  maxMinutes,
   companyId,
   uncertainties,
   canRemap,
@@ -230,55 +220,40 @@ function Lane({
   lane: BoardData["lanes"][number];
   weekKeys: string[];
   currentWeekKey: string;
-  maxMinutes: number;
   companyId: string;
   uncertainties: LaneUncertaintyOption[];
   canRemap: boolean;
   onRemapped: () => void;
 }) {
-  const [collapsed, setCollapsed] = useState(false);
   const totalPlanned = Object.values(lane.plannedMinutesByWeek).reduce((a, b) => a + b, 0);
   const totalActual = Object.values(lane.actualMinutesByWeek).reduce((a, b) => a + b, 0);
-  const startDate = new Date(lane.startDate);
-  const endDate = lane.endDate ? new Date(lane.endDate) : null;
 
   return (
-    <div className="border border-steel/30 bg-white p-2">
-      <div className="flex items-center justify-between gap-2">
-        <button type="button" onClick={() => setCollapsed((c) => !c)} className="flex items-center gap-2 text-left text-sm font-bold text-foreground">
-          <span className="text-steel">{collapsed ? "▸" : "▾"}</span>
-          {lane.projectName}
-        </button>
-        <span className="text-xs text-foreground/50">
-          {hoursLabel(totalActual)} logged / {hoursLabel(totalPlanned)} planned
+    <div className="rounded-[16px] border border-black/[.06] bg-surface-sunken px-6 pb-6 pt-[22px]">
+      <div className="mb-6 flex items-baseline justify-between">
+        <h4 className="m-0 text-[15.5px] font-[600] tracking-[-0.02em] text-text">{lane.projectName}</h4>
+        <span className="text-[13px] text-text-tertiary">
+          {hoursLabel(totalActual)}h logged · <span className="text-text">{hoursLabel(totalPlanned)}h</span> planned
         </span>
       </div>
 
-      {collapsed ? (
-        <p className="mt-1 pl-5 text-xs text-foreground/50">
-          {startDate.toLocaleDateString("en-GB")}
-          {endDate ? ` – ${endDate.toLocaleDateString("en-GB")}` : " – ongoing"}
-        </p>
-      ) : (
-        <div className="mt-2 flex gap-1 overflow-x-auto pb-2">
-          {weekKeys.map((weekKey) => (
-            <WeekCell
-              key={weekKey}
-              weekKey={weekKey}
-              isCurrentWeek={weekKey === currentWeekKey}
-              plannedMinutes={lane.plannedMinutesByWeek[weekKey] ?? 0}
-              actualMinutes={lane.actualMinutesByWeek[weekKey] ?? 0}
-              notes={lane.notesByWeek[weekKey] ?? []}
-              maxMinutes={maxMinutes}
-              companyId={companyId}
-              projectId={lane.projectId}
-              canRemap={canRemap}
-              uncertainties={uncertainties}
-              onRemapped={onRemapped}
-            />
-          ))}
-        </div>
-      )}
+      <div className="flex items-end gap-[6px]">
+        {weekKeys.map((weekKey) => (
+          <WeekColumn
+            key={weekKey}
+            weekKey={weekKey}
+            isCurrentWeek={weekKey === currentWeekKey}
+            plannedMinutes={lane.plannedMinutesByWeek[weekKey] ?? 0}
+            actualMinutes={lane.actualMinutesByWeek[weekKey] ?? 0}
+            notes={lane.notesByWeek[weekKey] ?? []}
+            companyId={companyId}
+            projectId={lane.projectId}
+            canRemap={canRemap}
+            uncertainties={uncertainties}
+            onRemapped={onRemapped}
+          />
+        ))}
+      </div>
     </div>
   );
 }
@@ -288,67 +263,38 @@ export function BoardClient({
   board,
   uncertaintiesByProject,
   remappableByProject,
-  fromWeekKey,
-  weekCount,
 }: {
   companyId: string;
   board: BoardData;
   uncertaintiesByProject: Record<string, LaneUncertaintyOption[]>;
   remappableByProject: Record<string, boolean>;
-  fromWeekKey: string;
-  weekCount: number;
 }) {
-  const maxMinutes = useMemo(() => {
-    let max = 0;
-    for (const lane of board.lanes) {
-      for (const v of Object.values(lane.plannedMinutesByWeek)) max = Math.max(max, v);
-      for (const v of Object.values(lane.actualMinutesByWeek)) max = Math.max(max, v);
-    }
-    return max;
-  }, [board]);
-
   const currentWeekKey = useMemo(() => getIsoWeekKey(new Date()), []);
-  const prevFrom = shiftWeekKey(fromWeekKey, -weekCount);
-  const nextFrom = shiftWeekKey(fromWeekKey, weekCount);
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex items-center justify-between text-xs">
-        <Link href={`/board?company=${companyId}&from=${prevFrom}`} className={chip}>
-          ← Previous {weekCount}
-        </Link>
-        <span className="font-semibold text-foreground/60">
-          {board.weekKeys[0]} – {board.weekKeys[board.weekKeys.length - 1]}
+    <div className="flex flex-col gap-6">
+      <div className="flex flex-wrap items-center gap-[22px] text-[12.5px] text-text-tertiary">
+        <span className="flex items-center gap-[6px]">
+          <span className="h-3 w-3 rounded-[6px] bg-track" /> Planned
         </span>
-        <Link href={`/board?company=${companyId}&from=${nextFrom}`} className={chip}>
-          Next {weekCount} →
-        </Link>
-      </div>
-
-      <div className="flex flex-wrap items-center gap-3 border border-steel/20 bg-white p-2 text-xs text-foreground/60">
-        {(Object.entries(TYPE_STYLE) as Array<[UncertaintyNoteType, (typeof TYPE_STYLE)[UncertaintyNoteType]]>).map(([type, style]) => (
-          <span key={type} className="flex items-center gap-1">
-            <span className={`h-2.5 w-2.5 ${style.swatch}`} />
-            {style.label}
+        <span className="flex items-center gap-[10px]">
+          Progress
+          <span className="flex items-center gap-[3px]">
+            {(["NO_PROGRESS", "ATTEMPT", "BLOCKER", "FAILED_ATTEMPT", "RESOLUTION"] as UncertaintyNoteType[]).map((type) => (
+              <span key={type} className="h-3 w-3 rounded-[6px]" style={{ background: TYPE_STYLE[type].ramp }} title={TYPE_STYLE[type].label} />
+            ))}
           </span>
-        ))}
-        <span className="flex items-center gap-1">
-          <span className="h-2.5 w-1.5 border border-dashed border-steel/50" /> Planned
+          none → solved
         </span>
-        <span className="flex items-center gap-1">
-          <span className="h-2.5 w-1.5 bg-steel/60" /> Actual
-        </span>
-        <span className={badgeSage}>Current week</span>
       </div>
 
-      <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-[14px]">
         {board.lanes.map((lane) => (
           <Lane
             key={lane.projectId}
             lane={lane}
             weekKeys={board.weekKeys}
             currentWeekKey={currentWeekKey}
-            maxMinutes={maxMinutes}
             companyId={companyId}
             uncertainties={uncertaintiesByProject[lane.projectId] ?? []}
             canRemap={remappableByProject[lane.projectId] ?? false}

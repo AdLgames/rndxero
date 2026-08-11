@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import type { SubmissionBasis, UncertaintyNoteType } from "@/lib/generated/prisma/client";
-import { Panel } from "@/app/components/Panel";
-import { badgeNeutral, badgeSage, buttonGhost, buttonPrimary, buttonSecondary, chip, chipActive, eyebrow, input } from "@/app/components/ui";
+import { SegmentedControl } from "@/app/components/SegmentedControl";
+import { LockIcon } from "@/app/components/icons";
+import { badgeAccent, badgeNeutral, buttonGhost, buttonPrimary, buttonSecondary, input } from "@/app/components/ui";
 
 interface AmendmentData {
   id: string;
@@ -51,16 +52,14 @@ function formatDate(iso: string): string {
   return new Date(iso).toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short" });
 }
 
-function AmendmentList({ amendments }: { amendments: AmendmentData[] }) {
-  if (amendments.length === 0) return null;
+function AmendmentNote({ amendment, deltaLabel }: { amendment: AmendmentData; deltaLabel?: string }) {
   return (
-    <ul className="mt-2 flex flex-col gap-1 border-l-2 border-sage pl-3">
-      {amendments.map((a) => (
-        <li key={a.id} className="text-xs text-foreground/70">
-          <span className="font-semibold text-sage-dark">Correction</span> by {a.authorName}, {formatDate(a.createdAt)}: {a.body}
-        </li>
-      ))}
-    </ul>
+    <div className="mt-[14px] rounded-[12px] border border-black/[.06] bg-white p-[14px_16px]">
+      <span className={badgeAccent}>{deltaLabel ?? "Amendment"}</span>
+      <p className="m-0 mt-2 text-[13.5px] leading-[1.5] text-text-secondary">
+        {amendment.body} Added by {amendment.authorName}, {formatDate(amendment.createdAt)}.
+      </p>
+    </div>
   );
 }
 
@@ -72,22 +71,16 @@ function AddCorrectionForm({ onSubmit }: { onSubmit: (body: string) => Promise<v
 
   if (!open) {
     return (
-      <button type="button" onClick={() => setOpen(true)} className={`mt-1 ${buttonGhost}`}>
+      <button type="button" onClick={() => setOpen(true)} className={`mt-[10px] ${buttonGhost}`}>
         + Add correction
       </button>
     );
   }
 
   return (
-    <div className="mt-2 flex flex-col gap-1">
-      <textarea
-        value={body}
-        onChange={(e) => setBody(e.target.value)}
-        placeholder="What should this correct, and to what?"
-        rows={2}
-        className={input.replace("mt-1 ", "text-xs ")}
-      />
-      <div className="flex items-center gap-2">
+    <div className="mt-[10px] flex flex-col gap-2">
+      <textarea value={body} onChange={(e) => setBody(e.target.value)} placeholder="What should this correct, and to what?" rows={2} className={input} />
+      <div className="flex items-center gap-3">
         <button
           type="button"
           disabled={saving || !body.trim()}
@@ -104,15 +97,15 @@ function AddCorrectionForm({ onSubmit }: { onSubmit: (body: string) => Promise<v
               setSaving(false);
             }
           }}
-          className={`${buttonPrimary} px-2 py-1 text-xs`}
+          className={buttonPrimary}
         >
           {saving ? "Saving…" : "Save correction"}
         </button>
-        <button type="button" onClick={() => setOpen(false)} className="text-xs text-foreground/50">
+        <button type="button" onClick={() => setOpen(false)} className={buttonGhost}>
           Cancel
         </button>
       </div>
-      {error && <p className="text-xs text-red-700">{error}</p>}
+      {error && <p className="m-0 text-[13px] text-red-700">{error}</p>}
     </div>
   );
 }
@@ -159,12 +152,7 @@ function SubmissionCard({ row, onChange }: { row: SubmissionRow; onChange: (upda
       const response = await fetch("/api/locking/unlock", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          companyId: row.companyId,
-          projectId: row.projectId,
-          submissionId: row.id,
-          reason: unlockReason.trim(),
-        }),
+        body: JSON.stringify({ companyId: row.companyId, projectId: row.projectId, submissionId: row.id, reason: unlockReason.trim() }),
       });
       const body = (await response.json()) as { submission?: { lockedAt: string | null }; error?: string };
       if (!response.ok || !body.submission) throw new Error(body.error ?? "Could not unlock");
@@ -173,13 +161,7 @@ function SubmissionCard({ row, onChange }: { row: SubmissionRow; onChange: (upda
         lockedAt: body.submission.lockedAt,
         lockHistory: [
           ...row.lockHistory,
-          {
-            id: `local-${Date.now()}`,
-            action: "submission.unlock",
-            actorName: "You",
-            reason: unlockReason.trim(),
-            createdAt: new Date().toISOString(),
-          },
+          { id: `local-${Date.now()}`, action: "submission.unlock", actorName: "You", reason: unlockReason.trim(), createdAt: new Date().toISOString() },
         ],
       });
       setUnlockOpen(false);
@@ -210,50 +192,66 @@ function SubmissionCard({ row, onChange }: { row: SubmissionRow; onChange: (upda
     });
     const json = (await response.json()) as { amendment?: AmendmentData; error?: string };
     if (!response.ok || !json.amendment) throw new Error(json.error ?? "Could not save correction");
-    onChange({
-      ...row,
-      notes: row.notes.map((n) => (n.id === noteId ? { ...n, amendments: [...n.amendments, json.amendment!] } : n)),
-    });
+    onChange({ ...row, notes: row.notes.map((n) => (n.id === noteId ? { ...n, amendments: [...n.amendments, json.amendment!] } : n)) });
   }
 
+  const allAmendments = [
+    ...row.amendments.map((a) => ({ ...a, context: null as string | null })),
+    ...row.notes.flatMap((n) => n.amendments.map((a) => ({ ...a, context: n.uncertaintyTitle as string | null }))),
+  ];
+
   return (
-    <Panel className={`p-4 ${locked ? "border-sage bg-sage/5" : ""}`}>
-      <div className="flex flex-wrap items-start justify-between gap-2">
+    <div className={`rounded-[16px] border p-[22px_24px] ${locked ? "border-accent-border bg-accent-wash" : "border-black/[.06] bg-surface-sunken"}`}>
+      <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <p className="text-sm font-semibold text-foreground">
-            {row.projectName} · {row.userName} · Week {row.weekKey}
+          <p className="m-0 text-[15.5px] font-[600] tracking-[-0.02em] text-text">
+            {row.projectName} · {row.userName} · {row.weekKey}
           </p>
-          <p className="mt-0.5 text-xs text-foreground/60">
-            {(row.minutes / 60).toFixed(2)}h ({row.basis.toLowerCase()}) · submitted {formatDate(row.submittedAt)}
+          <p className="m-0 mt-[4px] text-[13px] text-text-tertiary">
+            {(row.minutes / 60).toFixed(2)}h {row.basis.toLowerCase()} · submitted {formatDate(row.submittedAt)}
             {row.isRetrospective ? " · retrospective" : ""}
           </p>
+          {!locked && <AddCorrectionForm onSubmit={amendSubmission} />}
         </div>
 
-        {locked ? <span className={badgeSage}>Sealed {formatDate(row.lockedAt!)}</span> : <span className={badgeNeutral}>Open</span>}
+        <div className="flex shrink-0 flex-col items-end gap-3">
+          {locked ? (
+            <span className={`${badgeAccent} gap-[6px]`}>
+              <LockIcon className="h-[10px] w-[10px]" /> Locked
+            </span>
+          ) : (
+            <>
+              <span className={badgeNeutral}>Open</span>
+              <button type="button" disabled={busy} onClick={lock} className={buttonSecondary}>
+                {busy ? "Locking…" : "Lock week"}
+              </button>
+            </>
+          )}
+        </div>
       </div>
 
-      <AmendmentList amendments={row.amendments} />
-      <AddCorrectionForm onSubmit={amendSubmission} />
+      {allAmendments.map((a) => (
+        <AmendmentNote key={a.id} amendment={a} deltaLabel={a.context ? `Amendment · ${a.context}` : "Amendment"} />
+      ))}
 
       {row.notes.length > 0 && (
-        <ul className="mt-3 flex flex-col gap-2 border-t border-steel/20 pt-3">
+        <ul className="m-0 mt-4 flex list-none flex-col gap-2 border-t border-black/[.055] p-0 pt-4">
           {row.notes.map((note) => (
-            <li key={note.id} className="text-sm">
-              <p className="text-foreground">
-                <span className={eyebrow}>{note.type.replace("_", " ")}</span> — {note.uncertaintyTitle}
+            <li key={note.id} className="text-[13.5px]">
+              <p className="m-0 text-text">
+                <span className="text-[11.5px] font-[590] text-text-tertiary">{note.type.replace("_", " ")}</span> — {note.uncertaintyTitle}
               </p>
-              <p className="text-foreground/70">{note.body}</p>
-              <AmendmentList amendments={note.amendments} />
-              <AddCorrectionForm onSubmit={(body) => amendNote(note.id, body)} />
+              <p className="m-0 mt-[2px] text-text-secondary">{note.body}</p>
+              {!locked && <AddCorrectionForm onSubmit={(body) => amendNote(note.id, body)} />}
             </li>
           ))}
         </ul>
       )}
 
       {row.lockHistory.length > 0 && (
-        <details className="mt-3 text-xs text-foreground/50">
+        <details className="mt-4 text-[12.5px] text-text-tertiary">
           <summary className="cursor-pointer">Lock history ({row.lockHistory.length})</summary>
-          <ul className="mt-1 flex flex-col gap-1">
+          <ul className="m-0 mt-1 flex list-none flex-col gap-1 p-0">
             {row.lockHistory.map((h) => (
               <li key={h.id}>
                 {formatDate(h.createdAt)} — {h.action === "submission.auto_lock" ? "auto-locked" : h.action === "submission.lock" ? "locked" : "unlocked"}
@@ -265,39 +263,35 @@ function SubmissionCard({ row, onChange }: { row: SubmissionRow; onChange: (upda
         </details>
       )}
 
-      <div className="mt-3 flex items-center gap-2">
-        {locked ? (
-          unlockOpen ? (
-            <div className="flex w-full flex-col gap-1">
+      {locked && (
+        <div className="mt-4">
+          {unlockOpen ? (
+            <div className="flex flex-col gap-2">
               <input
                 type="text"
                 value={unlockReason}
                 onChange={(e) => setUnlockReason(e.target.value)}
                 placeholder="Reason for unlocking (required, kept on this week permanently)"
-                className={input.replace("mt-1 ", "text-xs ")}
+                className={input}
               />
-              <div className="flex gap-2">
-                <button type="button" disabled={busy || !unlockReason.trim()} onClick={unlock} className={`${buttonPrimary} px-3 py-1 text-xs`}>
+              <div className="flex items-center gap-3">
+                <button type="button" disabled={busy || !unlockReason.trim()} onClick={unlock} className={buttonPrimary}>
                   {busy ? "Unlocking…" : "Confirm unlock"}
                 </button>
-                <button type="button" onClick={() => setUnlockOpen(false)} className="text-xs text-foreground/50">
+                <button type="button" onClick={() => setUnlockOpen(false)} className={buttonGhost}>
                   Cancel
                 </button>
               </div>
             </div>
           ) : (
-            <button type="button" onClick={() => setUnlockOpen(true)} className={`${buttonSecondary} px-3 py-1 text-xs`}>
+            <button type="button" onClick={() => setUnlockOpen(true)} className={buttonGhost}>
               Unlock
             </button>
-          )
-        ) : (
-          <button type="button" disabled={busy} onClick={lock} className={`${buttonPrimary} px-3 py-1 text-xs`}>
-            {busy ? "Locking…" : "Lock week"}
-          </button>
-        )}
-      </div>
-      {error && <p className="mt-1 text-xs text-red-700">{error}</p>}
-    </Panel>
+          )}
+        </div>
+      )}
+      {error && <p className="m-0 mt-2 text-[13px] text-red-700">{error}</p>}
+    </div>
   );
 }
 
@@ -312,24 +306,27 @@ export function FinanceWeeksClient({ submissions }: { submissions: SubmissionRow
   const visible = rows.filter((r) => (filter === "all" ? true : filter === "locked" ? r.lockedAt !== null : r.lockedAt === null));
 
   if (rows.length === 0) {
-    return <p className="text-sm text-foreground/60">No submitted weeks yet.</p>;
+    return <p className="text-[14px] text-text-secondary">No submitted weeks yet.</p>;
   }
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex gap-2">
-        {(["all", "open", "locked"] as const).map((f) => (
-          <button key={f} type="button" onClick={() => setFilter(f)} className={filter === f ? chipActive : chip}>
-            {f === "all" ? "All" : f === "open" ? "Open" : "Locked"}
-          </button>
-        ))}
-      </div>
+    <div className="flex flex-col gap-6">
+      <SegmentedControl
+        options={[
+          { value: "all", label: "All" },
+          { value: "open", label: "Open" },
+          { value: "locked", label: "Locked" },
+        ]}
+        value={filter}
+        onChange={setFilter}
+        className="w-max"
+      />
 
-      <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-[14px]">
         {visible.map((row) => (
           <SubmissionCard key={row.id} row={row} onChange={updateRow} />
         ))}
-        {visible.length === 0 && <p className="text-sm text-foreground/60">Nothing matches this filter.</p>}
+        {visible.length === 0 && <p className="text-[14px] text-text-secondary">Nothing matches this filter.</p>}
       </div>
     </div>
   );

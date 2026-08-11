@@ -1,38 +1,33 @@
 /**
- * Shared Tailwind class strings for Trace's blueprint design system —
+ * Shared Tailwind class strings for Trace's Apple-style design system —
  * plain string exports rather than wrapper components, since most call
  * sites are existing <button>/<input> elements that already carry their
  * own handlers and don't need a new component layer, just consistent
  * classes.
  */
 
-export const eyebrow = "text-xs font-semibold uppercase tracking-widest text-steel-dark";
+export const eyebrow = "text-[12.5px] text-text-tertiary";
 
 export const buttonPrimary =
-  "border border-steel bg-steel px-4 py-2 text-sm font-semibold uppercase tracking-wide text-white transition-colors hover:bg-steel-dark disabled:opacity-50 disabled:cursor-not-allowed";
+  "inline-flex items-center justify-center gap-[7px] rounded-[10px] border-none bg-accent px-[18px] py-[10px] text-[13.5px] font-[590] text-white shadow-[0_1px_2px_rgba(14,122,88,.3)] transition-all duration-150 ease-out hover:bg-accent-hover active:scale-[.985] disabled:opacity-50 disabled:cursor-not-allowed";
 
 export const buttonSecondary =
-  "border border-steel/50 bg-white px-4 py-2 text-sm font-semibold uppercase tracking-wide text-steel-dark transition-colors hover:bg-steel/10 disabled:opacity-50 disabled:cursor-not-allowed";
+  "inline-flex items-center justify-center gap-[7px] rounded-[10px] border border-black/[.11] bg-white px-[18px] py-[10px] text-[13.5px] font-[590] text-text transition-all duration-150 ease-out hover:bg-[#FAFAFA] active:scale-[.985] disabled:opacity-50 disabled:cursor-not-allowed";
 
-export const buttonGhost =
-  "text-xs font-semibold uppercase tracking-wide text-steel-dark underline decoration-steel/50 underline-offset-2 hover:text-steel-dark";
+export const buttonGhost = "text-[13.5px] font-[500] text-accent hover:text-accent-hover";
 
 export const chip =
-  "border border-steel/40 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-steel-dark transition-colors hover:bg-steel/10";
+  "rounded-full bg-control-track px-[13px] py-[7px] text-[13px] font-[500] text-text-secondary transition-all duration-150 ease-out hover:text-text active:scale-[.985]";
 
-export const chipActive = "border border-steel bg-steel px-3 py-1 text-xs font-semibold uppercase tracking-wide text-white";
+export const chipActive = "rounded-full bg-accent px-[13px] py-[7px] text-[13px] font-[590] text-white transition-all duration-150 ease-out active:scale-[.985]";
 
-export const badgeSage =
-  "inline-block border border-sage bg-sage/10 px-2 py-0.5 text-xs font-semibold uppercase tracking-wide text-sage-dark";
+export const badgeAccent = "inline-flex items-center gap-[5px] rounded-full bg-accent-tint px-[11px] py-[3px] text-[11px] font-[590] text-accent";
 
-export const badgeSteel =
-  "inline-block border border-steel/50 bg-steel/5 px-2 py-0.5 text-xs font-semibold uppercase tracking-wide text-steel-dark";
+export const badgeNeutral = "inline-flex items-center gap-[5px] rounded-full bg-control-track px-[11px] py-[3px] text-[11px] font-[500] text-text-tertiary";
 
-export const badgeNeutral =
-  "inline-block border border-black/15 px-2 py-0.5 text-xs font-semibold uppercase tracking-wide text-foreground/60";
+export const fieldLabel = "mb-[6px] block text-[12.5px] text-text-secondary";
 
-export const fieldLabel = "block text-xs font-semibold uppercase tracking-wide text-steel-dark";
+export const input =
+  "w-full box-border rounded-[10px] border border-black/[.11] bg-white px-[13px] py-[10px] text-[14px] text-text placeholder:text-text-quaternary outline-none transition-colors duration-150";
 
-export const input = "mt-1 w-full border border-steel/40 bg-white px-3 py-2 text-sm text-foreground placeholder:text-foreground/35 focus:border-steel focus:outline-none";
-
-export const select = "border border-steel/40 bg-white px-2 py-1.5 text-sm text-foreground focus:border-steel focus:outline-none";
+export const cardRow = "flex items-center justify-between rounded-[14px] border border-black/[.06] bg-surface-sunken px-[22px] py-[20px]";

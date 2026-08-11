@@ -2,8 +2,10 @@
 
 import { useState } from "react";
 import type { SubmissionBasis, UncertaintyNoteType } from "@/lib/generated/prisma/client";
-import { Panel } from "@/app/components/Panel";
-import { badgeSage, buttonGhost, buttonPrimary, chip, chipActive, eyebrow, input, select } from "@/app/components/ui";
+import { SegmentedControl } from "@/app/components/SegmentedControl";
+import { Toggle } from "@/app/components/Toggle";
+import { ArrowRightIcon, CrosshairIcon } from "@/app/components/icons";
+import { buttonGhost, buttonPrimary, input } from "@/app/components/ui";
 
 export interface ProjectCaptureData {
   projectId: string;
@@ -12,6 +14,7 @@ export interface ProjectCaptureData {
   uncertainties: Array<{ id: string; title: string }>;
   prefillMinutes: number | null;
   existing: { minutes: number; basis: SubmissionBasis; locked: boolean } | null;
+  commitSignal: { repoFullName: string; count: number } | null;
 }
 
 const QUICK_CHIP_HOURS = [5, 10, 20, 40];
@@ -189,176 +192,218 @@ export function CaptureClient({ weekKey, projects: initialProjects }: { weekKey:
   }
 
   if (projects.length === 0) {
-    return <p className="text-sm text-foreground/60">No projects to log time against yet — ask your project lead to add you.</p>;
+    return <p className="text-sm text-text-secondary">No projects to log time against yet — ask your project lead to add you.</p>;
   }
 
   if (status === "done") {
     const totalHours = loggedSummary.reduce((sum, s) => sum + s.hours, 0);
     return (
-      <Panel className="border-sage bg-sage/5 p-4 text-sm">
-        <p className="font-semibold text-sage-dark">
+      <div className="rounded-[16px] border border-black/[.06] bg-accent-wash p-6 text-sm">
+        <p className="font-[590] text-accent">
           Week {weekKey} logged — {totalHours}h total.
         </p>
-        <ul className="mt-2 flex flex-col gap-1 text-foreground/70">
+        <ul className="mt-2 flex flex-col gap-1 text-text-secondary">
           {loggedSummary.map((s) => (
             <li key={s.projectName}>
               {s.projectName}: {s.hours}h
             </li>
           ))}
         </ul>
-      </Panel>
+      </div>
     );
   }
 
+  const totalHours = projects.reduce((sum, p) => {
+    const form = state[p.projectId];
+    if (form.nothingThisWeek) return sum;
+    const h = Number(form.hours);
+    return sum + (Number.isNaN(h) ? 0 : h);
+  }, 0);
+  const touchedCount = projects.filter((p) => {
+    const form = state[p.projectId];
+    return form.nothingThisWeek || form.hours.trim() !== "";
+  }).length;
+
   return (
-    <div className="flex flex-col gap-8">
-      {projects.map((project) => {
-        const form = state[project.projectId];
-        const locked = project.existing?.locked ?? false;
-        return (
-          <Panel key={project.projectId} className={`p-4 ${locked ? "border-sage bg-sage/5" : ""}`}>
-            <h2 className="text-base font-bold text-foreground">{project.projectName}</h2>
-            {locked ? (
-              <p className="mt-2 text-sm text-sage-dark">
-                <span className={badgeSage}>Sealed</span> — {(project.existing!.minutes / 60).toFixed(1)}h logged.
-                Corrections need an amendment.
-              </p>
-            ) : (
-              <>
-                <div className="mt-3 flex flex-wrap items-center gap-2">
-                  <label className={eyebrow}>
-                    Hours
-                    <input
-                      type="number"
-                      min="0"
-                      step="0.25"
-                      value={form.hours}
-                      disabled={form.nothingThisWeek}
-                      onChange={(e) => updateProject(project.projectId, { hours: e.target.value })}
-                      className="ml-2 w-20 border border-steel/40 bg-white px-2 py-1 text-sm normal-case text-foreground disabled:opacity-50"
-                    />
-                  </label>
-                  {QUICK_CHIP_HOURS.map((h) => (
-                    <button
-                      key={h}
-                      type="button"
-                      disabled={form.nothingThisWeek}
-                      onClick={() => updateProject(project.projectId, { hours: String(h) })}
-                      className={`${form.hours === String(h) ? chipActive : chip} disabled:opacity-40`}
-                    >
-                      {h}h
-                    </button>
-                  ))}
-                  <label className="ml-auto flex items-center gap-2 text-xs text-foreground/60">
-                    <input
-                      type="checkbox"
-                      checked={form.nothingThisWeek}
-                      onChange={(e) => updateProject(project.projectId, { nothingThisWeek: e.target.checked, hours: "" })}
-                    />
-                    Nothing this week
-                  </label>
-                </div>
+    <div>
+      <div className="flex flex-col gap-[14px]">
+        {projects.map((project, i) => {
+          const form = state[project.projectId];
+          const locked = project.existing?.locked ?? false;
+          const primaryUncertainty = project.uncertainties[0];
+          return (
+            <div key={project.projectId} className="rounded-[16px] border border-black/[.06] bg-surface-sunken p-6">
+              <div className="mb-[22px] flex items-center justify-between">
+                <h4 className="m-0 text-[17px] font-[600] tracking-[-0.02em] text-text">{project.projectName}</h4>
+                {!locked && (
+                  <Toggle
+                    label="Nothing this week"
+                    checked={form.nothingThisWeek}
+                    onChange={(checked) => updateProject(project.projectId, { nothingThisWeek: checked, hours: checked ? "" : form.hours })}
+                  />
+                )}
+              </div>
 
-                <select
-                  value={form.basis}
-                  onChange={(e) => updateProject(project.projectId, { basis: e.target.value as SubmissionBasis })}
-                  className={`mt-3 ${select}`}
-                >
-                  <option value="ESTIMATED">Estimated</option>
-                  <option value="TRACKED">From timesheet</option>
-                </select>
-
-                {!form.nothingThisWeek && (
-                  <div className="mt-4 flex flex-col gap-3">
-                    {project.uncertainties.map((uncertainty) => {
-                      const selection = form.notes[uncertainty.id];
-                      return (
-                        <div key={uncertainty.id} className="border border-steel/20 p-3">
-                          <p className="text-sm font-semibold text-foreground">{uncertainty.title}</p>
-                          <div className="mt-2 flex flex-wrap gap-2">
-                            {TAP_OPTIONS.map((option) => {
-                              const isActive = selection?.type === option.type;
-                              const activeClass = option.type === "RESOLUTION" ? chipActive.replace("bg-steel", "bg-sage").replace("border-steel", "border-sage") : chipActive;
-                              return (
-                                <button
-                                  key={option.type}
-                                  type="button"
-                                  onClick={() => selectNote(project.projectId, uncertainty.id, option.type)}
-                                  className={isActive ? activeClass : chip}
-                                >
-                                  {option.label}
-                                </button>
-                              );
-                            })}
-                          </div>
-                          {selection?.type && selection.type !== "NO_PROGRESS" && (
-                            <div className="mt-2 flex items-center gap-2">
-                              <input
-                                type="text"
-                                placeholder="One line about what happened"
-                                value={selection.body}
-                                onChange={(e) => setNoteBody(project.projectId, uncertainty.id, e.target.value)}
-                                className="w-full border border-steel/40 bg-white px-2 py-1 text-sm text-foreground"
-                              />
-                              <input
-                                type="number"
-                                min="0"
-                                step="0.25"
-                                placeholder="hrs"
-                                title="Hours spent specifically on this uncertainty (optional — feeds the planner's plan-vs-actual view)"
-                                value={selection.hours}
-                                onChange={(e) => setNoteHours(project.projectId, uncertainty.id, e.target.value)}
-                                className="w-16 shrink-0 border border-steel/40 bg-white px-2 py-1 text-sm text-foreground"
-                              />
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-
-                    {form.newUncertaintyOpen ? (
-                      <div className="border border-dashed border-steel/40 p-3">
-                        <input
-                          type="text"
-                          placeholder="What's the uncertainty?"
-                          value={form.newTitle}
-                          onChange={(e) => updateProject(project.projectId, { newTitle: e.target.value })}
-                          className={input.replace("mt-1 ", "")}
-                        />
-                        <input
-                          type="text"
-                          placeholder="What didn't we know?"
-                          value={form.newBaseline}
-                          onChange={(e) => updateProject(project.projectId, { newBaseline: e.target.value })}
-                          className={`mt-2 ${input.replace("mt-1 ", "")}`}
-                        />
-                        <button type="button" onClick={() => createUncertainty(project)} className={`${buttonPrimary} mt-2`}>
-                          Add
-                        </button>
+              {locked ? (
+                <p className="text-[13.5px] text-text-secondary">
+                  This week is locked ({(project.existing!.minutes / 60).toFixed(1)}h logged). Corrections need an amendment.
+                </p>
+              ) : (
+                <>
+                  <div className="grid grid-cols-[110px_1fr] items-center gap-x-5 gap-y-[18px]">
+                    <span className="text-[13.5px] text-text-secondary">Hours</span>
+                    <div className="flex items-center gap-[10px]">
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.25"
+                        value={form.hours}
+                        disabled={form.nothingThisWeek}
+                        onChange={(e) => updateProject(project.projectId, { hours: e.target.value })}
+                        className="w-[70px] box-border rounded-[10px] border border-black/[.11] bg-white px-3 py-[9px] text-[15px] font-[590] text-text outline-none disabled:opacity-50"
+                      />
+                      <div className="flex gap-[6px]">
+                        {QUICK_CHIP_HOURS.map((h) => (
+                          <button
+                            key={h}
+                            type="button"
+                            disabled={form.nothingThisWeek}
+                            onClick={() => updateProject(project.projectId, { hours: String(h) })}
+                            className={`rounded-full px-[13px] py-[7px] text-[13px] transition-all duration-150 disabled:opacity-40 ${
+                              form.hours === String(h) ? "bg-accent font-[590] text-white" : "bg-control-track font-[500] text-text-secondary hover:text-text"
+                            }`}
+                          >
+                            {h}h
+                          </button>
+                        ))}
                       </div>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => updateProject(project.projectId, { newUncertaintyOpen: true })}
-                        className={`self-start ${buttonGhost}`}
-                      >
-                        + Something new came up
-                      </button>
+                    </div>
+
+                    <span className="text-[13.5px] text-text-secondary">Basis</span>
+                    <SegmentedControl
+                      segmentClassName="px-4 py-[7px]"
+                      options={[
+                        { value: "ESTIMATED", label: "Estimated" },
+                        { value: "TRACKED", label: "From timesheet" },
+                      ]}
+                      value={form.basis}
+                      onChange={(value) => updateProject(project.projectId, { basis: value as SubmissionBasis })}
+                    />
+
+                    {primaryUncertainty && (
+                      <>
+                        <span className="text-[13.5px] text-text-secondary">Uncertainty</span>
+                        <span className="text-[14px] text-text">{primaryUncertainty.title}</span>
+                      </>
                     )}
                   </div>
-                )}
-              </>
-            )}
-          </Panel>
-        );
-      })}
 
-      <div>
-        <button type="button" onClick={logThisWeek} disabled={status === "saving"} className={`${buttonPrimary} px-6 py-2.5`}>
-          {status === "saving" ? "Logging…" : "Log this week"}
-        </button>
-        {status === "error" && <p className="mt-2 text-sm text-red-700">{errorMessage}</p>}
+                  {!form.nothingThisWeek && (
+                    <div className="mt-5 flex flex-col gap-3">
+                      {project.uncertainties.map((uncertainty) => {
+                        const selection = form.notes[uncertainty.id];
+                        return (
+                          <div key={uncertainty.id} className="rounded-[12px] border border-black/[.055] p-[14px]">
+                            <p className="m-0 text-[13.5px] font-[600] text-text">{uncertainty.title}</p>
+                            <div className="mt-2 flex flex-wrap gap-[6px]">
+                              {TAP_OPTIONS.map((option) => {
+                                const active = selection?.type === option.type;
+                                return (
+                                  <button
+                                    key={option.type}
+                                    type="button"
+                                    onClick={() => selectNote(project.projectId, uncertainty.id, option.type)}
+                                    className={`rounded-full px-[13px] py-[7px] text-[13px] transition-all duration-150 ${
+                                      active ? "bg-accent font-[590] text-white" : "bg-control-track font-[500] text-text-secondary hover:text-text"
+                                    }`}
+                                  >
+                                    {option.label}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                            {selection?.type && selection.type !== "NO_PROGRESS" && (
+                              <div className="mt-2 flex items-center gap-2">
+                                <input
+                                  type="text"
+                                  placeholder="One line about what happened"
+                                  value={selection.body}
+                                  onChange={(e) => setNoteBody(project.projectId, uncertainty.id, e.target.value)}
+                                  className={input}
+                                />
+                                <input
+                                  type="number"
+                                  min="0"
+                                  step="0.25"
+                                  placeholder="hrs"
+                                  title="Hours spent specifically on this uncertainty (optional — feeds the planner's plan-vs-actual view)"
+                                  value={selection.hours}
+                                  onChange={(e) => setNoteHours(project.projectId, uncertainty.id, e.target.value)}
+                                  className="w-16 shrink-0 rounded-[10px] border border-black/[.11] bg-white px-[10px] py-[9px] text-[13px] text-text outline-none"
+                                />
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+
+                      {form.newUncertaintyOpen ? (
+                        <div className="rounded-[12px] border border-dashed border-black/[.16] p-[14px]">
+                          <input
+                            type="text"
+                            placeholder="What's the uncertainty?"
+                            value={form.newTitle}
+                            onChange={(e) => updateProject(project.projectId, { newTitle: e.target.value })}
+                            className={input}
+                          />
+                          <input
+                            type="text"
+                            placeholder="What didn't we know?"
+                            value={form.newBaseline}
+                            onChange={(e) => updateProject(project.projectId, { newBaseline: e.target.value })}
+                            className={`mt-2 ${input}`}
+                          />
+                          <button type="button" onClick={() => createUncertainty(project)} className={`${buttonPrimary} mt-2`}>
+                            Add
+                          </button>
+                        </div>
+                      ) : (
+                        <button type="button" onClick={() => updateProject(project.projectId, { newUncertaintyOpen: true })} className={`self-start ${buttonGhost}`}>
+                          + Something new came up
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </>
+              )}
+
+              {i === 0 && project.commitSignal && (
+                <div className="mt-5 flex items-center gap-2 border-t border-black/[.055] pt-[18px]">
+                  <CrosshairIcon className="text-accent" />
+                  <span className="text-[13px] text-text-secondary">
+                    {project.commitSignal.count} commit{project.commitSignal.count === 1 ? "" : "s"} detected on{" "}
+                    <span className="text-text">{project.commitSignal.repoFullName}</span> this week
+                  </span>
+                  <a href="/github" className="ml-auto text-[13px] font-[500]">
+                    Review
+                  </a>
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
+
+      <div className="mt-7 flex items-center justify-between">
+        <span className="text-[14.5px] text-text-secondary">
+          Total <span className="font-[590] text-text">{totalHours.toFixed(1)}h</span> across {touchedCount} project{touchedCount === 1 ? "" : "s"}
+        </span>
+        <button type="button" onClick={logThisWeek} disabled={status === "saving"} className={buttonPrimary}>
+          {status === "saving" ? "Logging…" : "Log this week"}
+          <ArrowRightIcon />
+        </button>
+      </div>
+      {status === "error" && <p className="mt-2 text-sm text-red-700">{errorMessage}</p>}
     </div>
   );
 }
