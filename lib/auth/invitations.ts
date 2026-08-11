@@ -32,10 +32,13 @@ export interface AcceptInvitationInput {
 }
 
 /**
- * Accepting an invitation is how a user account is first created — there
- * is no open signup. This is also the only place a Membership row is
- * created, so an adviser's per-client scoping is always the result of an
- * explicit invite, never a side effect of something else.
+ * Accepting an invitation is one of two ways a Membership row gets
+ * created — the other is self-service signup (lib/auth/signup.ts), which
+ * creates a brand-new company with the signing-up user as its admin.
+ * Invitations are for joining an *existing* company as anything else
+ * (adviser, contributor, finance approver), so an adviser's per-client
+ * scoping is always the result of an explicit invite, never a side
+ * effect of something else.
  */
 export async function acceptInvitation(prisma: PrismaClient, input: AcceptInvitationInput) {
   const invitation = await prisma.invitation.findUnique({ where: { token: input.token } });
