@@ -34,7 +34,7 @@ export async function signUpCompany(prisma: PrismaClient, input: SignUpInput) {
   });
 
   const existing = await prisma.membership.findFirst({
-    where: { userId: user.id, role: "ADMIN", company: { name: input.companyName } },
+    where: { userId: user.id, role: "OWNER", company: { name: input.companyName } },
     include: { company: true },
   });
   if (existing) {
@@ -44,7 +44,7 @@ export async function signUpCompany(prisma: PrismaClient, input: SignUpInput) {
   const company = await prisma.company.create({ data: { name: input.companyName } });
 
   const membership = await prisma.membership.create({
-    data: { userId: user.id, companyId: company.id, role: "ADMIN" },
+    data: { userId: user.id, companyId: company.id, role: "OWNER" },
   });
 
   return { user, company, membership };

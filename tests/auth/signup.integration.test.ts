@@ -27,7 +27,7 @@ describe.skipIf(!hasDatabase)("signUpCompany (integration)", () => {
 
     expect(user.email).toBe("founder@example.com");
     expect(company.name).toBe("Acme R&D");
-    expect(membership.role).toBe("ADMIN");
+    expect(membership.role).toBe("OWNER");
     expect(membership.userId).toBe(user.id);
     expect(membership.companyId).toBe(company.id);
   });
@@ -72,7 +72,7 @@ describe.skipIf(!hasDatabase)("signUpCompany (integration)", () => {
 
     const memberships = await prisma.membership.findMany({ where: { userId: first.user.id } });
     expect(memberships).toHaveLength(2);
-    expect(memberships.every((m) => m.role === "ADMIN")).toBe(true);
+    expect(memberships.every((m) => m.role === "OWNER")).toBe(true);
   });
 
   it("is idempotent for a repeated company name — e.g. retrying after a failed confirmation email", async () => {

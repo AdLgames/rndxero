@@ -2,7 +2,6 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { getCurrentUser, SESSION_COOKIE_NAME } from "@/lib/auth/session";
-import { canManageCompany, type MembershipLike } from "@/lib/auth/roles";
 import { listCompanyProjects } from "@/lib/projects/repository";
 import { ProjectForm } from "./ProjectForm";
 
@@ -13,8 +12,8 @@ export default async function ProjectsPage() {
     redirect("/login");
   }
 
-  const adminCompanyIds = (currentUser.memberships as MembershipLike[])
-    .filter((m) => canManageCompany(m))
+  const adminCompanyIds = currentUser.memberships
+    .filter((m) => m.role === "OWNER")
     .map((m) => m.companyId);
 
   const companies = await prisma.company.findMany({ where: { id: { in: adminCompanyIds } } });
@@ -60,7 +59,7 @@ export default async function ProjectsPage() {
 
       {companiesWithProjects.length === 0 && (
         <p className="mt-4 text-sm text-zinc-600 dark:text-zinc-400">
-          You need to be a company admin to create projects.
+          You need to be a company owner to create projects.
         </p>
       )}
     </div>

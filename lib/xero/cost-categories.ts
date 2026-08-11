@@ -5,8 +5,8 @@
  *
  * This is a *suggestion* surfaced to a human for confirmation — see the
  * scope discipline in PLAN.md ("never auto-fill an apportionment
- * percentage... record, don't rule"). It never writes a CostAllocation by
- * itself; it only tags a mirrored GL line so the allocation UI can group
+ * percentage... record, don't rule"). It never writes a DirectCost by
+ * itself; it only tags a mirrored GL line so the cost-entry UI can group
  * and pre-filter what a human reviews.
  */
 

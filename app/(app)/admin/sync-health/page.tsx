@@ -2,7 +2,6 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { getCurrentUser, SESSION_COOKIE_NAME } from "@/lib/auth/session";
-import { canManageCompany, type MembershipLike } from "@/lib/auth/roles";
 import { getSyncHealthForCompanies } from "@/lib/admin/sync-health";
 
 export default async function SyncHealthPage() {
@@ -12,8 +11,8 @@ export default async function SyncHealthPage() {
     redirect("/login");
   }
 
-  const companyIds = (currentUser.memberships as MembershipLike[])
-    .filter((m) => canManageCompany(m))
+  const companyIds = currentUser.memberships
+    .filter((m) => m.role === "OWNER")
     .map((m) => m.companyId);
 
   const health = await getSyncHealthForCompanies(prisma, companyIds);

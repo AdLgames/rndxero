@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getCurrentUser, SESSION_COOKIE_NAME } from "@/lib/auth/session";
-import { canManageCompany, roleForCompany, type MembershipLike } from "@/lib/auth/roles";
+import { AuthorizationError, authorize } from "@/lib/authz/service";
 import { createProject } from "@/lib/projects/repository";
 
-/** Creates a project. Admin-only — see lib/projects/repository.ts for why competent professionals are required here. */
+/** Creates a project. See lib/authz/permissions.ts for who — project:create is Owner-only. */
 export async function POST(request: NextRequest) {
   const currentUser = await getCurrentUser(prisma, request.cookies.get(SESSION_COOKIE_NAME)?.value);
   if (!currentUser) {
@@ -26,9 +26,13 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const role = roleForCompany(currentUser.memberships as MembershipLike[], companyId);
-  if (!role || !canManageCompany({ role, companyId })) {
-    return NextResponse.json({ error: "Only a company admin can create projects" }, { status: 403 });
+  try {
+    await authorize(prisma, { userId: currentUser.id, companyId, action: "project:create" });
+  } catch (error) {
+    if (error instanceof AuthorizationError) {
+      return NextResponse.json({ error: "Only a company owner can create projects" }, { status: 403 });
+    }
+    throw error;
   }
 
   try {
