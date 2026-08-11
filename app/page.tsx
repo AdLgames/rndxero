@@ -1,6 +1,16 @@
 import Link from "next/link";
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
+import { prisma } from "@/lib/db";
+import { getCurrentUser, SESSION_COOKIE_NAME } from "@/lib/auth/session";
 
-export default function Home() {
+export default async function Home() {
+  const cookieStore = await cookies();
+  const currentUser = await getCurrentUser(prisma, cookieStore.get(SESSION_COOKIE_NAME)?.value);
+  if (currentUser) {
+    redirect("/projects");
+  }
+
   return (
     <div className="flex flex-1 flex-col bg-zinc-50 dark:bg-black">
       <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col justify-center px-6 py-24">

@@ -19,7 +19,7 @@ export default function AcceptInvitationPage({ params }: { params: Promise<{ tok
     });
     if (response.ok) {
       setStatus("success");
-      router.push("/");
+      router.push("/projects");
       return;
     }
     const body = (await response.json().catch(() => ({}))) as { error?: string };

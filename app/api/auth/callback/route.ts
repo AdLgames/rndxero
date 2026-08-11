@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "No account for this email" }, { status: 404 });
   }
 
-  const response = NextResponse.redirect(new URL("/", request.url));
+  const response = NextResponse.redirect(new URL("/projects", request.url));
   response.cookies.set(SESSION_COOKIE_NAME, createSessionCookieValue(user.id), {
     httpOnly: true,
     secure: true,
