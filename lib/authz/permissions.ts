@@ -40,6 +40,7 @@ const ROLE_ACTIONS: Record<AuthzSubject["companyRole"] & string, ReadonlySet<Act
     "note:read",
     "note:update",
     "note:amend",
+    "note:remap",
     "rate:read",
     "rate:write",
     "cost:read",
@@ -83,6 +84,7 @@ const ROLE_ACTIONS: Record<AuthzSubject["companyRole"] & string, ReadonlySet<Act
     "note:read",
     "note:update",
     "note:amend",
+    "note:remap",
     "plan:read",
     "plan:write",
     // rate:*, export:read absent entirely — Lead never sees raw rates
@@ -134,6 +136,7 @@ const PROJECT_SCOPED_ACTIONS: ReadonlySet<Action> = new Set<Action>([
   "note:read",
   "note:update",
   "note:amend",
+  "note:remap",
   "plan:read",
   "plan:write",
   "export:read",
@@ -141,6 +144,14 @@ const PROJECT_SCOPED_ACTIONS: ReadonlySet<Action> = new Set<Action>([
 
 /** Actions restricted to acting on your own submission/note, no matter the role — see the hard rule below. */
 const OWNERSHIP_RESTRICTED_ACTIONS: ReadonlySet<Action> = new Set<Action>(["submission:update", "note:update"]);
+
+// note:remap (board Phase 6.7: "drag-to-remap") is deliberately absent from
+// OWNERSHIP_RESTRICTED_ACTIONS — reassigning which uncertainty a note sits
+// under is a board-curation action a Lead does across the whole project,
+// not a correction to their own capture, so it isn't limited to notes they
+// personally wrote the way note:update is. It's still blocked once the
+// note's parent submission is locked, by the same DB trigger that guards
+// any other direct edit to a live note.
 
 /**
  * Pure authorization check. No database access — the caller (typically

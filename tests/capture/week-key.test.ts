@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getIsoWeekKey, getWeekBoundaries, isRetrospective } from "@/lib/capture/week-key";
+import { getIsoWeekKey, getWeekBoundaries, isRetrospective, shiftWeekKey } from "@/lib/capture/week-key";
 
 describe("getIsoWeekKey", () => {
   it("assigns a plain mid-year week, evaluated in Europe/London (August = BST, UTC+1)", () => {
@@ -71,5 +71,41 @@ describe("isRetrospective", () => {
 
   it("is true for a submission made well after the week closed", () => {
     expect(isRetrospective(new Date("2026-09-01T00:00:00Z"), "2026-W33")).toBe(true);
+  });
+});
+
+describe("shiftWeekKey", () => {
+  it("steps forward and backward within a year", () => {
+    expect(shiftWeekKey("2026-W33", 1)).toBe("2026-W34");
+    expect(shiftWeekKey("2026-W33", -1)).toBe("2026-W32");
+    expect(shiftWeekKey("2026-W33", 0)).toBe("2026-W33");
+    expect(shiftWeekKey("2026-W01", 11)).toBe("2026-W12");
+  });
+
+  it("rolls over a calendar year boundary", () => {
+    expect(shiftWeekKey("2026-W01", -1)).toBe("2025-W52"); // 2025 has no W53
+    expect(shiftWeekKey("2025-W52", 1)).toBe("2026-W01");
+  });
+
+  it("rolls over a year with a 53rd ISO week", () => {
+    expect(shiftWeekKey("2020-W53", 1)).toBe("2021-W01");
+    expect(shiftWeekKey("2021-W01", -1)).toBe("2020-W53");
+  });
+
+  it("crosses both BST transitions without drifting a day", () => {
+    // 2026-W13 (Mon 23 Mar, GMT) forward eight weeks, through the BST-starts
+    // transition, should land on the calendar Monday eight weeks later.
+    expect(shiftWeekKey("2026-W13", 8)).toBe("2026-W21");
+    // 2026-W43 (Mon 19 Oct, BST) forward one week crosses BST-ends.
+    expect(shiftWeekKey("2026-W43", 1)).toBe("2026-W44");
+  });
+
+  it("is consistent with getWeekBoundaries: the shifted key's Monday is exactly N*7 days after the original", () => {
+    const base = getWeekBoundaries("2026-W13").start;
+    for (const delta of [1, 4, 12, -1, -4]) {
+      const shifted = getWeekBoundaries(shiftWeekKey("2026-W13", delta)).start;
+      const days = Math.round((shifted.getTime() - base.getTime()) / 86_400_000);
+      expect(days).toBe(delta * 7);
+    }
   });
 });

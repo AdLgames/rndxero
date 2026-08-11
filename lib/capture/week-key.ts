@@ -113,3 +113,31 @@ export function isRetrospective(submittedAt: Date, weekKey: string): boolean {
   const { end } = getWeekBoundaries(weekKey);
   return submittedAt.getTime() >= end.getTime();
 }
+
+/**
+ * `weekKey`, `deltaWeeks` calendar weeks later (negative to go back) —
+ * the board's week columns (Phase 6.1) are built by walking this from a
+ * start key. Deliberately done in whole calendar weeks against the same
+ * Jan-4 ISO anchor `getWeekBoundaries` uses, converting to an instant
+ * only at the very end (at London noon, never midnight, so the read-back
+ * can't land on the wrong calendar date) — a week is always 7 calendar
+ * days regardless of any BST/GMT change crossed along the way, so this
+ * never needs to reason about DST at all, unlike adding
+ * `deltaWeeks * 7 * 86_400_000` milliseconds to an instant would.
+ */
+export function shiftWeekKey(weekKey: string, deltaWeeks: number): string {
+  const match = WEEK_KEY_PATTERN.exec(weekKey);
+  if (!match) {
+    throw new Error(`Invalid week key: ${weekKey}`);
+  }
+  const isoYear = Number(match[1]);
+  const week = Number(match[2]);
+
+  const jan4 = new Date(Date.UTC(isoYear, 0, 4));
+  const jan4MondayIndexedDay = (jan4.getUTCDay() + 6) % 7;
+  const monday = new Date(jan4);
+  monday.setUTCDate(jan4.getUTCDate() - jan4MondayIndexedDay + (week - 1 + deltaWeeks) * 7);
+
+  const noon = new Date(Date.UTC(monday.getUTCFullYear(), monday.getUTCMonth(), monday.getUTCDate(), 12));
+  return getIsoWeekKey(noon);
+}

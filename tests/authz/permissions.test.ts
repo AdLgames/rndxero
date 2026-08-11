@@ -82,6 +82,10 @@ describe("Finance", () => {
   it("acts company-wide for cost/rate/lock actions without a ProjectMember row", () => {
     expect(can(finance(), "submission:lock")).toBe(true);
   });
+
+  it("cannot remap a note (board curation isn't a Finance action)", () => {
+    expect(can(finance(), "note:remap")).toBe(false);
+  });
 });
 
 describe("Lead", () => {
@@ -120,6 +124,16 @@ describe("Lead", () => {
     expect(can(s, "submission:lock")).toBe(false);
     expect(can(s, "submission:unlock")).toBe(false);
   });
+
+  it("can remap a note on their project, not just their own (board drag-to-remap is not ownership-restricted)", () => {
+    const s = subject({ companyRole: "LEAD", projectRole: "LEAD", userId: "lead-1" });
+    expect(can(s, "note:remap", { ownerId: "someone-else" })).toBe(true);
+  });
+
+  it("cannot remap on a project they have no standing on", () => {
+    const s = subject({ companyRole: "LEAD", projectRole: null });
+    expect(can(s, "note:remap")).toBe(false);
+  });
 });
 
 describe("Contributor", () => {
@@ -152,6 +166,11 @@ describe("Contributor", () => {
     expect(can(s, "plan:write")).toBe(false);
     expect(can(s, "projectMember:invite")).toBe(false);
   });
+
+  it("cannot remap a note (board curation is Lead-and-above)", () => {
+    const s = subject({ companyRole: "CONTRIBUTOR", projectRole: "CONTRIBUTOR" });
+    expect(can(s, "note:remap")).toBe(false);
+  });
 });
 
 describe("Adviser", () => {
@@ -172,6 +191,10 @@ describe("Adviser", () => {
 
   it("has no standing on a project they are not shared into", () => {
     expect(can(subject({ companyRole: "ADVISER", projectRole: null }), "project:read")).toBe(false);
+  });
+
+  it("cannot remap a note", () => {
+    expect(can(subject({ companyRole: "ADVISER", projectRole: "ADVISER" }), "note:remap")).toBe(false);
   });
 });
 
