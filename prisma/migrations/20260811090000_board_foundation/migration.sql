@@ -252,7 +252,7 @@ CREATE TABLE "DirectCost" (
 CREATE TABLE "AuditLog" (
     "id" TEXT NOT NULL,
     "companyId" TEXT NOT NULL,
-    "actorId" TEXT NOT NULL,
+    "actorId" TEXT,
     "action" TEXT NOT NULL,
     "entityType" TEXT NOT NULL,
     "entityId" TEXT NOT NULL,
@@ -379,7 +379,7 @@ ALTER TABLE "DirectCost" ADD CONSTRAINT "DirectCost_manualCostLineId_fkey" FOREI
 ALTER TABLE "AuditLog" ADD CONSTRAINT "AuditLog_companyId_fkey" FOREIGN KEY ("companyId") REFERENCES "Company"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "AuditLog" ADD CONSTRAINT "AuditLog_actorId_fkey" FOREIGN KEY ("actorId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "AuditLog" ADD CONSTRAINT "AuditLog_actorId_fkey" FOREIGN KEY ("actorId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 
 -- CheckConstraint: Amendment references exactly one of noteId/submissionId
@@ -412,16 +412,38 @@ CREATE TRIGGER planned_allocation_append_only
   BEFORE UPDATE OR DELETE ON "PlannedAllocation"
   FOR EACH ROW EXECUTE FUNCTION reject_update_delete();
 
--- WeeklySubmission: mutable until lockedAt is set, then frozen. The
--- trigger allows exactly the UPDATE that sets lockedAt (OLD.lockedAt IS
--- NULL at that point) and rejects everything once OLD.lockedAt is set.
+-- WeeklySubmission: mutable until lockedAt is set. Once locked, the row
+-- is frozen with exactly one sanctioned exception: finance unlocking it
+-- (BOARD-PLAN.md Phase 4.3) — an UPDATE that changes lockedAt and nothing
+-- else. Any other change while locked, and DELETE at any time once
+-- locked, are rejected. (The transition that *sets* lockedAt in the
+-- first place is simply an ordinary update on an unlocked row, so it's
+-- not special-cased here.)
 CREATE OR REPLACE FUNCTION reject_update_delete_if_locked() RETURNS TRIGGER AS $$
 BEGIN
-  IF OLD."lockedAt" IS NOT NULL THEN
-    RAISE EXCEPTION 'append-only violation: % on table % is not permitted once locked (row id: %)',
-      TG_OP, TG_TABLE_NAME, OLD.id;
+  IF TG_OP = 'DELETE' THEN
+    IF OLD."lockedAt" IS NOT NULL THEN
+      RAISE EXCEPTION 'append-only violation: DELETE on table % is not permitted once locked (row id: %)',
+        TG_TABLE_NAME, OLD.id;
+    END IF;
+    RETURN OLD;
   END IF;
-  RETURN CASE WHEN TG_OP = 'DELETE' THEN OLD ELSE NEW END;
+
+  IF OLD."lockedAt" IS NOT NULL THEN
+    IF NEW."companyId" IS DISTINCT FROM OLD."companyId"
+      OR NEW."projectId" IS DISTINCT FROM OLD."projectId"
+      OR NEW."userId" IS DISTINCT FROM OLD."userId"
+      OR NEW."weekKey" IS DISTINCT FROM OLD."weekKey"
+      OR NEW."minutes" IS DISTINCT FROM OLD."minutes"
+      OR NEW."basis" IS DISTINCT FROM OLD."basis"
+      OR NEW."submittedAt" IS DISTINCT FROM OLD."submittedAt"
+      OR NEW."isRetrospective" IS DISTINCT FROM OLD."isRetrospective"
+    THEN
+      RAISE EXCEPTION 'append-only violation: UPDATE on table % is not permitted once locked, except unlocking it (row id: %)',
+        TG_TABLE_NAME, OLD.id;
+    END IF;
+  END IF;
+  RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 

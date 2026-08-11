@@ -385,7 +385,10 @@ model DirectCost {
 model AuditLog {
   id         String   @id @default(cuid())
   companyId  String
-  actorId    String
+  /// Null for a system-initiated action (e.g. auto-lock) — see `action`
+  /// for what happened; a null actor is how the record stays honest that
+  /// no human did this, rather than misattributing it to someone.
+  actorId    String?
   action     String
   entityType String
   entityId   String
@@ -395,7 +398,7 @@ model AuditLog {
   createdAt  DateTime @default(now())
 
   company Company @relation(fields: [companyId], references: [id])
-  actor   User    @relation(fields: [actorId], references: [id])
+  actor   User?   @relation(fields: [actorId], references: [id])
 
   @@index([companyId, createdAt])
   @@index([entityType, entityId])
