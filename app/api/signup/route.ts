@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { signUpCompany } from "@/lib/auth/signup";
 import { createMagicLinkToken } from "@/lib/auth/session";
+import { sendEmail } from "@/lib/email/send";
+import { buildMagicLinkEmail } from "@/lib/email/templates";
 
 /**
  * Creates a new company (with the requester as its admin) and emails a
@@ -23,12 +25,7 @@ export async function POST(request: NextRequest) {
 
   const token = createMagicLinkToken(email);
   const link = `${request.nextUrl.origin}/api/auth/callback?token=${encodeURIComponent(token)}`;
-  if (process.env.NODE_ENV !== "production") {
-    console.log(`[dev] magic sign-in link for ${email}: ${link}`);
-  } else {
-    // TODO(Phase 6): send via a transactional email provider instead of logging.
-    console.warn("No email provider configured — magic link was not sent.");
-  }
+  await sendEmail({ to: email, ...buildMagicLinkEmail({ link, context: "signup" }) });
 
   return NextResponse.json({ ok: true });
 }

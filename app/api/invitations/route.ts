@@ -3,6 +3,8 @@ import { prisma } from "@/lib/db";
 import { getCurrentUser, SESSION_COOKIE_NAME } from "@/lib/auth/session";
 import { canManageCompany, roleForCompany, type MembershipLike } from "@/lib/auth/roles";
 import { createInvitation } from "@/lib/auth/invitations";
+import { sendEmail } from "@/lib/email/send";
+import { buildInvitationEmail } from "@/lib/email/templates";
 import type { MembershipRole } from "@/lib/generated/prisma/client";
 
 export async function POST(request: NextRequest) {
@@ -25,6 +27,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Only a company admin can invite members" }, { status: 403 });
   }
 
+  const company = await prisma.company.findUniqueOrThrow({ where: { id: companyId } });
+
   const invitation = await createInvitation(prisma, {
     companyId,
     email,
@@ -33,9 +37,10 @@ export async function POST(request: NextRequest) {
   });
 
   const link = `${request.nextUrl.origin}/invitations/${invitation.token}`;
-  if (process.env.NODE_ENV !== "production") {
-    console.log(`[dev] invitation link for ${email}: ${link}`);
-  }
+  await sendEmail({
+    to: email,
+    ...buildInvitationEmail({ link, companyName: company.name, inviterName: currentUser.name }),
+  });
 
   return NextResponse.json({ id: invitation.id }, { status: 201 });
 }
