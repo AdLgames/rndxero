@@ -5,10 +5,12 @@ import Link from "next/link";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
-  const [status, setStatus] = useState<"idle" | "sent" | "error">("idle");
+  const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
+    if (status === "sending") return;
+    setStatus("sending");
     const response = await fetch("/api/auth/request-link", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -40,9 +42,10 @@ export default function LoginPage() {
             />
             <button
               type="submit"
-              className="rounded bg-foreground px-4 py-2 text-sm font-medium text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc]"
+              disabled={status === "sending"}
+              className="rounded bg-foreground px-4 py-2 text-sm font-medium text-background transition-colors hover:bg-[#383838] disabled:opacity-50 dark:hover:bg-[#ccc]"
             >
-              Send sign-in link
+              {status === "sending" ? "Sending…" : "Send sign-in link"}
             </button>
             {status === "error" && (
               <p className="text-sm text-red-600 dark:text-red-400">Something went wrong. Try again.</p>

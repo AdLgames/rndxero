@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { signUpCompany } from "@/lib/auth/signup";
-import { createMagicLinkToken } from "@/lib/auth/session";
-import { sendEmail } from "@/lib/email/send";
-import { buildMagicLinkEmail } from "@/lib/email/templates";
+import { sendMagicLinkIfAllowed } from "@/lib/auth/magic-link";
 
 /**
  * Creates a new company (with the requester as its admin) and emails a
@@ -15,7 +13,10 @@ import { buildMagicLinkEmail } from "@/lib/email/templates";
  * must not surface as an opaque crash: it's reported as a clear error,
  * and signUpCompany is idempotent on (user, companyName) specifically so
  * retrying this endpoint after a failed send reuses the same company
- * instead of piling up duplicates.
+ * instead of piling up duplicates. sendMagicLinkIfAllowed additionally
+ * cools down repeat sends to the same address, so a double-click, a
+ * reload, or a retry from a second tab produces exactly one email, not
+ * one per request.
  */
 export async function POST(request: NextRequest) {
   const { email, name, companyName } = (await request.json()) as {
@@ -27,13 +28,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "email, name and companyName are required" }, { status: 400 });
   }
 
-  await signUpCompany(prisma, { email, name, companyName });
-
-  const token = createMagicLinkToken(email);
-  const link = `${request.nextUrl.origin}/api/auth/callback?token=${encodeURIComponent(token)}`;
+  const { user } = await signUpCompany(prisma, { email, name, companyName });
 
   try {
-    await sendEmail({ to: email, ...buildMagicLinkEmail({ link, context: "signup" }) });
+    await sendMagicLinkIfAllowed(prisma, user, { origin: request.nextUrl.origin, context: "signup" });
   } catch (error) {
     console.error("Failed to send signup confirmation email", error);
     return NextResponse.json(

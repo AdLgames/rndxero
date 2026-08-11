@@ -7,11 +7,13 @@ export default function SignupPage() {
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
   const [companyName, setCompanyName] = useState("");
-  const [status, setStatus] = useState<"idle" | "sent" | "error">("idle");
+  const [status, setStatus] = useState<"idle" | "saving" | "sent" | "error">("idle");
   const [errorMessage, setErrorMessage] = useState("");
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
+    if (status === "saving") return;
+    setStatus("saving");
     const response = await fetch("/api/signup", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -65,9 +67,10 @@ export default function SignupPage() {
             />
             <button
               type="submit"
-              className="rounded bg-foreground px-4 py-2 text-sm font-medium text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc]"
+              disabled={status === "saving"}
+              className="rounded bg-foreground px-4 py-2 text-sm font-medium text-background transition-colors hover:bg-[#383838] disabled:opacity-50 dark:hover:bg-[#ccc]"
             >
-              Create company
+              {status === "saving" ? "Creating…" : "Create company"}
             </button>
             {status === "error" && (
               <p className="text-sm text-red-600 dark:text-red-400">{errorMessage}</p>

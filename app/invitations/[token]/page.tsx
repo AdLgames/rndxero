@@ -7,11 +7,13 @@ export default function AcceptInvitationPage({ params }: { params: Promise<{ tok
   const { token } = use(params);
   const router = useRouter();
   const [name, setName] = useState("");
-  const [status, setStatus] = useState<"idle" | "error" | "success">("idle");
+  const [status, setStatus] = useState<"idle" | "saving" | "error" | "success">("idle");
   const [error, setError] = useState("");
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
+    if (status === "saving") return;
+    setStatus("saving");
     const response = await fetch(`/api/invitations/${token}/accept`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -45,9 +47,10 @@ export default function AcceptInvitationPage({ params }: { params: Promise<{ tok
           />
           <button
             type="submit"
-            className="rounded bg-foreground px-4 py-2 text-sm font-medium text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc]"
+            disabled={status === "saving"}
+            className="rounded bg-foreground px-4 py-2 text-sm font-medium text-background transition-colors hover:bg-[#383838] disabled:opacity-50 dark:hover:bg-[#ccc]"
           >
-            Accept invitation
+            {status === "saving" ? "Joining…" : "Accept invitation"}
           </button>
           {status === "error" && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
         </form>
