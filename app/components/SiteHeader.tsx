@@ -36,6 +36,9 @@ export async function SiteHeader() {
           <Link href="/finance" className="text-zinc-600 hover:text-black dark:text-zinc-400 dark:hover:text-zinc-50">
             Finance
           </Link>
+          <Link href="/export" className="text-zinc-600 hover:text-black dark:text-zinc-400 dark:hover:text-zinc-50">
+            Export
+          </Link>
           <span className="text-zinc-500 dark:text-zinc-400">Signed in as {currentUser.email}</span>
           <form action="/api/auth/signout" method="POST">
             <button

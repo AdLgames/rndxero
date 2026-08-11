@@ -1,5 +1,6 @@
 import type { PlannedAllocation, PlanVersion, PrismaClient } from "@/lib/generated/prisma/client";
 import { getWeekBoundaries } from "@/lib/capture/week-key";
+import { findApplicableRate } from "@/lib/cost/rate";
 
 export class PlanError extends Error {}
 
@@ -162,14 +163,7 @@ export async function computePlannedCostMinorUnits(
   for (const allocation of params.planVersion.plannedAllocations) {
     if (!allocation.userId) continue;
     const { start } = getWeekBoundaries(allocation.weekKey);
-    const applicable = rates
-      .filter(
-        (r) =>
-          r.userId === allocation.userId &&
-          r.effectiveFrom <= start &&
-          (r.effectiveTo === null || r.effectiveTo > start)
-      )
-      .sort((a, b) => b.effectiveFrom.getTime() - a.effectiveFrom.getTime())[0];
+    const applicable = findApplicableRate(rates, allocation.userId, start);
     if (!applicable) continue;
     totalMinorUnits += Math.round((allocation.plannedMinutes / 60) * applicable.hourlyRateMinorUnits);
   }
