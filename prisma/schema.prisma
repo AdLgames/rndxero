@@ -1,11 +1,18 @@
-// ClaimTrail schema. See PLAN.md for the model rationale.
+// ClaimTrail schema. See PLAN.md for stack/Xero/billing context and
+// BOARD-PLAN.md for the capture/planning/board architecture below —
+// BOARD-PLAN.md is authoritative for anything it covers.
 //
-// Append-only tables (EvidenceEntry, EvidenceAttachment, TimeEntry,
-// CostAllocation, Approval, PeriodSnapshot) are additionally protected at
-// the database level — see prisma/migrations/*_evidence_model for the
-// triggers that reject UPDATE/DELETE on them. The Prisma layer never
-// issues update/delete against these tables; see lib/evidence and
-// lib/approvals.
+// Append-only enforcement (see prisma/migrations/*_board_foundation):
+//   - Amendment, AuditLog, PlannedAllocation: always insert-only.
+//   - WeeklySubmission: insert/update allowed until lockedAt is set, then
+//     the row is frozen — the trigger allows exactly the transition that
+//     sets lockedAt and rejects every UPDATE/DELETE after.
+//   - UncertaintyNote: same rule, keyed off its *parent* WeeklySubmission's
+//     lockedAt (a note has no lock state of its own).
+//   - PlanVersion: same shape, keyed off its own supersededAt.
+// The Prisma layer's job is to never attempt a disallowed write in the
+// first place; the triggers are what make that true regardless of what
+// calls the database.
 
 generator client {
   provider = "prisma-client"
@@ -19,10 +26,17 @@ datasource db {
 // --- Identity & access -------------------------------------------------
 
 enum MembershipRole {
-  ADMIN
+  OWNER
+  FINANCE
+  LEAD
   CONTRIBUTOR
-  FINANCE_APPROVER
   ADVISER
+}
+
+enum MembershipStatus {
+  INVITED
+  ACTIVE
+  REMOVED
 }
 
 model User {
@@ -36,12 +50,14 @@ model User {
   lastMagicLinkSentAt DateTime?
 
   memberships         Membership[]
-  evidenceEntries     EvidenceEntry[]
-  timeEntriesAsPerson TimeEntry[]                    @relation("TimeEntryPerson")
-  timeEntriesAsAuthor TimeEntry[]                    @relation("TimeEntryAuthor")
-  costAllocations     CostAllocation[]
-  approvals           Approval[]
-  periodSnapshots     PeriodSnapshot[]
+  projectMemberships  ProjectMember[]
+  weeklySubmissions   WeeklySubmission[]
+  plannedAllocations  PlannedAllocation[]
+  rates               Rate[]
+  directCostsEntered  DirectCost[]
+  auditLogEntries     AuditLog[]
+  amendments          Amendment[]
+  planVersionsCreated PlanVersion[]
   competentOn         ProjectCompetentProfessional[]
   invitationsSentBy   Invitation[]                   @relation("InvitationInviter")
 }
@@ -59,17 +75,25 @@ model Company {
   xeroConnection    XeroConnection?
   manualCostImports ManualCostImport[]
   subscription      Subscription?
+  weeklySubmissions WeeklySubmission[]
+  rates             Rate[]
+  auditLogEntries   AuditLog[]
 }
 
 // A membership scopes a user's role to a company. Adviser memberships are
 // how the B2B2B channel works: one adviser user, many client-company
-// memberships, each independently scoped.
+// memberships, each independently scoped. `canViewCosts` is deliberately
+// separate from role — a Lead or Contributor is not automatically able to
+// infer a colleague's pay from what they can see, even on projects they
+// lead.
 model Membership {
-  id        String         @id @default(cuid())
-  userId    String
-  companyId String
-  role      MembershipRole
-  createdAt DateTime       @default(now())
+  id           String           @id @default(cuid())
+  userId       String
+  companyId    String
+  role         MembershipRole
+  canViewCosts Boolean          @default(false)
+  status       MembershipStatus @default(ACTIVE)
+  createdAt    DateTime         @default(now())
 
   user    User    @relation(fields: [userId], references: [id])
   company Company @relation(fields: [companyId], references: [id])
@@ -92,7 +116,7 @@ model Invitation {
   invitedBy User    @relation("InvitationInviter", fields: [invitedById], references: [id])
 }
 
-// --- Projects ------------------------------------------------------------
+// --- Projects & uncertainties ---------------------------------------------
 
 enum ProjectStatus {
   ACTIVE
@@ -101,20 +125,44 @@ enum ProjectStatus {
 }
 
 model Project {
-  id        String        @id @default(cuid())
-  companyId String
-  name      String
-  startDate DateTime
-  endDate   DateTime?
-  status    ProjectStatus @default(ACTIVE)
-  createdAt DateTime      @default(now())
+  id          String        @id @default(cuid())
+  companyId   String
+  name        String
+  description String?
+  startDate   DateTime
+  endDate     DateTime?
+  status      ProjectStatus @default(ACTIVE)
+  createdAt   DateTime      @default(now())
 
   company                Company                        @relation(fields: [companyId], references: [id])
+  members                ProjectMember[]
   competentProfessionals ProjectCompetentProfessional[]
-  evidenceEntries        EvidenceEntry[]
-  timeEntries            TimeEntry[]
-  costAllocations        CostAllocation[]
-  periodSnapshots        PeriodSnapshot[]
+  uncertainties          Uncertainty[]
+  weeklySubmissions      WeeklySubmission[]
+  planVersions           PlanVersion[]
+  directCosts            DirectCost[]
+}
+
+// Project role sets access to *this* project; the company-level Membership
+// role sets the ceiling (e.g. an OWNER can always act on any project, but
+// a CONTRIBUTOR only has standing on projects they're a ProjectMember of).
+enum ProjectRole {
+  LEAD
+  CONTRIBUTOR
+  ADVISER
+}
+
+model ProjectMember {
+  id        String      @id @default(cuid())
+  projectId String
+  userId    String
+  role      ProjectRole
+  createdAt DateTime    @default(now())
+
+  project Project @relation(fields: [projectId], references: [id])
+  user    User    @relation(fields: [userId], references: [id])
+
+  @@unique([projectId, userId])
 }
 
 // A named competent professional for a project. `userId` is optional
@@ -132,6 +180,227 @@ model ProjectCompetentProfessional {
   @@unique([projectId, name])
 }
 
+enum UncertaintyOutcome {
+  OPEN
+  RESOLVED
+  ABANDONED
+}
+
+// The lane unit is the *project*, not the uncertainty (BOARD-PLAN.md
+// Phase 0 decision) — this table still exists as a first-class entity
+// because it's what the claim narrative and the note-taking flow both
+// hang off, it just isn't what the board's swimlanes group by.
+model Uncertainty {
+  id           String             @id @default(cuid())
+  projectId    String
+  title        String
+  description  String?
+  /// What the existing state of knowledge was — the field the claim
+  /// narrative needs and the one everyone forgets to write down.
+  baseline     String
+  raisedWeek   String
+  resolvedWeek String?
+  outcome      UncertaintyOutcome @default(OPEN)
+  createdAt    DateTime           @default(now())
+
+  project            Project             @relation(fields: [projectId], references: [id])
+  notes              UncertaintyNote[]
+  plannedAllocations PlannedAllocation[]
+  directCosts        DirectCost[]
+
+  @@index([projectId])
+}
+
+// --- Capture ---------------------------------------------------------------
+
+enum SubmissionBasis {
+  ESTIMATED
+  TRACKED
+}
+
+// One submission = one person, one project, one ISO week (BOARD-PLAN.md
+// Phase 0: weeks are Monday-Sunday, Europe/London, stored as a week key
+// like "2026-W33" — never a date range). See the append-only note at the
+// top of this file for the lock-state trigger.
+model WeeklySubmission {
+  id              String          @id @default(cuid())
+  companyId       String
+  projectId       String
+  userId          String
+  weekKey         String
+  minutes         Int
+  basis           SubmissionBasis
+  submittedAt     DateTime        @default(now())
+  isRetrospective Boolean
+  lockedAt        DateTime?
+
+  company Company           @relation(fields: [companyId], references: [id])
+  project Project           @relation(fields: [projectId], references: [id])
+  user    User              @relation(fields: [userId], references: [id])
+  notes   UncertaintyNote[]
+
+  @@unique([projectId, userId, weekKey])
+  @@index([companyId, weekKey])
+}
+
+enum UncertaintyNoteType {
+  ATTEMPT
+  BLOCKER
+  FAILED_ATTEMPT
+  RESOLUTION
+  NO_PROGRESS
+}
+
+// The sticky note. One submission produces several of these — one per
+// uncertainty the person touched that week. `minutes` is an optional
+// per-uncertainty breakdown, not required at capture time.
+model UncertaintyNote {
+  id            String              @id @default(cuid())
+  submissionId  String
+  uncertaintyId String
+  type          UncertaintyNoteType
+  body          String
+  minutes       Int?
+  createdAt     DateTime            @default(now())
+
+  submission  WeeklySubmission @relation(fields: [submissionId], references: [id])
+  uncertainty Uncertainty      @relation(fields: [uncertaintyId], references: [id])
+  amendments  Amendment[]
+
+  @@index([uncertaintyId])
+  @@index([submissionId])
+}
+
+// Corrections append; nothing is ever overwritten. Exactly one of
+// noteId/submissionId is set — enforced by a CHECK constraint in the
+// migration, not just convention.
+model Amendment {
+  id           String   @id @default(cuid())
+  noteId       String?
+  submissionId String?
+  authorId     String
+  body         String
+  createdAt    DateTime @default(now())
+
+  note   UncertaintyNote? @relation(fields: [noteId], references: [id])
+  author User             @relation(fields: [authorId], references: [id])
+
+  @@index([noteId])
+  @@index([submissionId])
+}
+
+// --- Plan --------------------------------------------------------------
+
+// Plans are immutable once superseded. A revision creates a new version;
+// the old one stays queryable forever — see the append-only note above.
+model PlanVersion {
+  id            String    @id @default(cuid())
+  projectId     String
+  versionNumber Int
+  createdById   String
+  createdAt     DateTime  @default(now())
+  /// Why this revision happened — required on every revision after v1.
+  note          String?
+  supersededAt  DateTime?
+
+  project            Project             @relation(fields: [projectId], references: [id])
+  createdBy          User                @relation(fields: [createdById], references: [id])
+  plannedAllocations PlannedAllocation[]
+
+  @@unique([projectId, versionNumber])
+}
+
+// Always insert-only: a plan revision creates a new PlanVersion with its
+// own fresh PlannedAllocation rows rather than editing existing ones, so
+// this table never needs a lock-state trigger — it's never touched again
+// once written.
+model PlannedAllocation {
+  id             String   @id @default(cuid())
+  planVersionId  String
+  uncertaintyId  String
+  userId         String?
+  weekKey        String
+  plannedMinutes Int
+  createdAt      DateTime @default(now())
+
+  planVersion PlanVersion @relation(fields: [planVersionId], references: [id])
+  uncertainty Uncertainty @relation(fields: [uncertaintyId], references: [id])
+  user        User?       @relation(fields: [userId], references: [id])
+
+  @@index([planVersionId])
+  @@index([uncertaintyId, weekKey])
+}
+
+// --- Cost ----------------------------------------------------------------
+
+// Time-boxed so a raise doesn't retroactively rewrite last year's costs.
+// A correction is a new Rate row with its own effective window, not an
+// edit to an old one — same "never rewrite history" discipline as
+// evidence, applied to pay.
+model Rate {
+  id                   String    @id @default(cuid())
+  companyId            String
+  userId               String
+  hourlyRateMinorUnits Int
+  effectiveFrom        DateTime
+  effectiveTo          DateTime?
+  createdAt            DateTime  @default(now())
+
+  company Company @relation(fields: [companyId], references: [id])
+  user    User    @relation(fields: [userId], references: [id])
+
+  @@index([userId, effectiveFrom])
+}
+
+// Consumables and subcontractor costs only — labour cost is always
+// derived (hours × rate at that week), never stored here. Optional
+// traceability back to the Xero mirror or a manual import, same
+// traceability requirement PLAN.md already established for costs.
+model DirectCost {
+  id                String   @id @default(cuid())
+  projectId         String
+  uncertaintyId     String?
+  description       String
+  amountMinorUnits  Int
+  currency          String   @default("GBP")
+  date              DateTime
+  enteredById       String
+  xeroJournalLineId String?
+  manualCostLineId  String?
+  createdAt         DateTime @default(now())
+
+  project         Project          @relation(fields: [projectId], references: [id])
+  uncertainty     Uncertainty?     @relation(fields: [uncertaintyId], references: [id])
+  enteredBy       User             @relation(fields: [enteredById], references: [id])
+  xeroJournalLine XeroJournalLine? @relation(fields: [xeroJournalLineId], references: [id])
+  manualCostLine  ManualCostLine?  @relation(fields: [manualCostLineId], references: [id])
+
+  @@index([projectId])
+}
+
+// --- Audit -----------------------------------------------------------------
+
+// Always insert-only. Written from a single service wrapper (Phase 2),
+// not from individual route handlers, or coverage rots within a month.
+model AuditLog {
+  id         String   @id @default(cuid())
+  companyId  String
+  actorId    String
+  action     String
+  entityType String
+  entityId   String
+  before     Json?
+  after      Json?
+  reason     String?
+  createdAt  DateTime @default(now())
+
+  company Company @relation(fields: [companyId], references: [id])
+  actor   User    @relation(fields: [actorId], references: [id])
+
+  @@index([companyId, createdAt])
+  @@index([entityType, entityId])
+}
+
 model AccountingPeriod {
   id        String   @id @default(cuid())
   companyId String
@@ -140,161 +409,9 @@ model AccountingPeriod {
   endDate   DateTime
   createdAt DateTime @default(now())
 
-  company         Company          @relation(fields: [companyId], references: [id])
-  periodSnapshots PeriodSnapshot[]
+  company Company @relation(fields: [companyId], references: [id])
 
   @@unique([companyId, startDate, endDate])
-}
-
-// --- Evidence (append-only) ----------------------------------------------
-
-enum EvidenceEntryType {
-  UNCERTAINTY_RAISED
-  APPROACH_ATTEMPTED
-  RESULT_OBSERVED
-  RESOLUTION
-  DECISION
-}
-
-model EvidenceEntry {
-  id         String            @id @default(cuid())
-  projectId  String
-  type       EvidenceEntryType
-  body       String
-  authorId   String
-  supersedes String?           @unique
-  createdAt  DateTime          @default(now())
-
-  project         Project              @relation(fields: [projectId], references: [id])
-  author          User                 @relation(fields: [authorId], references: [id])
-  supersededEntry EvidenceEntry?       @relation("EvidenceSupersession", fields: [supersedes], references: [id])
-  supersededBy    EvidenceEntry?       @relation("EvidenceSupersession")
-  attachments     EvidenceAttachment[]
-
-  @@index([projectId, createdAt])
-}
-
-// Attachments carry a content hash so a swapped file is detectable —
-// the hash is computed at upload time and never recomputed/trusted from
-// the client on read.
-model EvidenceAttachment {
-  id              String   @id @default(cuid())
-  evidenceEntryId String
-  filename        String
-  contentHash     String
-  storageUrl      String
-  sizeBytes       Int
-  mimeType        String
-  createdAt       DateTime @default(now())
-
-  evidenceEntry EvidenceEntry @relation(fields: [evidenceEntryId], references: [id])
-}
-
-enum TimeEntryBasis {
-  TIMESHEET
-  SAMPLED
-  ESTIMATED
-}
-
-// Hours are stored as integer minutes, never fractional floats.
-model TimeEntry {
-  id          String         @id @default(cuid())
-  projectId   String
-  personId    String
-  periodStart DateTime
-  periodEnd   DateTime
-  minutes     Int
-  basis       TimeEntryBasis
-  authorId    String
-  supersedes  String?        @unique
-  createdAt   DateTime       @default(now())
-
-  project         Project    @relation(fields: [projectId], references: [id])
-  person          User       @relation("TimeEntryPerson", fields: [personId], references: [id])
-  author          User       @relation("TimeEntryAuthor", fields: [authorId], references: [id])
-  supersededEntry TimeEntry? @relation("TimeEntrySupersession", fields: [supersedes], references: [id])
-  supersededBy    TimeEntry? @relation("TimeEntrySupersession")
-
-  @@index([projectId, periodStart])
-}
-
-enum CostAllocationSource {
-  XERO_JOURNAL_LINE
-  MANUAL_IMPORT
-}
-
-// Apportionment is stored in basis points (1/100 of a percent) as an
-// integer — never a float — and is always human-confirmed; nothing in
-// this codebase may write a CostAllocation without a rationale.
-model CostAllocation {
-  id                String               @id @default(cuid())
-  projectId         String
-  source            CostAllocationSource
-  xeroJournalLineId String?
-  manualCostLineId  String?
-  amountMinorUnits  Int
-  currency          String               @default("GBP")
-  apportionmentBps  Int
-  rationale         String
-  authorId          String
-  supersedes        String?              @unique
-  createdAt         DateTime             @default(now())
-
-  project         Project          @relation(fields: [projectId], references: [id])
-  author          User             @relation(fields: [authorId], references: [id])
-  xeroJournalLine XeroJournalLine? @relation(fields: [xeroJournalLineId], references: [id])
-  manualCostLine  ManualCostLine?  @relation(fields: [manualCostLineId], references: [id])
-  supersededEntry CostAllocation?  @relation("CostAllocationSupersession", fields: [supersedes], references: [id])
-  supersededBy    CostAllocation?  @relation("CostAllocationSupersession")
-
-  @@index([projectId, createdAt])
-}
-
-// --- Approvals & snapshots (append-only) ----------------------------------
-
-enum ApprovalTargetType {
-  TIME_ENTRY
-  COST_ALLOCATION
-  PERIOD_SNAPSHOT
-}
-
-enum ApprovalDecision {
-  APPROVED
-  QUERIED
-}
-
-model Approval {
-  id           String             @id @default(cuid())
-  targetType   ApprovalTargetType
-  targetId     String
-  decision     ApprovalDecision
-  snapshotHash String
-  comment      String?
-  approverId   String
-  createdAt    DateTime           @default(now())
-
-  approver User @relation(fields: [approverId], references: [id])
-
-  @@index([targetType, targetId])
-}
-
-// An immutable freeze of a project-period once signed off. `dataJson` is
-// the exact canonicalized payload that `snapshotHash` was computed over —
-// keeping both means the hash can always be independently re-verified.
-model PeriodSnapshot {
-  id                 String   @id @default(cuid())
-  projectId          String
-  accountingPeriodId String
-  snapshotHash       String
-  dataJson           Json
-  generatedById      String
-  createdAt          DateTime @default(now())
-
-  project          Project          @relation(fields: [projectId], references: [id])
-  accountingPeriod AccountingPeriod @relation(fields: [accountingPeriodId], references: [id])
-  generatedBy      User             @relation(fields: [generatedById], references: [id])
-
-  @@unique([projectId, accountingPeriodId])
 }
 
 // --- Xero (read-only mirror) ----------------------------------------------
@@ -329,13 +446,11 @@ model XeroJournalLine {
   trackingCategory  String?
   trackingOption    String?
   sourceType        String
-  /**
-   * Heuristic suggestion only — see lib/xero/cost-categories.ts.
-   */
+  /// Heuristic suggestion only — see lib/xero/cost-categories.ts.
   costCategory      String?
   syncedAt          DateTime @default(now())
 
-  costAllocations CostAllocation[]
+  directCosts DirectCost[]
 
   @@unique([companyId, xeroJournalLineId])
   @@index([companyId, journalDate])
@@ -372,7 +487,7 @@ model ManualCostLine {
   description        String?
 
   manualCostImport ManualCostImport @relation(fields: [manualCostImportId], references: [id])
-  costAllocations  CostAllocation[]
+  directCosts      DirectCost[]
 }
 
 // --- Billing ---------------------------------------------------------------

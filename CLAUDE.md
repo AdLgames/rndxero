@@ -2,7 +2,7 @@
 
 # ClaimTrail
 
-Read `PLAN.md` before working on this repo — it is the build plan and the source of truth for scope, phasing, and design rules. Build one phase at a time; each phase ends with a checklist that must pass before moving to the next.
+Read `PLAN.md` before working on this repo — it is the original build plan. Read `BOARD-PLAN.md` next — it supersedes `PLAN.md`'s capture/cost/evidence/export architecture (Phases 2–5) with a project-workstream board, weekly submissions, uncertainty tracking, planning, and locking. Where the two disagree, `BOARD-PLAN.md` wins. Build one phase at a time; each phase ends with a checklist that must pass before moving to the next.
 
 ## Conventions
 
