@@ -24,6 +24,8 @@ const TAP_OPTIONS: Array<{ label: string; type: UncertaintyNoteType; requiresBod
 interface NoteSelection {
   type: UncertaintyNoteType | null;
   body: string;
+  /** Optional hours-on-this-uncertainty, as typed (empty = not split out). Feeds the planner's plan-vs-actual view. */
+  hours: string;
 }
 
 interface ProjectFormState {
@@ -67,21 +69,31 @@ export function CaptureClient({ weekKey, projects: initialProjects }: { weekKey:
   }
 
   function selectNote(projectId: string, uncertaintyId: string, type: UncertaintyNoteType) {
-    setState((prev) => ({
-      ...prev,
-      [projectId]: {
-        ...prev[projectId],
-        notes: { ...prev[projectId].notes, [uncertaintyId]: { type, body: prev[projectId].notes[uncertaintyId]?.body ?? "" } },
-      },
-    }));
+    setState((prev) => {
+      const existingNote = prev[projectId].notes[uncertaintyId] ?? { type: null, body: "", hours: "" };
+      return {
+        ...prev,
+        [projectId]: { ...prev[projectId], notes: { ...prev[projectId].notes, [uncertaintyId]: { ...existingNote, type } } },
+      };
+    });
   }
 
   function setNoteBody(projectId: string, uncertaintyId: string, body: string) {
     setState((prev) => {
-      const existingNote = prev[projectId].notes[uncertaintyId] ?? { type: null, body: "" };
+      const existingNote = prev[projectId].notes[uncertaintyId] ?? { type: null, body: "", hours: "" };
       return {
         ...prev,
         [projectId]: { ...prev[projectId], notes: { ...prev[projectId].notes, [uncertaintyId]: { ...existingNote, body } } },
+      };
+    });
+  }
+
+  function setNoteHours(projectId: string, uncertaintyId: string, hours: string) {
+    setState((prev) => {
+      const existingNote = prev[projectId].notes[uncertaintyId] ?? { type: null, body: "", hours: "" };
+      return {
+        ...prev,
+        [projectId]: { ...prev[projectId], notes: { ...prev[projectId].notes, [uncertaintyId]: { ...existingNote, hours } } },
       };
     });
   }
@@ -133,11 +145,15 @@ export function CaptureClient({ weekKey, projects: initialProjects }: { weekKey:
 
         const notes = Object.entries(form.notes)
           .filter(([, selection]) => selection.type !== null)
-          .map(([uncertaintyId, selection]) => ({
-            uncertaintyId,
-            type: selection.type as UncertaintyNoteType,
-            body: selection.body.trim() || (selection.type === "NO_PROGRESS" ? "No progress this week." : ""),
-          }));
+          .map(([uncertaintyId, selection]) => {
+            const hours = Number(selection.hours);
+            return {
+              uncertaintyId,
+              type: selection.type as UncertaintyNoteType,
+              body: selection.body.trim() || (selection.type === "NO_PROGRESS" ? "No progress this week." : ""),
+              minutes: selection.hours.trim() !== "" && !Number.isNaN(hours) && hours > 0 ? Math.round(hours * 60) : undefined,
+            };
+          });
 
         const missingBody = notes.find((n) => n.type !== "NO_PROGRESS" && !n.body);
         if (missingBody) {
@@ -276,13 +292,25 @@ export function CaptureClient({ weekKey, projects: initialProjects }: { weekKey:
                             ))}
                           </div>
                           {selection?.type && selection.type !== "NO_PROGRESS" && (
-                            <input
-                              type="text"
-                              placeholder="One line about what happened"
-                              value={selection.body}
-                              onChange={(e) => setNoteBody(project.projectId, uncertainty.id, e.target.value)}
-                              className="mt-2 w-full rounded border border-black/[.12] px-2 py-1 text-sm dark:border-white/[.145] dark:bg-black dark:text-zinc-50"
-                            />
+                            <div className="mt-2 flex items-center gap-2">
+                              <input
+                                type="text"
+                                placeholder="One line about what happened"
+                                value={selection.body}
+                                onChange={(e) => setNoteBody(project.projectId, uncertainty.id, e.target.value)}
+                                className="w-full rounded border border-black/[.12] px-2 py-1 text-sm dark:border-white/[.145] dark:bg-black dark:text-zinc-50"
+                              />
+                              <input
+                                type="number"
+                                min="0"
+                                step="0.25"
+                                placeholder="hrs"
+                                title="Hours spent specifically on this uncertainty (optional — feeds the planner's plan-vs-actual view)"
+                                value={selection.hours}
+                                onChange={(e) => setNoteHours(project.projectId, uncertainty.id, e.target.value)}
+                                className="w-16 shrink-0 rounded border border-black/[.12] px-2 py-1 text-sm dark:border-white/[.145] dark:bg-black dark:text-zinc-50"
+                              />
+                            </div>
                           )}
                         </div>
                       );

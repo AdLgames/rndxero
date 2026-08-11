@@ -27,6 +27,9 @@ export async function SiteHeader() {
           <Link href="/capture" className="text-zinc-600 hover:text-black dark:text-zinc-400 dark:hover:text-zinc-50">
             Capture
           </Link>
+          <Link href="/planner" className="text-zinc-600 hover:text-black dark:text-zinc-400 dark:hover:text-zinc-50">
+            Planner
+          </Link>
           <Link href="/finance" className="text-zinc-600 hover:text-black dark:text-zinc-400 dark:hover:text-zinc-50">
             Finance
           </Link>
