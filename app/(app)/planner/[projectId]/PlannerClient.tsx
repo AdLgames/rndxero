@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { Panel } from "@/app/components/Panel";
+import { buttonPrimary, buttonSecondary, eyebrow, input, select } from "@/app/components/ui";
 
 export interface UncertaintyOption {
   id: string;
@@ -150,53 +152,45 @@ export function PlannerClient({
 
   return (
     <div className="flex flex-col gap-8">
-      <section>
-        <h2 className="text-base font-medium text-black dark:text-zinc-50">Current plan</h2>
+      <Panel className="p-4">
+        <p className={eyebrow}>Current plan</p>
         {currentPlan ? (
-          <div className="mt-2 text-sm text-zinc-700 dark:text-zinc-300">
+          <div className="mt-2 text-sm text-foreground/80">
             <p>
               Version {currentPlan.versionNumber} · {hoursLabel(currentPlan.totalPlannedMinutes)}h planned
               {canViewCosts && plannedCostMinorUnits !== null ? ` · ${formatMoney(plannedCostMinorUnits)} derived cost` : ""}
             </p>
-            {currentPlan.note && <p className="mt-1 text-zinc-500 dark:text-zinc-400">&quot;{currentPlan.note}&quot;</p>}
+            {currentPlan.note && <p className="mt-1 text-foreground/50">&quot;{currentPlan.note}&quot;</p>}
           </div>
         ) : (
-          <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">No plan yet.</p>
+          <p className="mt-2 text-sm text-foreground/60">No plan yet.</p>
         )}
-      </section>
+      </Panel>
 
       <section>
-        <h2 className="text-base font-medium text-black dark:text-zinc-50">Plan vs actual</h2>
+        <p className={eyebrow}>Plan vs actual</p>
         {variance.length === 0 ? (
-          <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">Nothing planned or logged yet.</p>
+          <p className="mt-2 text-sm text-foreground/60">Nothing planned or logged yet.</p>
         ) : (
-          <div className="mt-2 overflow-x-auto">
+          <div className="mt-2 overflow-x-auto border border-steel/30">
             <table className="w-full text-left text-sm">
               <thead>
-                <tr className="border-b border-black/[.08] text-xs uppercase tracking-wide text-zinc-500 dark:border-white/[.08] dark:text-zinc-400">
-                  <th className="py-1 pr-2">Uncertainty</th>
-                  <th className="py-1 pr-2">Week</th>
-                  <th className="py-1 pr-2 text-right">Planned</th>
-                  <th className="py-1 pr-2 text-right">Actual</th>
-                  <th className="py-1 text-right">Variance</th>
+                <tr className="border-b border-steel/30 bg-steel/5 text-xs font-semibold uppercase tracking-wide text-steel-dark">
+                  <th className="px-2 py-1.5">Uncertainty</th>
+                  <th className="px-2 py-1.5">Week</th>
+                  <th className="px-2 py-1.5 text-right">Planned</th>
+                  <th className="px-2 py-1.5 text-right">Logged so far</th>
+                  <th className="px-2 py-1.5 text-right">Variance</th>
                 </tr>
               </thead>
               <tbody>
                 {variance.map((row, i) => (
-                  <tr key={`${row.uncertaintyTitle}-${row.weekKey}-${i}`} className="border-b border-black/[.04] dark:border-white/[.04]">
-                    <td className="py-1 pr-2 text-black dark:text-zinc-50">{row.uncertaintyTitle}</td>
-                    <td className="py-1 pr-2 text-zinc-600 dark:text-zinc-400">{row.weekKey}</td>
-                    <td className="py-1 pr-2 text-right text-zinc-600 dark:text-zinc-400">{hoursLabel(row.plannedMinutes)}h</td>
-                    <td className="py-1 pr-2 text-right text-zinc-600 dark:text-zinc-400">{hoursLabel(row.actualMinutes)}h</td>
-                    <td
-                      className={`py-1 text-right ${
-                        row.varianceMinutes < 0
-                          ? "text-red-600 dark:text-red-400"
-                          : row.varianceMinutes > 0
-                            ? "text-amber-600 dark:text-amber-400"
-                            : "text-zinc-600 dark:text-zinc-400"
-                      }`}
-                    >
+                  <tr key={`${row.uncertaintyTitle}-${row.weekKey}-${i}`} className="border-b border-steel/10">
+                    <td className="px-2 py-1.5 text-foreground">{row.uncertaintyTitle}</td>
+                    <td className="px-2 py-1.5 text-foreground/60">{row.weekKey}</td>
+                    <td className="px-2 py-1.5 text-right text-foreground/60">{hoursLabel(row.plannedMinutes)}h</td>
+                    <td className="px-2 py-1.5 text-right font-semibold text-sage-dark">{hoursLabel(row.actualMinutes)}h</td>
+                    <td className={`px-2 py-1.5 text-right ${row.varianceMinutes < 0 ? "text-red-700" : "text-steel-dark"}`}>
                       {row.varianceMinutes > 0 ? "+" : ""}
                       {hoursLabel(row.varianceMinutes)}h
                     </td>
@@ -206,7 +200,7 @@ export function PlannerClient({
             </table>
           </div>
         )}
-        <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+        <p className="mt-1 text-xs text-foreground/50">
           Actuals only include weeks where someone tagged hours to that specific uncertainty in capture — a blank
           isn&apos;t necessarily zero effort, just untagged.
         </p>
@@ -214,8 +208,8 @@ export function PlannerClient({
 
       {versionHistory.length > 0 && (
         <section>
-          <h2 className="text-base font-medium text-black dark:text-zinc-50">Version history</h2>
-          <ul className="mt-2 flex flex-col gap-1 text-sm text-zinc-600 dark:text-zinc-400">
+          <p className={eyebrow}>Version history</p>
+          <ul className="mt-2 flex flex-col gap-1 text-sm text-foreground/60">
             {versionHistory.map((v) => (
               <li key={v.versionNumber}>
                 Version {v.versionNumber} · {hoursLabel(v.totalPlannedMinutes)}h planned ·{" "}
@@ -229,39 +223,25 @@ export function PlannerClient({
 
       {canWrite && (
         <section>
-          <h2 className="text-base font-medium text-black dark:text-zinc-50">
-            {currentPlan ? "Revise the plan" : "Build a plan"}
-          </h2>
+          <p className={eyebrow}>{currentPlan ? "Revise the plan" : "Build a plan"}</p>
 
           {!builderOpen ? (
-            <button
-              type="button"
-              onClick={() => setBuilderOpen(true)}
-              className="mt-2 rounded border border-black/[.12] px-3 py-1.5 text-sm dark:border-white/[.145] dark:text-zinc-50"
-            >
+            <button type="button" onClick={() => setBuilderOpen(true)} className={`${buttonSecondary} mt-2`}>
               {currentPlan ? "Start a revision" : "Add allocations"}
             </button>
           ) : (
             <div className="mt-2 flex flex-col gap-3">
               <div className="flex flex-col gap-2">
                 {rows.map((row) => (
-                  <div key={row.key} className="flex flex-wrap items-center gap-2 rounded border border-black/[.08] p-2 dark:border-white/[.08]">
-                    <select
-                      value={row.uncertaintyId}
-                      onChange={(e) => updateRow(row.key, { uncertaintyId: e.target.value })}
-                      className="rounded border border-black/[.12] px-2 py-1 text-sm dark:border-white/[.145] dark:bg-black dark:text-zinc-50"
-                    >
+                  <div key={row.key} className="flex flex-wrap items-center gap-2 border border-steel/20 p-2">
+                    <select value={row.uncertaintyId} onChange={(e) => updateRow(row.key, { uncertaintyId: e.target.value })} className={select}>
                       {uncertainties.map((u) => (
                         <option key={u.id} value={u.id}>
                           {u.title}
                         </option>
                       ))}
                     </select>
-                    <select
-                      value={row.userId}
-                      onChange={(e) => updateRow(row.key, { userId: e.target.value })}
-                      className="rounded border border-black/[.12] px-2 py-1 text-sm dark:border-white/[.145] dark:bg-black dark:text-zinc-50"
-                    >
+                    <select value={row.userId} onChange={(e) => updateRow(row.key, { userId: e.target.value })} className={select}>
                       <option value="">Unassigned</option>
                       {members.map((m) => (
                         <option key={m.userId} value={m.userId}>
@@ -274,7 +254,7 @@ export function PlannerClient({
                       placeholder="2026-W33"
                       value={row.weekKey}
                       onChange={(e) => updateRow(row.key, { weekKey: e.target.value })}
-                      className="w-24 rounded border border-black/[.12] px-2 py-1 text-sm dark:border-white/[.145] dark:bg-black dark:text-zinc-50"
+                      className="w-24 border border-steel/40 bg-white px-2 py-1 text-sm text-foreground"
                     />
                     <input
                       type="number"
@@ -283,14 +263,14 @@ export function PlannerClient({
                       placeholder="hrs"
                       value={row.hours}
                       onChange={(e) => updateRow(row.key, { hours: e.target.value })}
-                      className="w-20 rounded border border-black/[.12] px-2 py-1 text-sm dark:border-white/[.145] dark:bg-black dark:text-zinc-50"
+                      className="w-20 border border-steel/40 bg-white px-2 py-1 text-sm text-foreground"
                     />
-                    <button type="button" onClick={() => removeRow(row.key)} className="text-xs text-zinc-500 underline dark:text-zinc-400">
+                    <button type="button" onClick={() => removeRow(row.key)} className="text-xs font-semibold uppercase text-foreground/50 underline">
                       Remove
                     </button>
                   </div>
                 ))}
-                <button type="button" onClick={addRow} className="self-start text-sm text-zinc-600 underline dark:text-zinc-400">
+                <button type="button" onClick={addRow} className="self-start text-xs font-semibold uppercase tracking-wide text-steel-dark underline">
                   + Add row
                 </button>
               </div>
@@ -301,20 +281,15 @@ export function PlannerClient({
                   onChange={(e) => setNote(e.target.value)}
                   placeholder="Why is this plan being revised?"
                   rows={2}
-                  className="w-full rounded border border-black/[.12] px-2 py-1 text-sm dark:border-white/[.145] dark:bg-black dark:text-zinc-50"
+                  className={input.replace("mt-1 ", "")}
                 />
               )}
 
               <div>
-                <button
-                  type="button"
-                  disabled={status === "saving"}
-                  onClick={submitPlan}
-                  className="rounded bg-foreground px-4 py-2 text-sm font-medium text-background disabled:opacity-50"
-                >
+                <button type="button" disabled={status === "saving"} onClick={submitPlan} className={buttonPrimary}>
                   {status === "saving" ? "Saving…" : currentPlan ? "Save revision" : "Save plan"}
                 </button>
-                {status === "error" && <p className="mt-1 text-sm text-red-600 dark:text-red-400">{error}</p>}
+                {status === "error" && <p className="mt-1 text-sm text-red-700">{error}</p>}
               </div>
             </div>
           )}

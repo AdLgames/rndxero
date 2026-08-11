@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { getCurrentUser, SESSION_COOKIE_NAME } from "@/lib/auth/session";
+import { eyebrow } from "@/app/components/ui";
 import { FinanceWeeksClient, type SubmissionRow } from "./FinanceWeeksClient";
 
 export default async function FinancePage() {
@@ -21,8 +22,9 @@ export default async function FinancePage() {
   if (financeCompanyIds.length === 0) {
     return (
       <div className="mx-auto w-full max-w-3xl px-6 py-16">
-        <h1 className="text-xl font-semibold text-black dark:text-zinc-50">Finance</h1>
-        <p className="mt-4 text-sm text-zinc-600 dark:text-zinc-400">
+        <p className={eyebrow}>05 · Finance</p>
+        <h1 className="mt-1 text-2xl font-bold text-foreground">Lock settled weeks</h1>
+        <p className="mt-4 text-sm text-foreground/60">
           You need to be an Owner or Finance member of a company to lock weeks or review amendments.
         </p>
       </div>
@@ -106,8 +108,9 @@ export default async function FinancePage() {
 
   return (
     <div className="mx-auto w-full max-w-3xl px-6 py-16">
-      <h1 className="text-xl font-semibold text-black dark:text-zinc-50">Finance</h1>
-      <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+      <p className={eyebrow}>05 · Finance</p>
+      <h1 className="mt-1 text-2xl font-bold text-foreground">Lock settled weeks</h1>
+      <p className="mt-2 text-sm text-foreground/60">
         Lock weeks once they&apos;re settled. Once locked, the only way to correct one is an attributed amendment —
         the original stays exactly as submitted.
       </p>

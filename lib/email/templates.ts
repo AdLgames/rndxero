@@ -14,12 +14,12 @@ const LINK_EXPIRY_COPY = "This link expires in 15 minutes. If you didn't request
 
 export function buildMagicLinkEmail(params: { link: string; context: "sign-in" | "signup" }): EmailContent {
   const isSignup = params.context === "signup";
-  const subject = isSignup ? "Confirm your ClaimTrail company" : "Sign in to ClaimTrail";
+  const subject = isSignup ? "Confirm your Trace company" : "Sign in to Trace";
   const cta = isSignup ? "Confirm and sign in" : "Sign in";
 
   const text = `${cta}: ${params.link}\n\n${LINK_EXPIRY_COPY}`;
   const html = `
-    <p>${isSignup ? "One click to confirm your new company and sign in." : "Click below to sign in to ClaimTrail."}</p>
+    <p>${isSignup ? "One click to confirm your new company and sign in." : "Click below to sign in to Trace."}</p>
     <p><a href="${params.link}">${cta}</a></p>
     <p style="color:#666;font-size:13px;">${LINK_EXPIRY_COPY}</p>
   `.trim();
@@ -56,10 +56,10 @@ export function buildInvitationEmail(params: {
   companyName: string;
   inviterName: string;
 }): EmailContent {
-  const subject = `${params.inviterName} invited you to ${params.companyName} on ClaimTrail`;
-  const text = `${params.inviterName} invited you to join ${params.companyName} on ClaimTrail.\n\nAccept: ${params.link}\n\nThis invitation expires in 7 days.`;
+  const subject = `${params.inviterName} invited you to ${params.companyName} on Trace`;
+  const text = `${params.inviterName} invited you to join ${params.companyName} on Trace.\n\nAccept: ${params.link}\n\nThis invitation expires in 7 days.`;
   const html = `
-    <p>${params.inviterName} invited you to join <strong>${params.companyName}</strong> on ClaimTrail.</p>
+    <p>${params.inviterName} invited you to join <strong>${params.companyName}</strong> on Trace.</p>
     <p><a href="${params.link}">Accept invitation</a></p>
     <p style="color:#666;font-size:13px;">This invitation expires in 7 days.</p>
   `.trim();

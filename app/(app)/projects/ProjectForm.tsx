@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { buttonPrimary, fieldLabel, input } from "@/app/components/ui";
 
 export function ProjectForm({ companyId }: { companyId: string }) {
   const router = useRouter();
@@ -44,30 +45,18 @@ export function ProjectForm({ companyId }: { companyId: string }) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-3 rounded border border-black/[.08] p-4 dark:border-white/[.08]">
-      <label className="text-sm font-medium text-black dark:text-zinc-50">
+    <form onSubmit={handleSubmit} className="flex flex-col gap-3 border border-steel/30 bg-white p-4">
+      <label className={fieldLabel}>
         Project name
-        <input
-          type="text"
-          required
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          className="mt-1 w-full rounded border border-black/[.12] px-3 py-2 text-sm dark:border-white/[.145] dark:bg-black dark:text-zinc-50"
-        />
+        <input type="text" required value={name} onChange={(e) => setName(e.target.value)} className={input} />
       </label>
 
-      <label className="text-sm font-medium text-black dark:text-zinc-50">
+      <label className={fieldLabel}>
         Start date
-        <input
-          type="date"
-          required
-          value={startDate}
-          onChange={(e) => setStartDate(e.target.value)}
-          className="mt-1 w-full rounded border border-black/[.12] px-3 py-2 text-sm dark:border-white/[.145] dark:bg-black dark:text-zinc-50"
-        />
+        <input type="date" required value={startDate} onChange={(e) => setStartDate(e.target.value)} className={input} />
       </label>
 
-      <label className="text-sm font-medium text-black dark:text-zinc-50">
+      <label className={fieldLabel}>
         Competent professional(s)
         <input
           type="text"
@@ -75,19 +64,15 @@ export function ProjectForm({ companyId }: { companyId: string }) {
           placeholder="e.g. Dr. Ada Lovelace, Bo Chen"
           value={competentProfessionals}
           onChange={(e) => setCompetentProfessionals(e.target.value)}
-          className="mt-1 w-full rounded border border-black/[.12] px-3 py-2 text-sm dark:border-white/[.145] dark:bg-black dark:text-zinc-50"
+          className={input}
         />
-        <span className="mt-1 block text-xs text-zinc-500 dark:text-zinc-400">Comma-separated names.</span>
+        <span className="mt-1 block text-xs normal-case text-foreground/50">Comma-separated names.</span>
       </label>
 
-      <button
-        type="submit"
-        disabled={status === "saving"}
-        className="mt-1 rounded bg-foreground px-4 py-2 text-sm font-medium text-background transition-colors hover:bg-[#383838] disabled:opacity-50 dark:hover:bg-[#ccc]"
-      >
+      <button type="submit" disabled={status === "saving"} className={`${buttonPrimary} mt-1`}>
         Create project
       </button>
-      {status === "error" && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
+      {status === "error" && <p className="text-sm text-red-700">{error}</p>}
     </form>
   );
 }

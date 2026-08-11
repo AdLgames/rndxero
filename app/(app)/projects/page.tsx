@@ -3,8 +3,14 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { getCurrentUser, SESSION_COOKIE_NAME } from "@/lib/auth/session";
 import { listCompanyProjects } from "@/lib/projects/repository";
+import { Panel } from "@/app/components/Panel";
+import { badgeNeutral, badgeSage, eyebrow } from "@/app/components/ui";
 import { ProjectForm } from "./ProjectForm";
 import { InviteForm } from "./InviteForm";
+
+function hoursLabel(minutes: number): string {
+  return `${(minutes / 60).toFixed(1)}h`;
+}
 
 export default async function ProjectsPage() {
   const cookieStore = await cookies();
@@ -13,59 +19,83 @@ export default async function ProjectsPage() {
     redirect("/login");
   }
 
-  const adminCompanyIds = currentUser.memberships
-    .filter((m) => m.role === "OWNER")
-    .map((m) => m.companyId);
-
+  const adminCompanyIds = currentUser.memberships.filter((m) => m.role === "OWNER").map((m) => m.companyId);
   const companies = await prisma.company.findMany({ where: { id: { in: adminCompanyIds } } });
 
   const companiesWithProjects = await Promise.all(
-    companies.map(async (company) => ({
-      company,
-      projects: await listCompanyProjects(prisma, company.id),
-    }))
+    companies.map(async (company) => {
+      const [projects, members] = await Promise.all([
+        listCompanyProjects(prisma, company.id),
+        prisma.membership.findMany({
+          where: { companyId: company.id, status: "ACTIVE" },
+          include: { user: { select: { name: true, email: true } } },
+          orderBy: { createdAt: "asc" },
+        }),
+      ]);
+      const projectsWithHours = await Promise.all(
+        projects.map(async (project) => {
+          const total = await prisma.weeklySubmission.aggregate({
+            where: { projectId: project.id },
+            _sum: { minutes: true },
+          });
+          return { project, minutes: total._sum.minutes ?? 0 };
+        })
+      );
+      return { company, projectsWithHours, members };
+    })
   );
 
   return (
-    <div className="mx-auto w-full max-w-2xl px-6 py-16">
-      <h1 className="text-xl font-semibold text-black dark:text-zinc-50">Projects</h1>
+    <div className="mx-auto w-full max-w-3xl px-6 py-16">
+      <p className={eyebrow}>01 · Projects</p>
+      <h1 className="mt-1 text-2xl font-bold text-foreground">Setup &amp; team</h1>
+      <p className="mt-2 max-w-xl text-sm text-foreground/60">
+        Every project is a claimable line of R&amp;D. Set who did the work and when it began; the rest is captured
+        week by week.
+      </p>
 
-      {companiesWithProjects.map(({ company, projects }) => (
-        <section key={company.id} className="mt-8">
-          <h2 className="text-base font-medium text-black dark:text-zinc-50">{company.name}</h2>
+      {companiesWithProjects.map(({ company, projectsWithHours, members }) => (
+        <section key={company.id} className="mt-10 border-t border-steel/30 pt-8">
+          <h2 className="text-lg font-bold text-foreground">{company.name}</h2>
 
-          <div className="mt-3">
-            <InviteForm companyId={company.id} />
-          </div>
-
-          <ul className="mt-4 flex flex-col gap-2">
-            {projects.map((project) => (
-              <li
-                key={project.id}
-                className="rounded border border-black/[.08] p-3 text-sm dark:border-white/[.08]"
-              >
-                <p className="font-medium text-black dark:text-zinc-50">{project.name}</p>
-                <p className="mt-1 text-zinc-600 dark:text-zinc-400">
-                  Started {new Date(project.startDate).toLocaleDateString("en-GB")} · Competent
-                  professional(s): {project.competentProfessionals.map((cp) => cp.name).join(", ")}
+          <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+            {projectsWithHours.map(({ project, minutes }) => (
+              <Panel key={project.id} className="p-3">
+                <p className="font-semibold text-foreground">{project.name}</p>
+                <p className="mt-1 text-xs text-foreground/60">
+                  Started {new Date(project.startDate).toLocaleDateString("en-GB")}
                 </p>
-              </li>
+                <p className="mt-1 text-xs text-foreground/60">
+                  {project.competentProfessionals.map((cp) => cp.name).join(", ") || "No competent professional named"}
+                </p>
+                <p className="mt-2 text-sm font-semibold text-steel-dark">{hoursLabel(minutes)} logged</p>
+              </Panel>
             ))}
-            {projects.length === 0 && (
-              <li className="text-sm text-zinc-500 dark:text-zinc-400">No projects yet.</li>
-            )}
-          </ul>
+            {projectsWithHours.length === 0 && <p className="text-sm text-foreground/50 sm:col-span-2">No projects yet.</p>}
+          </div>
 
           <div className="mt-4">
             <ProjectForm companyId={company.id} />
+          </div>
+
+          <div className="mt-8 border-t border-steel/20 pt-6">
+            <p className={eyebrow}>Team</p>
+            <ul className="mt-3 flex flex-wrap gap-2">
+              {members.map((m) => (
+                <li key={m.id} className={m.role === "ADVISER" ? badgeSage : badgeNeutral}>
+                  {m.user.name} · {m.role === "ADVISER" ? "Adviser (free)" : m.role.charAt(0) + m.role.slice(1).toLowerCase()}
+                </li>
+              ))}
+            </ul>
+            <div className="mt-4">
+              <InviteForm companyId={company.id} />
+            </div>
           </div>
         </section>
       ))}
 
       {companiesWithProjects.length === 0 && (
-        <p className="mt-4 text-sm text-zinc-600 dark:text-zinc-400">
-          You need to be a company owner to create projects.
-        </p>
+        <p className="mt-8 text-sm text-foreground/60">You need to be a company owner to create projects.</p>
       )}
     </div>
   );

@@ -5,7 +5,7 @@ describe("buildMagicLinkEmail", () => {
   it("includes the link in both html and text for sign-in", () => {
     const content = buildMagicLinkEmail({ link: "https://app.example.com/cb?token=abc", context: "sign-in" });
 
-    expect(content.subject).toBe("Sign in to ClaimTrail");
+    expect(content.subject).toBe("Sign in to Trace");
     expect(content.html).toContain("https://app.example.com/cb?token=abc");
     expect(content.text).toContain("https://app.example.com/cb?token=abc");
     expect(content.text).toContain("15 minutes");
@@ -14,7 +14,7 @@ describe("buildMagicLinkEmail", () => {
   it("uses signup-specific copy for the signup context", () => {
     const content = buildMagicLinkEmail({ link: "https://app.example.com/cb?token=abc", context: "signup" });
 
-    expect(content.subject).toBe("Confirm your ClaimTrail company");
+    expect(content.subject).toBe("Confirm your Trace company");
     expect(content.html).toContain("Confirm and sign in");
   });
 });
@@ -27,7 +27,7 @@ describe("buildInvitationEmail", () => {
       inviterName: "Jamie",
     });
 
-    expect(content.subject).toBe("Jamie invited you to Acme R&D on ClaimTrail");
+    expect(content.subject).toBe("Jamie invited you to Acme R&D on Trace");
     expect(content.html).toContain("Acme R&D");
     expect(content.html).toContain("https://app.example.com/invitations/xyz");
     expect(content.text).toContain("7 days");

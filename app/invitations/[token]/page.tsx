@@ -2,6 +2,8 @@
 
 import { use, useState } from "react";
 import { useRouter } from "next/navigation";
+import { Panel } from "../../components/Panel";
+import { buttonPrimary, eyebrow, input } from "../../components/ui";
 
 export default function AcceptInvitationPage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = use(params);
@@ -30,12 +32,11 @@ export default function AcceptInvitationPage({ params }: { params: Promise<{ tok
   }
 
   return (
-    <div className="flex flex-1 items-center justify-center bg-zinc-50 dark:bg-black">
-      <main className="w-full max-w-sm rounded-lg border border-black/[.08] bg-white p-8 dark:border-white/[.145] dark:bg-zinc-950">
-        <h1 className="text-xl font-semibold text-black dark:text-zinc-50">Join ClaimTrail</h1>
-        <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
-          Enter your name to accept the invitation.
-        </p>
+    <div className="flex flex-1 items-center justify-center">
+      <Panel as="main" className="w-full max-w-sm p-8">
+        <p className={eyebrow}>Trace</p>
+        <h1 className="mt-1 text-xl font-bold text-foreground">Join</h1>
+        <p className="mt-2 text-sm text-foreground/60">Enter your name to accept the invitation.</p>
         <form onSubmit={handleSubmit} className="mt-6 flex flex-col gap-3">
           <input
             type="text"
@@ -43,18 +44,14 @@ export default function AcceptInvitationPage({ params }: { params: Promise<{ tok
             placeholder="Your name"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="rounded border border-black/[.12] px-3 py-2 text-sm text-black dark:border-white/[.145] dark:bg-black dark:text-zinc-50"
+            className={input.replace("mt-1 ", "")}
           />
-          <button
-            type="submit"
-            disabled={status === "saving"}
-            className="rounded bg-foreground px-4 py-2 text-sm font-medium text-background transition-colors hover:bg-[#383838] disabled:opacity-50 dark:hover:bg-[#ccc]"
-          >
+          <button type="submit" disabled={status === "saving"} className={`${buttonPrimary} py-2.5`}>
             {status === "saving" ? "Joining…" : "Accept invitation"}
           </button>
-          {status === "error" && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
+          {status === "error" && <p className="text-sm text-red-700">{error}</p>}
         </form>
-      </main>
+      </Panel>
     </div>
   );
 }

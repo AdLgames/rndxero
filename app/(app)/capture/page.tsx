@@ -5,6 +5,7 @@ import { getCurrentUser, SESSION_COOKIE_NAME } from "@/lib/auth/session";
 import { listAccessibleProjectIds } from "@/lib/authz/service";
 import { getIsoWeekKey, getWeekBoundaries } from "@/lib/capture/week-key";
 import { getOpenUncertainties, getPrefillMinutes } from "@/lib/capture/repository";
+import { eyebrow } from "@/app/components/ui";
 import { CaptureClient, type ProjectCaptureData } from "./CaptureClient";
 
 const WEEK_KEY_PATTERN = /^\d{4}-W\d{2}$/;
@@ -67,8 +68,9 @@ export default async function CapturePage({
 
   return (
     <div className="mx-auto w-full max-w-2xl px-6 py-16">
-      <h1 className="text-xl font-semibold text-black dark:text-zinc-50">This week&apos;s R&amp;D time</h1>
-      <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+      <p className={eyebrow}>02 · Capture</p>
+      <h1 className="mt-1 text-2xl font-bold text-foreground">This week&apos;s R&amp;D time</h1>
+      <p className="mt-2 text-sm text-foreground/60">
         Week {weekKey}. Confirm what you worked on — takes under a minute.
       </p>
       <div className="mt-6">

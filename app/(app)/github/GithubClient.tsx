@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { Panel } from "@/app/components/Panel";
+import { buttonPrimary, buttonSecondary, eyebrow } from "@/app/components/ui";
 
 export interface ProjectGithubData {
   projectId: string;
@@ -46,19 +48,14 @@ function RepoLinkForm({ project, webhookUrl, onLinked }: { project: ProjectGithu
           placeholder="owner/repo"
           value={repoFullName}
           onChange={(e) => setRepoFullName(e.target.value)}
-          className="min-w-0 flex-1 rounded border border-black/[.12] px-2 py-1 text-sm dark:border-white/[.145] dark:bg-black dark:text-zinc-50"
+          className="min-w-0 flex-1 border border-steel/40 bg-white px-2 py-1 text-sm text-foreground"
         />
-        <button
-          type="button"
-          disabled={status === "saving"}
-          onClick={submit}
-          className="rounded bg-foreground px-3 py-1 text-xs font-medium text-background disabled:opacity-50"
-        >
+        <button type="button" disabled={status === "saving"} onClick={submit} className={`${buttonPrimary} px-3 py-1 text-xs`}>
           Link repo
         </button>
       </div>
-      {status === "error" && <p className="text-xs text-red-600 dark:text-red-400">{error}</p>}
-      <p className="text-xs text-zinc-500 dark:text-zinc-400">
+      {status === "error" && <p className="text-xs text-red-700">{error}</p>}
+      <p className="text-xs text-foreground/50">
         Webhook URL for GitHub&apos;s repo settings: <code className="break-all">{webhookUrl}</code>
       </p>
     </div>
@@ -117,15 +114,15 @@ function SuggestionRow({
   }
 
   return (
-    <li className="rounded border border-black/[.08] p-3 text-sm dark:border-white/[.08]">
-      <p className="text-black dark:text-zinc-50">{suggestion.summary}</p>
-      <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">{suggestion.externalRef}</p>
+    <Panel as="li" className="p-3 text-sm">
+      <p className="text-foreground">{suggestion.summary}</p>
+      <p className="mt-0.5 text-xs text-foreground/50">{suggestion.externalRef}</p>
 
       <div className="mt-2 flex flex-wrap items-center gap-2">
         <select
           value={uncertaintyId}
           onChange={(e) => setUncertaintyId(e.target.value)}
-          className="rounded border border-black/[.12] px-2 py-1 text-xs dark:border-white/[.145] dark:bg-black dark:text-zinc-50"
+          className="border border-steel/40 bg-white px-2 py-1 text-xs text-foreground"
         >
           {project.uncertainties.length === 0 && <option value="">No open uncertainties</option>}
           {project.uncertainties.map((u) => (
@@ -138,27 +135,17 @@ function SuggestionRow({
           type="text"
           value={weekKey}
           onChange={(e) => setWeekKey(e.target.value)}
-          className="w-24 rounded border border-black/[.12] px-2 py-1 text-xs dark:border-white/[.145] dark:bg-black dark:text-zinc-50"
+          className="w-24 border border-steel/40 bg-white px-2 py-1 text-xs text-foreground"
         />
-        <button
-          type="button"
-          disabled={busy || !uncertaintyId}
-          onClick={confirm}
-          className="rounded bg-foreground px-2 py-1 text-xs font-medium text-background disabled:opacity-50"
-        >
+        <button type="button" disabled={busy || !uncertaintyId} onClick={confirm} className={`${buttonPrimary} px-2 py-1 text-xs`}>
           Confirm
         </button>
-        <button
-          type="button"
-          disabled={busy}
-          onClick={dismiss}
-          className="rounded border border-black/[.12] px-2 py-1 text-xs dark:border-white/[.145] dark:text-zinc-50"
-        >
+        <button type="button" disabled={busy} onClick={dismiss} className={`${buttonSecondary} px-2 py-1 text-xs`}>
           Dismiss
         </button>
       </div>
-      {error && <p className="mt-1 text-xs text-red-600 dark:text-red-400">{error}</p>}
-    </li>
+      {error && <p className="mt-1 text-xs text-red-700">{error}</p>}
+    </Panel>
   );
 }
 
@@ -186,13 +173,13 @@ export function GithubClient({
   return (
     <div className="flex flex-col gap-6">
       {projects.map((project) => (
-        <section key={project.projectId} className="rounded border border-black/[.08] p-4 dark:border-white/[.08]">
-          <h2 className="text-base font-medium text-black dark:text-zinc-50">{project.projectName}</h2>
+        <Panel key={project.projectId} as="section" className="p-4">
+          <h2 className="text-base font-bold text-foreground">{project.projectName}</h2>
 
           {project.canManageRepos && (
             <div className="mt-3">
               {project.repoLinks.length > 0 && (
-                <ul className="mb-2 flex flex-col gap-1 text-xs text-zinc-600 dark:text-zinc-400">
+                <ul className="mb-2 flex flex-col gap-1 text-xs text-foreground/60">
                   {project.repoLinks.map((link) => (
                     <li key={link.id}>
                       {link.repoFullName} — secret: <code className="break-all">{link.webhookSecret}</code>
@@ -205,23 +192,17 @@ export function GithubClient({
           )}
 
           {project.canReviewSuggestions && (
-            <div className="mt-4 border-t border-black/[.06] pt-3 dark:border-white/[.06]">
-              <h3 className="text-sm font-medium text-black dark:text-zinc-50">Pending suggestions ({project.suggestions.length})</h3>
+            <div className="mt-4 border-t border-steel/20 pt-3">
+              <p className={eyebrow}>Pending suggestions ({project.suggestions.length})</p>
               <ul className="mt-2 flex flex-col gap-2">
                 {project.suggestions.map((s) => (
-                  <SuggestionRow
-                    key={s.id}
-                    suggestion={s}
-                    project={project}
-                    currentWeekKey={currentWeekKey}
-                    onResolved={(id) => resolveSuggestion(project.projectId, id)}
-                  />
+                  <SuggestionRow key={s.id} suggestion={s} project={project} currentWeekKey={currentWeekKey} onResolved={(id) => resolveSuggestion(project.projectId, id)} />
                 ))}
-                {project.suggestions.length === 0 && <li className="text-xs text-zinc-500 dark:text-zinc-400">Nothing pending.</li>}
+                {project.suggestions.length === 0 && <li className="text-xs text-foreground/50">Nothing pending.</li>}
               </ul>
             </div>
           )}
-        </section>
+        </Panel>
       ))}
     </div>
   );

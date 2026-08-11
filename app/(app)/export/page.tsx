@@ -4,6 +4,8 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { getCurrentUser, SESSION_COOKIE_NAME } from "@/lib/auth/session";
 import { canDo, listAccessibleProjectIds } from "@/lib/authz/service";
+import { Panel } from "@/app/components/Panel";
+import { eyebrow } from "@/app/components/ui";
 
 export default async function ExportIndexPage() {
   const cookieStore = await cookies();
@@ -31,22 +33,21 @@ export default async function ExportIndexPage() {
 
   return (
     <div className="mx-auto w-full max-w-2xl px-6 py-16">
-      <h1 className="text-xl font-semibold text-black dark:text-zinc-50">Export</h1>
-      <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+      <p className={eyebrow}>06 · Export</p>
+      <h1 className="mt-1 text-2xl font-bold text-foreground">The evidence dossier</h1>
+      <p className="mt-2 text-sm text-foreground/60">
         A claim pack per project: the per-uncertainty evidence narrative, plan-vs-actual, and integrity metadata.
       </p>
 
       <ul className="mt-6 flex flex-col gap-2">
         {allProjects.map((project) => (
-          <li key={project.id} className="rounded border border-black/[.08] p-3 text-sm dark:border-white/[.08]">
-            <Link href={`/export/${project.id}`} className="font-medium text-black hover:underline dark:text-zinc-50">
+          <Panel key={project.id} as="li" className="p-3 text-sm">
+            <Link href={`/export/${project.id}`} className="font-semibold text-foreground hover:text-steel-dark">
               {project.name}
             </Link>
-          </li>
+          </Panel>
         ))}
-        {allProjects.length === 0 && (
-          <li className="text-sm text-zinc-500 dark:text-zinc-400">No projects you can export yet.</li>
-        )}
+        {allProjects.length === 0 && <li className="text-sm text-foreground/50">No projects you can export yet.</li>}
       </ul>
     </div>
   );

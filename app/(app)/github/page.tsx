@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { getCurrentUser, SESSION_COOKIE_NAME } from "@/lib/auth/session";
 import { canDo, listAccessibleProjectIds } from "@/lib/authz/service";
 import { getIsoWeekKey } from "@/lib/capture/week-key";
+import { eyebrow } from "@/app/components/ui";
 import { GithubClient, type ProjectGithubData } from "./GithubClient";
 
 export default async function GithubPage() {
@@ -60,8 +61,9 @@ export default async function GithubPage() {
 
   return (
     <div className="mx-auto w-full max-w-3xl px-6 py-16">
-      <h1 className="text-xl font-semibold text-black dark:text-zinc-50">GitHub</h1>
-      <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+      <p className={eyebrow}>GitHub</p>
+      <h1 className="mt-1 text-2xl font-bold text-foreground">Suggestions, never evidence on their own</h1>
+      <p className="mt-2 text-sm text-foreground/60">
         Commits and pull requests never become evidence on their own — link a repo, and anything it sends over shows
         up here as a suggestion until a human confirms it against a specific uncertainty.
       </p>
@@ -71,7 +73,7 @@ export default async function GithubPage() {
       </div>
 
       {projects.length === 0 && (
-        <p className="mt-4 text-sm text-zinc-500 dark:text-zinc-400">No projects you can manage GitHub links or suggestions for.</p>
+        <p className="mt-4 text-sm text-foreground/50">No projects you can manage GitHub links or suggestions for.</p>
       )}
     </div>
   );

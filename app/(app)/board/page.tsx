@@ -5,6 +5,7 @@ import { getCurrentUser, SESSION_COOKIE_NAME } from "@/lib/auth/session";
 import { canDo, listAccessibleProjectIds } from "@/lib/authz/service";
 import { getIsoWeekKey, shiftWeekKey } from "@/lib/capture/week-key";
 import { getBoardData } from "@/lib/board/repository";
+import { eyebrow } from "@/app/components/ui";
 import { BoardClient, type LaneUncertaintyOption } from "./BoardClient";
 
 const WEEK_COUNT = 12;
@@ -25,7 +26,7 @@ export default async function BoardPage({
   if (companyIds.length === 0) {
     return (
       <div className="mx-auto w-full max-w-5xl px-6 py-16">
-        <p className="text-sm text-zinc-600 dark:text-zinc-400">You&apos;re not a member of any company yet.</p>
+        <p className="text-sm text-foreground/60">You&apos;re not a member of any company yet.</p>
       </div>
     );
   }
@@ -56,8 +57,9 @@ export default async function BoardPage({
   if (projectIds.length === 0) {
     return (
       <div className="mx-auto w-full max-w-5xl px-6 py-16">
-        <h1 className="text-xl font-semibold text-black dark:text-zinc-50">Board</h1>
-        <p className="mt-4 text-sm text-zinc-600 dark:text-zinc-400">No projects to show yet.</p>
+        <p className={eyebrow}>03 · Board</p>
+        <h1 className="mt-1 text-2xl font-bold text-foreground">Planned vs actual</h1>
+        <p className="mt-4 text-sm text-foreground/60">No projects to show yet.</p>
       </div>
     );
   }
@@ -74,10 +76,11 @@ export default async function BoardPage({
 
   return (
     <div className="mx-auto w-full max-w-6xl px-6 py-16">
-      <h1 className="text-xl font-semibold text-black dark:text-zinc-50">{company.name} — Board</h1>
-      <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-        Each lane is a project. Ghost bars are planned hours; solid bars are what got logged. This isn&apos;t a
-        delivery-management view — it&apos;s the evidence record for R&amp;D uncertainty, presented at a glance.
+      <p className={eyebrow}>03 · Board — {company.name}</p>
+      <h1 className="mt-1 text-2xl font-bold text-foreground">Planned vs actual</h1>
+      <p className="mt-2 text-sm text-foreground/60">
+        The at-a-glance evidence view, not a delivery tracker. Ghost bars are planned hours; solid bars are what got
+        logged.
       </p>
 
       <div className="mt-6">

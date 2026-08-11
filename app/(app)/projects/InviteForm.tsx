@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { MembershipRole } from "@/lib/generated/prisma/client";
+import { buttonPrimary, eyebrow, input, select } from "@/app/components/ui";
 
 const ROLE_OPTIONS: Array<{ value: MembershipRole; label: string }> = [
   { value: "ADVISER", label: "Adviser — free, read-only + export" },
@@ -41,13 +42,10 @@ export function InviteForm({ companyId }: { companyId: string }) {
   }
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="flex flex-col gap-3 rounded border border-black/[.12] bg-black/[.02] p-4 dark:border-white/[.16] dark:bg-white/[.04]"
-    >
+    <form onSubmit={handleSubmit} className="flex flex-col gap-3 border border-sage/50 bg-sage/5 p-4">
       <div>
-        <h3 className="text-sm font-semibold text-black dark:text-zinc-50">Invite your accountant</h3>
-        <p className="mt-0.5 text-xs text-zinc-600 dark:text-zinc-400">
+        <h3 className={eyebrow}>Invite your accountant</h3>
+        <p className="mt-0.5 text-xs text-foreground/60">
           Adviser seats are free — they never count toward your bill, however many you invite.
         </p>
       </div>
@@ -59,29 +57,21 @@ export function InviteForm({ companyId }: { companyId: string }) {
           placeholder="them@theirfirm.com"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          className="min-w-0 flex-1 rounded border border-black/[.12] px-3 py-2 text-sm dark:border-white/[.145] dark:bg-black dark:text-zinc-50"
+          className={`min-w-0 flex-1 ${input.replace("mt-1 ", "")}`}
         />
-        <select
-          value={role}
-          onChange={(e) => setRole(e.target.value as MembershipRole)}
-          className="rounded border border-black/[.12] px-2 py-2 text-sm dark:border-white/[.145] dark:bg-black dark:text-zinc-50"
-        >
+        <select value={role} onChange={(e) => setRole(e.target.value as MembershipRole)} className={select}>
           {ROLE_OPTIONS.map((option) => (
             <option key={option.value} value={option.value}>
               {option.label}
             </option>
           ))}
         </select>
-        <button
-          type="submit"
-          disabled={status === "saving"}
-          className="rounded bg-foreground px-4 py-2 text-sm font-medium text-background transition-colors hover:bg-[#383838] disabled:opacity-50 dark:hover:bg-[#ccc]"
-        >
+        <button type="submit" disabled={status === "saving"} className={buttonPrimary}>
           {status === "saving" ? "Sending…" : "Send invite"}
         </button>
       </div>
-      {status === "done" && <p className="text-sm text-green-700 dark:text-green-400">Invitation sent.</p>}
-      {status === "error" && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
+      {status === "done" && <p className="text-sm font-semibold text-sage-dark">Invitation sent.</p>}
+      {status === "error" && <p className="text-sm text-red-700">{error}</p>}
     </form>
   );
 }

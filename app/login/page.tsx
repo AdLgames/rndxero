@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { Panel } from "../components/Panel";
+import { buttonPrimary, eyebrow, input } from "../components/ui";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -20,14 +22,13 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex flex-1 items-center justify-center bg-zinc-50 dark:bg-black">
-      <main className="w-full max-w-sm rounded-lg border border-black/[.08] bg-white p-8 dark:border-white/[.145] dark:bg-zinc-950">
-        <h1 className="text-xl font-semibold text-black dark:text-zinc-50">Sign in to ClaimTrail</h1>
-        <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
-          We&apos;ll email you a sign-in link. No password needed.
-        </p>
+    <div className="flex flex-1 items-center justify-center">
+      <Panel as="main" className="w-full max-w-sm p-8">
+        <p className={eyebrow}>Trace</p>
+        <h1 className="mt-1 text-xl font-bold text-foreground">Sign in</h1>
+        <p className="mt-2 text-sm text-foreground/60">We&apos;ll email you a sign-in link. No password needed.</p>
         {status === "sent" ? (
-          <p className="mt-6 rounded bg-black/[.04] p-3 text-sm text-black dark:bg-white/[.08] dark:text-zinc-50">
+          <p className="mt-6 border border-sage bg-sage/10 p-3 text-sm text-sage-dark">
             If that email has an account, a sign-in link is on its way.
           </p>
         ) : (
@@ -38,27 +39,21 @@ export default function LoginPage() {
               placeholder="you@company.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="rounded border border-black/[.12] px-3 py-2 text-sm text-black dark:border-white/[.145] dark:bg-black dark:text-zinc-50"
+              className={input.replace("mt-1 ", "")}
             />
-            <button
-              type="submit"
-              disabled={status === "sending"}
-              className="rounded bg-foreground px-4 py-2 text-sm font-medium text-background transition-colors hover:bg-[#383838] disabled:opacity-50 dark:hover:bg-[#ccc]"
-            >
+            <button type="submit" disabled={status === "sending"} className={`${buttonPrimary} py-2.5`}>
               {status === "sending" ? "Sending…" : "Send sign-in link"}
             </button>
-            {status === "error" && (
-              <p className="text-sm text-red-600 dark:text-red-400">Something went wrong. Try again.</p>
-            )}
+            {status === "error" && <p className="text-sm text-red-700">Something went wrong. Try again.</p>}
           </form>
         )}
-        <p className="mt-6 text-sm text-zinc-600 dark:text-zinc-400">
+        <p className="mt-6 text-sm text-foreground/60">
           New here?{" "}
-          <Link href="/signup" className="font-medium text-black underline dark:text-zinc-50">
+          <Link href="/signup" className="font-semibold text-steel-dark underline decoration-steel/50">
             Create a company
           </Link>
         </p>
-      </main>
+      </Panel>
     </div>
   );
 }

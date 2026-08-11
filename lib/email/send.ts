@@ -31,7 +31,7 @@ export async function sendEmail(params: SendEmailParams): Promise<{ sent: boolea
     return { sent: false };
   }
 
-  const from = process.env.EMAIL_FROM ?? "ClaimTrail <onboarding@resend.dev>";
+  const from = process.env.EMAIL_FROM ?? "Trace <onboarding@resend.dev>";
   const resend = getResendClient(apiKey);
   const { error } = await resend.emails.send({
     from,

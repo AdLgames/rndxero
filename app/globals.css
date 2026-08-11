@@ -1,26 +1,112 @@
 @import "tailwindcss";
 
+/*
+ * Trace commits to one look — steel-blue blueprint wireframe on a light
+ * ground — rather than adapting to the visitor's OS theme. Switching
+ * Tailwind's dark: variant to class-based (instead of the default
+ * prefers-color-scheme media query) and then never adding a .dark class
+ * anywhere is what makes that commitment real regardless of device
+ * settings, rather than just "mostly light in practice."
+ */
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --color-steel: #5980a6;
+  --color-steel-dark: #3f6386;
+  --color-sage: #6f9276;
+  --color-sage-dark: #567a5d;
+  --color-ground: #f6f7f5;
+  --background: var(--color-ground);
+  --foreground: #1f2a2f;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-steel: var(--color-steel);
+  --color-steel-dark: var(--color-steel-dark);
+  --color-sage: var(--color-sage);
+  --color-sage-dark: var(--color-sage-dark);
+  --color-ground: var(--color-ground);
+  --font-sans: var(--font-barlow);
+  --font-condensed: var(--font-barlow-condensed);
+  --radius-none: 0px;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+/* Square corners with registration marks (see Panel) is the whole design
+   language here — a single global rule is what keeps every card, input,
+   button and badge consistent with it, instead of hunting down every
+   rounded-* utility already written across every screen. */
+@layer base {
+  *,
+  *::before,
+  *::after {
+    border-radius: 0 !important;
+  }
+
+  body {
+    font-family: var(--font-barlow), sans-serif;
+    background-color: var(--color-ground);
+    color: var(--foreground);
+    background-image: linear-gradient(rgba(89, 128, 166, 0.07) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(89, 128, 166, 0.07) 1px, transparent 1px);
+    background-size: 24px 24px;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: var(--font-barlow-condensed), sans-serif;
+    letter-spacing: 0.01em;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* Registration marks — a small steel "+" straddling each corner of a
+   Panel, print-registration style. Four real spans (app/components/
+   Panel.tsx) rather than pseudo-elements, since one element only gets
+   two (::before/::after) and four corners need four. */
+.corner-mark {
+  position: absolute;
+  width: 9px;
+  height: 9px;
+  pointer-events: none;
+}
+.corner-mark::before,
+.corner-mark::after {
+  content: "";
+  position: absolute;
+  background: var(--color-steel);
+}
+.corner-mark::before {
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 1px;
+  transform: translateY(-50%);
+}
+.corner-mark::after {
+  left: 50%;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  transform: translateX(-50%);
+}
+.corner-mark-tl {
+  top: -4px;
+  left: -4px;
+}
+.corner-mark-tr {
+  top: -4px;
+  right: -4px;
+}
+.corner-mark-bl {
+  bottom: -4px;
+  left: -4px;
+}
+.corner-mark-br {
+  bottom: -4px;
+  right: -4px;
 }

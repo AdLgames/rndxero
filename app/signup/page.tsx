@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { Panel } from "../components/Panel";
+import { buttonPrimary, eyebrow, input } from "../components/ui";
 
 export default function SignupPage() {
   const [email, setEmail] = useState("");
@@ -28,15 +30,16 @@ export default function SignupPage() {
     setStatus("error");
   }
 
+  const fieldClass = input.replace("mt-1 ", "");
+
   return (
-    <div className="flex flex-1 items-center justify-center bg-zinc-50 dark:bg-black">
-      <main className="w-full max-w-sm rounded-lg border border-black/[.08] bg-white p-8 dark:border-white/[.145] dark:bg-zinc-950">
-        <h1 className="text-xl font-semibold text-black dark:text-zinc-50">Set up ClaimTrail</h1>
-        <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
-          Create your company. Free for now — no card required.
-        </p>
+    <div className="flex flex-1 items-center justify-center">
+      <Panel as="main" className="w-full max-w-sm p-8">
+        <p className={eyebrow}>Trace</p>
+        <h1 className="mt-1 text-xl font-bold text-foreground">Set up your company</h1>
+        <p className="mt-2 text-sm text-foreground/60">Free for now — no card required.</p>
         {status === "sent" ? (
-          <p className="mt-6 rounded bg-black/[.04] p-3 text-sm text-black dark:bg-white/[.08] dark:text-zinc-50">
+          <p className="mt-6 border border-sage bg-sage/10 p-3 text-sm text-sage-dark">
             Check your email for a sign-in link to finish setting up {companyName || "your company"}.
           </p>
         ) : (
@@ -47,7 +50,7 @@ export default function SignupPage() {
               placeholder="Your name"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="rounded border border-black/[.12] px-3 py-2 text-sm text-black dark:border-white/[.145] dark:bg-black dark:text-zinc-50"
+              className={fieldClass}
             />
             <input
               type="email"
@@ -55,7 +58,7 @@ export default function SignupPage() {
               placeholder="you@company.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="rounded border border-black/[.12] px-3 py-2 text-sm text-black dark:border-white/[.145] dark:bg-black dark:text-zinc-50"
+              className={fieldClass}
             />
             <input
               type="text"
@@ -63,27 +66,21 @@ export default function SignupPage() {
               placeholder="Company name"
               value={companyName}
               onChange={(e) => setCompanyName(e.target.value)}
-              className="rounded border border-black/[.12] px-3 py-2 text-sm text-black dark:border-white/[.145] dark:bg-black dark:text-zinc-50"
+              className={fieldClass}
             />
-            <button
-              type="submit"
-              disabled={status === "saving"}
-              className="rounded bg-foreground px-4 py-2 text-sm font-medium text-background transition-colors hover:bg-[#383838] disabled:opacity-50 dark:hover:bg-[#ccc]"
-            >
+            <button type="submit" disabled={status === "saving"} className={`${buttonPrimary} py-2.5`}>
               {status === "saving" ? "Creating…" : "Create company"}
             </button>
-            {status === "error" && (
-              <p className="text-sm text-red-600 dark:text-red-400">{errorMessage}</p>
-            )}
+            {status === "error" && <p className="text-sm text-red-700">{errorMessage}</p>}
           </form>
         )}
-        <p className="mt-6 text-sm text-zinc-600 dark:text-zinc-400">
+        <p className="mt-6 text-sm text-foreground/60">
           Already have an account?{" "}
-          <Link href="/login" className="font-medium text-black underline dark:text-zinc-50">
+          <Link href="/login" className="font-semibold text-steel-dark underline decoration-steel/50">
             Sign in
           </Link>
         </p>
-      </main>
+      </Panel>
     </div>
   );
 }

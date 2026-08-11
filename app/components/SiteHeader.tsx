@@ -2,6 +2,7 @@ import Link from "next/link";
 import { cookies } from "next/headers";
 import { prisma } from "@/lib/db";
 import { getCurrentUser, SESSION_COOKIE_NAME } from "@/lib/auth/session";
+import { NavLinks } from "./NavLinks";
 
 /**
  * Always-visible sign-in state, on every page. The one thing signup and
@@ -14,50 +15,36 @@ export async function SiteHeader() {
   const currentUser = await getCurrentUser(prisma, cookieStore.get(SESSION_COOKIE_NAME)?.value);
 
   return (
-    <header className="flex items-center justify-between border-b border-black/[.08] px-6 py-3 dark:border-white/[.08]">
-      <Link href="/" className="text-sm font-semibold text-black dark:text-zinc-50">
-        ClaimTrail
+    <header className="flex items-center justify-between border-b border-steel/40 bg-white px-6 py-3">
+      <Link href="/" className="flex items-center gap-2 text-base font-semibold tracking-wide text-foreground">
+        <span className="flex h-5 w-5 items-center justify-center border border-steel text-[10px] font-bold text-steel-dark">
+          T
+        </span>
+        TRACE
       </Link>
 
       {currentUser ? (
-        <nav className="flex items-center gap-4 text-sm">
-          <Link href="/projects" className="text-zinc-600 hover:text-black dark:text-zinc-400 dark:hover:text-zinc-50">
-            Projects
-          </Link>
-          <Link href="/capture" className="text-zinc-600 hover:text-black dark:text-zinc-400 dark:hover:text-zinc-50">
-            Capture
-          </Link>
-          <Link href="/planner" className="text-zinc-600 hover:text-black dark:text-zinc-400 dark:hover:text-zinc-50">
-            Planner
-          </Link>
-          <Link href="/board" className="text-zinc-600 hover:text-black dark:text-zinc-400 dark:hover:text-zinc-50">
-            Board
-          </Link>
-          <Link href="/finance" className="text-zinc-600 hover:text-black dark:text-zinc-400 dark:hover:text-zinc-50">
-            Finance
-          </Link>
-          <Link href="/export" className="text-zinc-600 hover:text-black dark:text-zinc-400 dark:hover:text-zinc-50">
-            Export
-          </Link>
-          <Link href="/github" className="text-zinc-600 hover:text-black dark:text-zinc-400 dark:hover:text-zinc-50">
-            GitHub
-          </Link>
-          <span className="text-zinc-500 dark:text-zinc-400">Signed in as {currentUser.email}</span>
+        <nav className="flex items-center gap-4">
+          <NavLinks />
+          <span className="hidden text-xs text-foreground/50 sm:inline">{currentUser.email}</span>
           <form action="/api/auth/signout" method="POST">
             <button
               type="submit"
-              className="text-zinc-600 underline hover:text-black dark:text-zinc-400 dark:hover:text-zinc-50"
+              className="text-xs font-semibold uppercase tracking-wide text-foreground/60 underline decoration-steel/50 underline-offset-2 hover:text-steel-dark"
             >
               Sign out
             </button>
           </form>
         </nav>
       ) : (
-        <nav className="flex items-center gap-4 text-sm">
-          <Link href="/login" className="text-zinc-600 hover:text-black dark:text-zinc-400 dark:hover:text-zinc-50">
+        <nav className="flex items-center gap-4">
+          <Link href="/login" className="text-xs font-semibold uppercase tracking-wide text-foreground/60 hover:text-steel-dark">
             Sign in
           </Link>
-          <Link href="/signup" className="font-medium text-black dark:text-zinc-50">
+          <Link
+            href="/signup"
+            className="border border-steel bg-steel px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-white hover:bg-steel-dark"
+          >
             Create your company
           </Link>
         </nav>

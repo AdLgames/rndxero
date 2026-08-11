@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import type { SubmissionBasis, UncertaintyNoteType } from "@/lib/generated/prisma/client";
+import { Panel } from "@/app/components/Panel";
+import { badgeSage, buttonGhost, buttonPrimary, chip, chipActive, eyebrow, input, select } from "@/app/components/ui";
 
 export interface ProjectCaptureData {
   projectId: string;
@@ -187,26 +189,24 @@ export function CaptureClient({ weekKey, projects: initialProjects }: { weekKey:
   }
 
   if (projects.length === 0) {
-    return (
-      <p className="text-sm text-zinc-600 dark:text-zinc-400">
-        No projects to log time against yet — ask your project lead to add you.
-      </p>
-    );
+    return <p className="text-sm text-foreground/60">No projects to log time against yet — ask your project lead to add you.</p>;
   }
 
   if (status === "done") {
     const totalHours = loggedSummary.reduce((sum, s) => sum + s.hours, 0);
     return (
-      <div className="rounded bg-black/[.04] p-4 text-sm text-black dark:bg-white/[.08] dark:text-zinc-50">
-        <p className="font-medium">Week {weekKey} logged — {totalHours}h total.</p>
-        <ul className="mt-2 flex flex-col gap-1 text-zinc-600 dark:text-zinc-400">
+      <Panel className="border-sage bg-sage/5 p-4 text-sm">
+        <p className="font-semibold text-sage-dark">
+          Week {weekKey} logged — {totalHours}h total.
+        </p>
+        <ul className="mt-2 flex flex-col gap-1 text-foreground/70">
           {loggedSummary.map((s) => (
             <li key={s.projectName}>
               {s.projectName}: {s.hours}h
             </li>
           ))}
         </ul>
-      </div>
+      </Panel>
     );
   }
 
@@ -216,17 +216,17 @@ export function CaptureClient({ weekKey, projects: initialProjects }: { weekKey:
         const form = state[project.projectId];
         const locked = project.existing?.locked ?? false;
         return (
-          <section key={project.projectId} className="rounded border border-black/[.08] p-4 dark:border-white/[.08]">
-            <h2 className="text-base font-medium text-black dark:text-zinc-50">{project.projectName}</h2>
+          <Panel key={project.projectId} className={`p-4 ${locked ? "border-sage bg-sage/5" : ""}`}>
+            <h2 className="text-base font-bold text-foreground">{project.projectName}</h2>
             {locked ? (
-              <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-400">
-                This week is locked ({(project.existing!.minutes / 60).toFixed(1)}h logged). Corrections need an
-                amendment.
+              <p className="mt-2 text-sm text-sage-dark">
+                <span className={badgeSage}>Sealed</span> — {(project.existing!.minutes / 60).toFixed(1)}h logged.
+                Corrections need an amendment.
               </p>
             ) : (
               <>
                 <div className="mt-3 flex flex-wrap items-center gap-2">
-                  <label className="text-sm text-black dark:text-zinc-50">
+                  <label className={eyebrow}>
                     Hours
                     <input
                       type="number"
@@ -235,7 +235,7 @@ export function CaptureClient({ weekKey, projects: initialProjects }: { weekKey:
                       value={form.hours}
                       disabled={form.nothingThisWeek}
                       onChange={(e) => updateProject(project.projectId, { hours: e.target.value })}
-                      className="ml-2 w-20 rounded border border-black/[.12] px-2 py-1 text-sm disabled:opacity-50 dark:border-white/[.145] dark:bg-black dark:text-zinc-50"
+                      className="ml-2 w-20 border border-steel/40 bg-white px-2 py-1 text-sm normal-case text-foreground disabled:opacity-50"
                     />
                   </label>
                   {QUICK_CHIP_HOURS.map((h) => (
@@ -244,12 +244,12 @@ export function CaptureClient({ weekKey, projects: initialProjects }: { weekKey:
                       type="button"
                       disabled={form.nothingThisWeek}
                       onClick={() => updateProject(project.projectId, { hours: String(h) })}
-                      className="rounded-full border border-black/[.12] px-3 py-1 text-xs disabled:opacity-50 dark:border-white/[.145] dark:text-zinc-50"
+                      className={`${form.hours === String(h) ? chipActive : chip} disabled:opacity-40`}
                     >
                       {h}h
                     </button>
                   ))}
-                  <label className="ml-auto flex items-center gap-2 text-sm text-zinc-600 dark:text-zinc-400">
+                  <label className="ml-auto flex items-center gap-2 text-xs text-foreground/60">
                     <input
                       type="checkbox"
                       checked={form.nothingThisWeek}
@@ -262,10 +262,10 @@ export function CaptureClient({ weekKey, projects: initialProjects }: { weekKey:
                 <select
                   value={form.basis}
                   onChange={(e) => updateProject(project.projectId, { basis: e.target.value as SubmissionBasis })}
-                  className="mt-2 rounded border border-black/[.12] px-2 py-1 text-sm dark:border-white/[.145] dark:bg-black dark:text-zinc-50"
+                  className={`mt-3 ${select}`}
                 >
                   <option value="ESTIMATED">Estimated</option>
-                  <option value="TRACKED">Tracked</option>
+                  <option value="TRACKED">From timesheet</option>
                 </select>
 
                 {!form.nothingThisWeek && (
@@ -273,23 +273,23 @@ export function CaptureClient({ weekKey, projects: initialProjects }: { weekKey:
                     {project.uncertainties.map((uncertainty) => {
                       const selection = form.notes[uncertainty.id];
                       return (
-                        <div key={uncertainty.id} className="rounded border border-black/[.06] p-3 dark:border-white/[.06]">
-                          <p className="text-sm font-medium text-black dark:text-zinc-50">{uncertainty.title}</p>
+                        <div key={uncertainty.id} className="border border-steel/20 p-3">
+                          <p className="text-sm font-semibold text-foreground">{uncertainty.title}</p>
                           <div className="mt-2 flex flex-wrap gap-2">
-                            {TAP_OPTIONS.map((option) => (
-                              <button
-                                key={option.type}
-                                type="button"
-                                onClick={() => selectNote(project.projectId, uncertainty.id, option.type)}
-                                className={`rounded-full border px-3 py-1 text-xs ${
-                                  selection?.type === option.type
-                                    ? "border-black bg-black text-white dark:border-zinc-50 dark:bg-zinc-50 dark:text-black"
-                                    : "border-black/[.12] text-black dark:border-white/[.145] dark:text-zinc-50"
-                                }`}
-                              >
-                                {option.label}
-                              </button>
-                            ))}
+                            {TAP_OPTIONS.map((option) => {
+                              const isActive = selection?.type === option.type;
+                              const activeClass = option.type === "RESOLUTION" ? chipActive.replace("bg-steel", "bg-sage").replace("border-steel", "border-sage") : chipActive;
+                              return (
+                                <button
+                                  key={option.type}
+                                  type="button"
+                                  onClick={() => selectNote(project.projectId, uncertainty.id, option.type)}
+                                  className={isActive ? activeClass : chip}
+                                >
+                                  {option.label}
+                                </button>
+                              );
+                            })}
                           </div>
                           {selection?.type && selection.type !== "NO_PROGRESS" && (
                             <div className="mt-2 flex items-center gap-2">
@@ -298,7 +298,7 @@ export function CaptureClient({ weekKey, projects: initialProjects }: { weekKey:
                                 placeholder="One line about what happened"
                                 value={selection.body}
                                 onChange={(e) => setNoteBody(project.projectId, uncertainty.id, e.target.value)}
-                                className="w-full rounded border border-black/[.12] px-2 py-1 text-sm dark:border-white/[.145] dark:bg-black dark:text-zinc-50"
+                                className="w-full border border-steel/40 bg-white px-2 py-1 text-sm text-foreground"
                               />
                               <input
                                 type="number"
@@ -308,7 +308,7 @@ export function CaptureClient({ weekKey, projects: initialProjects }: { weekKey:
                                 title="Hours spent specifically on this uncertainty (optional — feeds the planner's plan-vs-actual view)"
                                 value={selection.hours}
                                 onChange={(e) => setNoteHours(project.projectId, uncertainty.id, e.target.value)}
-                                className="w-16 shrink-0 rounded border border-black/[.12] px-2 py-1 text-sm dark:border-white/[.145] dark:bg-black dark:text-zinc-50"
+                                className="w-16 shrink-0 border border-steel/40 bg-white px-2 py-1 text-sm text-foreground"
                               />
                             </div>
                           )}
@@ -317,26 +317,22 @@ export function CaptureClient({ weekKey, projects: initialProjects }: { weekKey:
                     })}
 
                     {form.newUncertaintyOpen ? (
-                      <div className="rounded border border-dashed border-black/[.2] p-3 dark:border-white/[.2]">
+                      <div className="border border-dashed border-steel/40 p-3">
                         <input
                           type="text"
                           placeholder="What's the uncertainty?"
                           value={form.newTitle}
                           onChange={(e) => updateProject(project.projectId, { newTitle: e.target.value })}
-                          className="w-full rounded border border-black/[.12] px-2 py-1 text-sm dark:border-white/[.145] dark:bg-black dark:text-zinc-50"
+                          className={input.replace("mt-1 ", "")}
                         />
                         <input
                           type="text"
                           placeholder="What didn't we know?"
                           value={form.newBaseline}
                           onChange={(e) => updateProject(project.projectId, { newBaseline: e.target.value })}
-                          className="mt-2 w-full rounded border border-black/[.12] px-2 py-1 text-sm dark:border-white/[.145] dark:bg-black dark:text-zinc-50"
+                          className={`mt-2 ${input.replace("mt-1 ", "")}`}
                         />
-                        <button
-                          type="button"
-                          onClick={() => createUncertainty(project)}
-                          className="mt-2 rounded bg-foreground px-3 py-1 text-xs font-medium text-background"
-                        >
+                        <button type="button" onClick={() => createUncertainty(project)} className={`${buttonPrimary} mt-2`}>
                           Add
                         </button>
                       </div>
@@ -344,7 +340,7 @@ export function CaptureClient({ weekKey, projects: initialProjects }: { weekKey:
                       <button
                         type="button"
                         onClick={() => updateProject(project.projectId, { newUncertaintyOpen: true })}
-                        className="self-start text-sm text-zinc-600 underline dark:text-zinc-400"
+                        className={`self-start ${buttonGhost}`}
                       >
                         + Something new came up
                       </button>
@@ -353,20 +349,15 @@ export function CaptureClient({ weekKey, projects: initialProjects }: { weekKey:
                 )}
               </>
             )}
-          </section>
+          </Panel>
         );
       })}
 
       <div>
-        <button
-          type="button"
-          onClick={logThisWeek}
-          disabled={status === "saving"}
-          className="rounded bg-foreground px-5 py-2.5 text-sm font-medium text-background transition-colors hover:bg-[#383838] disabled:opacity-50 dark:hover:bg-[#ccc]"
-        >
+        <button type="button" onClick={logThisWeek} disabled={status === "saving"} className={`${buttonPrimary} px-6 py-2.5`}>
           {status === "saving" ? "Logging…" : "Log this week"}
         </button>
-        {status === "error" && <p className="mt-2 text-sm text-red-600 dark:text-red-400">{errorMessage}</p>}
+        {status === "error" && <p className="mt-2 text-sm text-red-700">{errorMessage}</p>}
       </div>
     </div>
   );
