@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getCurrentUser, SESSION_COOKIE_NAME } from "@/lib/auth/session";
 import { AuthorizationError, authorize } from "@/lib/authz/service";
+import { EntitlementError, requireEntitled } from "@/lib/billing/entitlement";
 import { createProject } from "@/lib/projects/repository";
 
 /** Creates a project. See lib/authz/permissions.ts for who — project:create is Owner-only. */
@@ -31,6 +32,15 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     if (error instanceof AuthorizationError) {
       return NextResponse.json({ error: "Only a company owner can create projects" }, { status: 403 });
+    }
+    throw error;
+  }
+
+  try {
+    await requireEntitled(prisma, companyId);
+  } catch (error) {
+    if (error instanceof EntitlementError) {
+      return NextResponse.json({ error: error.message }, { status: 402 });
     }
     throw error;
   }

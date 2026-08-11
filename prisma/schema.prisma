@@ -60,6 +60,7 @@ model User {
   planVersionsCreated PlanVersion[]
   competentOn         ProjectCompetentProfessional[]
   invitationsSentBy   Invitation[]                   @relation("InvitationInviter")
+  suggestionsResolved Suggestion[]
 }
 
 model Company {
@@ -78,6 +79,7 @@ model Company {
   weeklySubmissions WeeklySubmission[]
   rates             Rate[]
   auditLogEntries   AuditLog[]
+  githubRepoLinks   GithubRepoLink[]
 }
 
 // A membership scopes a user's role to a company. Adviser memberships are
@@ -141,6 +143,8 @@ model Project {
   weeklySubmissions      WeeklySubmission[]
   planVersions           PlanVersion[]
   directCosts            DirectCost[]
+  githubRepoLinks        GithubRepoLink[]
+  suggestions            Suggestion[]
 }
 
 // Project role sets access to *this* project; the company-level Membership
@@ -266,6 +270,7 @@ model UncertaintyNote {
   submission  WeeklySubmission @relation(fields: [submissionId], references: [id])
   uncertainty Uncertainty      @relation(fields: [uncertaintyId], references: [id])
   amendments  Amendment[]
+  suggestion  Suggestion?
 
   @@index([uncertaintyId])
   @@index([submissionId])
@@ -513,4 +518,58 @@ model Subscription {
   updatedAt            DateTime           @updatedAt
 
   company Company @relation(fields: [companyId], references: [id])
+}
+
+// --- GitHub ingestion --------------------------------------------------
+
+// One repo maps to exactly one project. webhookSecret is generated at
+// link time and never derived from anything guessable — GitHub signs
+// every delivery with it (X-Hub-Signature-256), which is how the webhook
+// route knows a payload claiming to be for this repo actually is.
+model GithubRepoLink {
+  id            String   @id @default(cuid())
+  companyId     String
+  projectId     String
+  repoFullName  String   @unique
+  webhookSecret String
+  createdAt     DateTime @default(now())
+
+  company     Company      @relation(fields: [companyId], references: [id])
+  project     Project      @relation(fields: [projectId], references: [id])
+  suggestions Suggestion[]
+}
+
+enum SuggestionStatus {
+  PENDING
+  CONFIRMED
+  DISMISSED
+}
+
+// Suggestion-only ingestion (BOARD-PLAN.md Phase 8.4): a commit or PR
+// never becomes evidence on its own. Confirming one creates a real,
+// attributed UncertaintyNote (noteId records which); dismissing one
+// just marks it resolved. Nothing here is append-only in the way
+// WeeklySubmission/UncertaintyNote are — a suggestion is a proposal, not
+// a record of work, so it's fine for status/resolvedAt to update in
+// place until it's actioned.
+model Suggestion {
+  id           String           @id @default(cuid())
+  repoLinkId   String
+  projectId    String
+  externalRef  String
+  summary      String
+  status       SuggestionStatus @default(PENDING)
+  createdAt    DateTime         @default(now())
+  resolvedAt   DateTime?
+  resolvedById String?
+  noteId       String?
+
+  repoLink   GithubRepoLink   @relation(fields: [repoLinkId], references: [id])
+  project    Project          @relation(fields: [projectId], references: [id])
+  resolvedBy User?            @relation(fields: [resolvedById], references: [id])
+  note       UncertaintyNote? @relation(fields: [noteId], references: [id])
+
+  @@unique([repoLinkId, externalRef])
+  @@unique([noteId])
+  @@index([projectId, status])
 }

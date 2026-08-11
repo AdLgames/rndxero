@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getCurrentUser, SESSION_COOKIE_NAME } from "@/lib/auth/session";
 import { AuthorizationError, authorize, canDo } from "@/lib/authz/service";
+import { EntitlementError, requireEntitled } from "@/lib/billing/entitlement";
 import { getProjectClaimPack } from "@/lib/export/pack";
 import { renderClaimPackPdf } from "@/lib/export/pdf";
 import { buildClaimPackCsv } from "@/lib/export/csv";
@@ -28,6 +29,15 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   } catch (error) {
     if (error instanceof AuthorizationError) {
       return NextResponse.json({ error: "Not permitted to export this project" }, { status: 403 });
+    }
+    throw error;
+  }
+
+  try {
+    await requireEntitled(prisma, companyId);
+  } catch (error) {
+    if (error instanceof EntitlementError) {
+      return NextResponse.json({ error: error.message }, { status: 402 });
     }
     throw error;
   }

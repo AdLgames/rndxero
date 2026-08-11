@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { getCurrentUser, SESSION_COOKIE_NAME } from "@/lib/auth/session";
 import { listCompanyProjects } from "@/lib/projects/repository";
 import { ProjectForm } from "./ProjectForm";
+import { InviteForm } from "./InviteForm";
 
 export default async function ProjectsPage() {
   const cookieStore = await cookies();
@@ -33,7 +34,11 @@ export default async function ProjectsPage() {
         <section key={company.id} className="mt-8">
           <h2 className="text-base font-medium text-black dark:text-zinc-50">{company.name}</h2>
 
-          <ul className="mt-3 flex flex-col gap-2">
+          <div className="mt-3">
+            <InviteForm companyId={company.id} />
+          </div>
+
+          <ul className="mt-4 flex flex-col gap-2">
             {projects.map((project) => (
               <li
                 key={project.id}

@@ -27,6 +27,30 @@ export function buildMagicLinkEmail(params: { link: string; context: "sign-in" |
   return { subject, html, text };
 }
 
+/**
+ * Weekly nudge (BOARD-PLAN.md Phase 8.3), sent the week-close day for
+ * whichever projects a person hasn't logged that just-closed week on —
+ * not a generic "don't forget to log your time" blast to everyone.
+ */
+export function buildWeeklyNudgeEmail(params: {
+  link: string;
+  weekKey: string;
+  missingProjectNames: string[];
+}): EmailContent {
+  const projectList = params.missingProjectNames.join(", ");
+  const subject =
+    params.missingProjectNames.length === 1
+      ? `Log week ${params.weekKey} on ${params.missingProjectNames[0]}`
+      : `Log week ${params.weekKey} on ${params.missingProjectNames.length} projects`;
+  const text = `Week ${params.weekKey} closed and you haven't logged it yet on: ${projectList}.\n\nLog it now (under a minute): ${params.link}`;
+  const html = `
+    <p>Week ${params.weekKey} closed and you haven't logged it yet on: <strong>${projectList}</strong>.</p>
+    <p><a href="${params.link}">Log it now</a> — takes under a minute.</p>
+  `.trim();
+
+  return { subject, html, text };
+}
+
 export function buildInvitationEmail(params: {
   link: string;
   companyName: string;
