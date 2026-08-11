@@ -1,6 +1,6 @@
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { prisma } from "@/lib/db";
-import { authorize, AuthorizationError, canDo, resolveSubject } from "@/lib/authz/service";
+import { authorize, AuthorizationError, canDo, listAccessibleProjectIds, resolveSubject } from "@/lib/authz/service";
 
 const hasDatabase = Boolean(process.env.DATABASE_URL);
 
@@ -105,6 +105,24 @@ describe.skipIf(!hasDatabase)("authz service (integration)", () => {
         action: "project:read",
       });
       expect(allowed).toBe(true);
+    });
+  });
+
+  describe("listAccessibleProjectIds", () => {
+    it("returns only projects a Contributor is an explicit ProjectMember of", async () => {
+      const ids = await listAccessibleProjectIds(prisma, { userId: contributorId, companyId });
+      expect(ids).toEqual([projectAId]);
+    });
+
+    it("returns every company project for an Owner, even ones they never explicitly joined", async () => {
+      const ids = await listAccessibleProjectIds(prisma, { userId: ownerId, companyId });
+      expect(ids.sort()).toEqual([projectAId, projectBId].sort());
+    });
+
+    it("returns nothing for a user with no membership at all", async () => {
+      const stranger = await prisma.user.create({ data: { email: "stranger2@example.com", name: "Stranger" } });
+      const ids = await listAccessibleProjectIds(prisma, { userId: stranger.id, companyId });
+      expect(ids).toEqual([]);
     });
   });
 

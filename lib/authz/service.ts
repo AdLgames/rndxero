@@ -74,3 +74,36 @@ export async function canDo(prisma: PrismaClient, params: AuthorizeParams): Prom
   });
   return can(subject, params.action, params.resource ?? {});
 }
+
+/**
+ * Every project a user has standing on for a given company — as a
+ * ProjectMember, or implicitly all of them if they're OWNER/FINANCE
+ * (who act company-wide without needing a ProjectMember row, per the
+ * permission matrix). Pages that list "your projects" (capture, the
+ * board, the planner) should use this rather than querying ProjectMember
+ * alone, or an Owner who never explicitly joined their own project would
+ * see none of them.
+ */
+export async function listAccessibleProjectIds(
+  prisma: PrismaClient,
+  params: { userId: string; companyId: string }
+): Promise<string[]> {
+  const membership = await prisma.membership.findUnique({
+    where: { userId_companyId: { userId: params.userId, companyId: params.companyId } },
+  });
+  if (!membership || membership.status !== "ACTIVE") return [];
+
+  if (membership.role === "OWNER" || membership.role === "FINANCE") {
+    const projects = await prisma.project.findMany({
+      where: { companyId: params.companyId },
+      select: { id: true },
+    });
+    return projects.map((p) => p.id);
+  }
+
+  const memberships = await prisma.projectMember.findMany({
+    where: { userId: params.userId, project: { companyId: params.companyId } },
+    select: { projectId: true },
+  });
+  return memberships.map((m) => m.projectId);
+}
