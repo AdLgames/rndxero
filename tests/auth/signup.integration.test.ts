@@ -74,4 +74,23 @@ describe.skipIf(!hasDatabase)("signUpCompany (integration)", () => {
     expect(memberships).toHaveLength(2);
     expect(memberships.every((m) => m.role === "ADMIN")).toBe(true);
   });
+
+  it("is idempotent for a repeated company name — e.g. retrying after a failed confirmation email", async () => {
+    const first = await signUpCompany(prisma, {
+      email: "founder@example.com",
+      name: "Founder",
+      companyName: "Acme R&D",
+    });
+    const retry = await signUpCompany(prisma, {
+      email: "founder@example.com",
+      name: "Founder",
+      companyName: "Acme R&D",
+    });
+
+    expect(retry.company.id).toBe(first.company.id);
+    expect(retry.membership.id).toBe(first.membership.id);
+
+    const companies = await prisma.company.findMany({ where: { name: "Acme R&D" } });
+    expect(companies).toHaveLength(1);
+  });
 });

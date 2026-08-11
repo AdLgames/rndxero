@@ -37,10 +37,18 @@ export async function POST(request: NextRequest) {
   });
 
   const link = `${request.nextUrl.origin}/invitations/${invitation.token}`;
-  await sendEmail({
-    to: email,
-    ...buildInvitationEmail({ link, companyName: company.name, inviterName: currentUser.name }),
-  });
+  try {
+    await sendEmail({
+      to: email,
+      ...buildInvitationEmail({ link, companyName: company.name, inviterName: currentUser.name }),
+    });
+  } catch (error) {
+    console.error("Failed to send invitation email", error);
+    return NextResponse.json(
+      { id: invitation.id, warning: "Invitation was created, but the email couldn't be sent." },
+      { status: 201 }
+    );
+  }
 
   return NextResponse.json({ id: invitation.id }, { status: 201 });
 }

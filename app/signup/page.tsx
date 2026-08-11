@@ -8,6 +8,7 @@ export default function SignupPage() {
   const [name, setName] = useState("");
   const [companyName, setCompanyName] = useState("");
   const [status, setStatus] = useState<"idle" | "sent" | "error">("idle");
+  const [errorMessage, setErrorMessage] = useState("");
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
@@ -16,7 +17,13 @@ export default function SignupPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, name, companyName }),
     });
-    setStatus(response.ok ? "sent" : "error");
+    if (response.ok) {
+      setStatus("sent");
+      return;
+    }
+    const body = (await response.json().catch(() => ({}))) as { error?: string };
+    setErrorMessage(body.error ?? "Something went wrong. Try again.");
+    setStatus("error");
   }
 
   return (
@@ -63,7 +70,7 @@ export default function SignupPage() {
               Create company
             </button>
             {status === "error" && (
-              <p className="text-sm text-red-600 dark:text-red-400">Something went wrong. Try again.</p>
+              <p className="text-sm text-red-600 dark:text-red-400">{errorMessage}</p>
             )}
           </form>
         )}
