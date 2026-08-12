@@ -9,6 +9,8 @@ import { badgeAccent } from "@/app/components/ui";
 import { CaptureClient, type ProjectCaptureData } from "./CaptureClient";
 
 const WEEK_KEY_PATTERN = /^\d{4}-W\d{2}$/;
+/** Auto-lock is close + 7 days (BOARD-PLAN.md Phase 0 decision #4) — matches lib/locking's real deadline. */
+const AUTO_LOCK_DAYS_AFTER_CLOSE = 7;
 
 export default async function CapturePage({
   searchParams,
@@ -25,6 +27,7 @@ export default async function CapturePage({
   const weekKey = params.week && WEEK_KEY_PATTERN.test(params.week) ? params.week : getIsoWeekKey(new Date());
   const { start, end } = getWeekBoundaries(weekKey);
   const previousWeekKey = getIsoWeekKey(new Date(start.getTime() - 24 * 60 * 60 * 1000));
+  const daysUntilAutoLock = Math.floor((end.getTime() + AUTO_LOCK_DAYS_AFTER_CLOSE * 86_400_000 - new Date().getTime()) / 86_400_000);
 
   // Every company the user belongs to, not just one — someone can be a
   // Contributor on one company's project and an Owner of their own.
@@ -84,7 +87,7 @@ export default async function CapturePage({
       <p className="m-0 mb-[34px] text-[15px] leading-[1.5] text-text-secondary">
         Confirm what you worked on. Under a minute — refine hours any time before the week is locked.
       </p>
-      <CaptureClient weekKey={weekKey} projects={projects} />
+      <CaptureClient weekKey={weekKey} projects={projects} daysUntilAutoLock={daysUntilAutoLock} />
     </div>
   );
 }

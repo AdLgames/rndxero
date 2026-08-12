@@ -19,6 +19,7 @@ export interface ClaimPackNoteEntry {
   weekKey: string;
   type: UncertaintyNoteType;
   body: string;
+  evidenceRef: string | null;
   minutes: number | null;
   submittedAt: string;
   isRetrospective: boolean;
@@ -145,6 +146,7 @@ export async function getProjectClaimPack(
           weekKey: submission.weekKey,
           type: note.type,
           body: note.body,
+          evidenceRef: note.evidenceRef,
           minutes: note.minutes,
           submittedAt: submission.submittedAt.toISOString(),
           isRetrospective: submission.isRetrospective,

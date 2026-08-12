@@ -82,6 +82,7 @@ export default async function FinancePage() {
       id: n.id,
       type: n.type,
       body: n.body,
+      evidenceRef: n.evidenceRef,
       uncertaintyTitle: n.uncertainty.title,
       amendments: n.amendments.map((a) => ({
         id: a.id,

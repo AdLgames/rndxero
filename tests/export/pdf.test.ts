@@ -26,6 +26,7 @@ function buildContent(overrides: Partial<ClaimPackContent> = {}): ClaimPackConte
         chronology: [
           {
             weekKey: "2026-W29",
+            evidenceRef: null,
             type: "FAILED_ATTEMPT",
             body: "LRU thrashed under load",
             minutes: 300,

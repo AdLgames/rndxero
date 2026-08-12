@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { getCurrentUser, SESSION_COOKIE_NAME } from "@/lib/auth/session";
 import { AuthorizationError, authorize, canDo } from "@/lib/authz/service";
 import { getProjectClaimPack } from "@/lib/export/pack";
+import { readinessScore } from "@/lib/compliance/readiness";
 import { eyebrow } from "@/app/components/ui";
 import { ExportActions } from "./ExportActions";
 
@@ -45,6 +46,10 @@ export default async function ExportPage({ params }: { params: Promise<{ project
     pack.integrity.reduce((sum, row) => sum + row.amendments.length, 0) +
     pack.uncertainties.reduce((sum, u) => sum + u.chronology.reduce((s, e) => s + e.amendments.length, 0), 0);
 
+  const allNotes = pack.uncertainties.flatMap((u) => u.chronology.filter((e) => e.type !== "NO_PROGRESS"));
+  const auditReadinessPct = readinessScore(allNotes);
+  const missingContextCount = allNotes.filter((n) => n.body.trim().length < 15 || !n.evidenceRef?.trim()).length;
+
   const downloadUrl = `/api/export/${projectId}?companyId=${project.companyId}`;
   const filenameBase = `${project.name.replace(/[^a-z0-9]+/gi, "-")}-claim-pack`;
 
@@ -82,6 +87,7 @@ export default async function ExportPage({ params }: { params: Promise<{ project
               ["Planned", hoursLabel(pack.totals.plannedMinutes)],
               ["Locked weeks", `${lockedWeeks} / ${weekKeys.size}`],
               ["Amendments", amendmentCount.toString()],
+              ["Audit readiness", `${auditReadinessPct}%`],
               ...(includeCosts && pack.totals.derivedCostMinorUnits !== null
                 ? ([["Derived cost", `£${(pack.totals.derivedCostMinorUnits / 100).toFixed(2)}`]] as const)
                 : []),
@@ -94,6 +100,13 @@ export default async function ExportPage({ params }: { params: Promise<{ project
           </dl>
         </div>
       </div>
+
+      {missingContextCount > 0 && (
+        <div className="mt-9 rounded-[10px] border border-[#E8C77A] bg-[#FDF6E7] px-4 py-3 text-[13px] leading-[1.5] text-[#7A5A12]">
+          {missingContextCount} note{missingContextCount === 1 ? "" : "s"} on this project {missingContextCount === 1 ? "is" : "are"} missing a
+          narrative or a linked piece of evidence — worth closing before weeks lock.
+        </div>
+      )}
 
       <p className={`mt-9 mb-3 ${eyebrow}`}>Uncertainty narratives</p>
       <ul className="m-0 flex list-none flex-col gap-[10px] p-0">

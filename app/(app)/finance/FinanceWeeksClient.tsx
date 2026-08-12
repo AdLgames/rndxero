@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { SubmissionBasis, UncertaintyNoteType } from "@/lib/generated/prisma/client";
+import { weekComplianceStatus, type WeekComplianceStatus } from "@/lib/compliance/readiness";
 import { SegmentedControl } from "@/app/components/SegmentedControl";
 import { LockIcon } from "@/app/components/icons";
 import { badgeAccent, badgeNeutral, buttonGhost, buttonPrimary, buttonSecondary, input } from "@/app/components/ui";
@@ -17,9 +18,16 @@ interface NoteData {
   id: string;
   type: UncertaintyNoteType;
   body: string;
+  evidenceRef: string | null;
   uncertaintyTitle: string;
   amendments: AmendmentData[];
 }
+
+const STATUS_STYLE: Record<WeekComplianceStatus, { dot: string; label: string }> = {
+  green: { dot: "bg-accent", label: "Fully backed" },
+  amber: { dot: "bg-[#C88A1E]", label: "Missing narrative or evidence" },
+  red: { dot: "bg-[#C0392B]", label: "Unconfirmed" },
+};
 
 interface LockHistoryEntry {
   id: string;
@@ -117,6 +125,11 @@ function SubmissionCard({ row, onChange }: { row: SubmissionRow; onChange: (upda
   const [error, setError] = useState("");
 
   const locked = row.lockedAt !== null;
+  const complianceStatus = weekComplianceStatus({
+    submitted: true,
+    minutes: row.minutes,
+    notes: row.notes.filter((n) => n.type !== "NO_PROGRESS").map((n) => ({ body: n.body, evidenceRef: n.evidenceRef })),
+  });
 
   async function lock() {
     setBusy(true);
@@ -204,9 +217,20 @@ function SubmissionCard({ row, onChange }: { row: SubmissionRow; onChange: (upda
     <div className={`rounded-[16px] border p-[22px_24px] ${locked ? "border-accent-border bg-accent-wash" : "border-black/[.06] bg-surface-sunken"}`}>
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <p className="m-0 text-[15.5px] font-[600] tracking-[-0.02em] text-text">
-            {row.projectName} · {row.userName} · {row.weekKey}
-          </p>
+          <div className="flex items-center gap-[10px]">
+            <p className="m-0 text-[15.5px] font-[600] tracking-[-0.02em] text-text">
+              {row.projectName} · {row.userName} · {row.weekKey}
+            </p>
+            {complianceStatus && (
+              <span
+                className="flex items-center gap-[6px] rounded-full bg-control-track px-[10px] py-[3px] text-[11px] font-[500] text-text-secondary"
+                title={STATUS_STYLE[complianceStatus].label}
+              >
+                <span className={`h-[7px] w-[7px] rounded-full ${STATUS_STYLE[complianceStatus].dot}`} />
+                {STATUS_STYLE[complianceStatus].label}
+              </span>
+            )}
+          </div>
           <p className="m-0 mt-[4px] text-[13px] text-text-tertiary">
             {(row.minutes / 60).toFixed(2)}h {row.basis.toLowerCase()} · submitted {formatDate(row.submittedAt)}
             {row.isRetrospective ? " · retrospective" : ""}

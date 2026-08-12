@@ -61,6 +61,7 @@ export interface NoteInput {
   type: UncertaintyNoteType;
   body: string;
   minutes?: number;
+  evidenceRef?: string;
 }
 
 export interface SubmitWeekInput {
@@ -116,6 +117,7 @@ export async function submitWeek(
         type: note.type,
         body: note.body,
         minutes: note.minutes,
+        evidenceRef: note.evidenceRef,
       })),
     });
   }

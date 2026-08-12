@@ -26,6 +26,7 @@ function buildContent(): ClaimPackContent {
         chronology: [
           {
             weekKey: "2026-W28",
+            evidenceRef: null,
             type: "ATTEMPT",
             body: "Tried a two-tier cache, notes with, a comma",
             minutes: 120,
@@ -37,6 +38,7 @@ function buildContent(): ClaimPackContent {
           },
           {
             weekKey: "2026-W29",
+            evidenceRef: null,
             type: "FAILED_ATTEMPT",
             body: "Thrashed under load",
             minutes: null,

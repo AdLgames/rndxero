@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { SubmissionBasis, UncertaintyNoteType } from "@/lib/generated/prisma/client";
+import { weekComplianceStatus, type WeekComplianceStatus } from "@/lib/compliance/readiness";
 import { SegmentedControl } from "@/app/components/SegmentedControl";
 import { Toggle } from "@/app/components/Toggle";
 import { ArrowRightIcon, CrosshairIcon } from "@/app/components/icons";
@@ -17,7 +18,8 @@ export interface ProjectCaptureData {
   commitSignal: { repoFullName: string; count: number } | null;
 }
 
-const QUICK_CHIP_HOURS = [5, 10, 20, 40];
+/** A standard working week, used by the "Full week" quick-fill and the equal-split default. */
+const STANDARD_WEEK_HOURS = 37.5;
 
 const TAP_OPTIONS: Array<{ label: string; type: UncertaintyNoteType; requiresBody: boolean }> = [
   { label: "No progress", type: "NO_PROGRESS", requiresBody: false },
@@ -26,11 +28,19 @@ const TAP_OPTIONS: Array<{ label: string; type: UncertaintyNoteType; requiresBod
   { label: "Solved it", type: "RESOLUTION", requiresBody: true },
 ];
 
+const STATUS_STYLE: Record<WeekComplianceStatus, { dot: string; label: string }> = {
+  green: { dot: "bg-accent", label: "Fully backed" },
+  amber: { dot: "bg-[#C88A1E]", label: "Missing narrative or evidence" },
+  red: { dot: "bg-[#C0392B]", label: "Unconfirmed — approaching lock" },
+};
+
 interface NoteSelection {
   type: UncertaintyNoteType | null;
   body: string;
   /** Optional hours-on-this-uncertainty, as typed (empty = not split out). Feeds the planner's plan-vs-actual view. */
   hours: string;
+  /** A commit URL, ticket reference, or other pointer to supporting evidence — manually entered, not a live integration. */
+  evidenceRef: string;
 }
 
 interface ProjectFormState {
@@ -47,7 +57,16 @@ function minutesToHoursLabel(minutes: number): string {
   return (minutes / 60).toString();
 }
 
-export function CaptureClient({ weekKey, projects: initialProjects }: { weekKey: string; projects: ProjectCaptureData[] }) {
+export function CaptureClient({
+  weekKey,
+  projects: initialProjects,
+  daysUntilAutoLock,
+}: {
+  weekKey: string;
+  projects: ProjectCaptureData[];
+  /** Days remaining before this week auto-locks (close + 7 days) — computed server-side so render stays pure. */
+  daysUntilAutoLock: number;
+}) {
   const [projects, setProjects] = useState(initialProjects);
   const [state, setState] = useState<Record<string, ProjectFormState>>(() =>
     Object.fromEntries(
@@ -75,7 +94,7 @@ export function CaptureClient({ weekKey, projects: initialProjects }: { weekKey:
 
   function selectNote(projectId: string, uncertaintyId: string, type: UncertaintyNoteType) {
     setState((prev) => {
-      const existingNote = prev[projectId].notes[uncertaintyId] ?? { type: null, body: "", hours: "" };
+      const existingNote = prev[projectId].notes[uncertaintyId] ?? { type: null, body: "", hours: "", evidenceRef: "" };
       return {
         ...prev,
         [projectId]: { ...prev[projectId], notes: { ...prev[projectId].notes, [uncertaintyId]: { ...existingNote, type } } },
@@ -85,7 +104,7 @@ export function CaptureClient({ weekKey, projects: initialProjects }: { weekKey:
 
   function setNoteBody(projectId: string, uncertaintyId: string, body: string) {
     setState((prev) => {
-      const existingNote = prev[projectId].notes[uncertaintyId] ?? { type: null, body: "", hours: "" };
+      const existingNote = prev[projectId].notes[uncertaintyId] ?? { type: null, body: "", hours: "", evidenceRef: "" };
       return {
         ...prev,
         [projectId]: { ...prev[projectId], notes: { ...prev[projectId].notes, [uncertaintyId]: { ...existingNote, body } } },
@@ -95,11 +114,35 @@ export function CaptureClient({ weekKey, projects: initialProjects }: { weekKey:
 
   function setNoteHours(projectId: string, uncertaintyId: string, hours: string) {
     setState((prev) => {
-      const existingNote = prev[projectId].notes[uncertaintyId] ?? { type: null, body: "", hours: "" };
+      const existingNote = prev[projectId].notes[uncertaintyId] ?? { type: null, body: "", hours: "", evidenceRef: "" };
       return {
         ...prev,
         [projectId]: { ...prev[projectId], notes: { ...prev[projectId].notes, [uncertaintyId]: { ...existingNote, hours } } },
       };
+    });
+  }
+
+  function setNoteEvidenceRef(projectId: string, uncertaintyId: string, evidenceRef: string) {
+    setState((prev) => {
+      const existingNote = prev[projectId].notes[uncertaintyId] ?? { type: null, body: "", hours: "", evidenceRef: "" };
+      return {
+        ...prev,
+        [projectId]: { ...prev[projectId], notes: { ...prev[projectId].notes, [uncertaintyId]: { ...existingNote, evidenceRef } } },
+      };
+    });
+  }
+
+  /** Divides a standard week evenly across every active, unlocked project that hasn't been touched yet. */
+  function equalSplit() {
+    const eligible = projects.filter((p) => !(p.existing?.locked ?? false));
+    if (eligible.length === 0) return;
+    const each = (STANDARD_WEEK_HOURS / eligible.length).toFixed(2).replace(/\.?0+$/, "");
+    setState((prev) => {
+      const next = { ...prev };
+      for (const p of eligible) {
+        next[p.projectId] = { ...next[p.projectId], nothingThisWeek: false, hours: each };
+      }
+      return next;
     });
   }
 
@@ -157,6 +200,7 @@ export function CaptureClient({ weekKey, projects: initialProjects }: { weekKey:
               type: selection.type as UncertaintyNoteType,
               body: selection.body.trim() || (selection.type === "NO_PROGRESS" ? "No progress this week." : ""),
               minutes: selection.hours.trim() !== "" && !Number.isNaN(hours) && hours > 0 ? Math.round(hours * 60) : undefined,
+              evidenceRef: selection.evidenceRef.trim() || undefined,
             };
           });
 
@@ -226,15 +270,44 @@ export function CaptureClient({ weekKey, projects: initialProjects }: { weekKey:
 
   return (
     <div>
+      <div className="mb-4 flex items-center justify-between">
+        <span className="text-[12.5px] text-text-tertiary">Quick-fill</span>
+        <button type="button" onClick={equalSplit} className={buttonGhost}>
+          Equal split ({STANDARD_WEEK_HOURS}h across active projects)
+        </button>
+      </div>
+
       <div className="flex flex-col gap-[14px]">
         {projects.map((project, i) => {
           const form = state[project.projectId];
           const locked = project.existing?.locked ?? false;
           const primaryUncertainty = project.uncertainties[0];
+
+          const draftNotes = Object.values(form.notes)
+            .filter((n) => n.type !== null && n.type !== "NO_PROGRESS")
+            .map((n) => ({ body: n.body, evidenceRef: n.evidenceRef }));
+          const touched = form.nothingThisWeek || form.hours.trim() !== "";
+          const complianceStatus = locked
+            ? null
+            : touched
+              ? weekComplianceStatus({ submitted: true, minutes: form.nothingThisWeek ? 0 : Number(form.hours) || 0, notes: draftNotes })
+              : weekComplianceStatus({ submitted: false, daysUntilAutoLock });
+
           return (
             <div key={project.projectId} className="rounded-[16px] border border-black/[.06] bg-surface-sunken p-6">
               <div className="mb-[22px] flex items-center justify-between">
-                <h4 className="m-0 text-[17px] font-[600] tracking-[-0.02em] text-text">{project.projectName}</h4>
+                <div className="flex items-center gap-[10px]">
+                  <h4 className="m-0 text-[17px] font-[600] tracking-[-0.02em] text-text">{project.projectName}</h4>
+                  {complianceStatus && (
+                    <span
+                      className="flex items-center gap-[6px] rounded-full bg-control-track px-[10px] py-[3px] text-[11px] font-[500] text-text-secondary"
+                      title={STATUS_STYLE[complianceStatus].label}
+                    >
+                      <span className={`h-[7px] w-[7px] rounded-full ${STATUS_STYLE[complianceStatus].dot}`} />
+                      {STATUS_STYLE[complianceStatus].label}
+                    </span>
+                  )}
+                </div>
                 {!locked && (
                   <Toggle
                     label="Nothing this week"
@@ -263,19 +336,26 @@ export function CaptureClient({ weekKey, projects: initialProjects }: { weekKey:
                         className="w-[70px] box-border rounded-[10px] border border-black/[.11] bg-white px-3 py-[9px] text-[15px] font-[590] text-text outline-none disabled:opacity-50"
                       />
                       <div className="flex gap-[6px]">
-                        {QUICK_CHIP_HOURS.map((h) => (
+                        {project.prefillMinutes !== null && (
                           <button
-                            key={h}
                             type="button"
                             disabled={form.nothingThisWeek}
-                            onClick={() => updateProject(project.projectId, { hours: String(h) })}
-                            className={`rounded-full px-[13px] py-[7px] text-[13px] transition-all duration-150 disabled:opacity-40 ${
-                              form.hours === String(h) ? "bg-accent font-[590] text-white" : "bg-control-track font-[500] text-text-secondary hover:text-text"
-                            }`}
+                            onClick={() => updateProject(project.projectId, { hours: minutesToHoursLabel(project.prefillMinutes!) })}
+                            className="rounded-full bg-control-track px-[13px] py-[7px] text-[13px] font-[500] text-text-secondary transition-all duration-150 hover:text-text disabled:opacity-40"
                           >
-                            {h}h
+                            Copy previous week
                           </button>
-                        ))}
+                        )}
+                        <button
+                          type="button"
+                          disabled={form.nothingThisWeek}
+                          onClick={() => updateProject(project.projectId, { hours: String(STANDARD_WEEK_HOURS) })}
+                          className={`rounded-full px-[13px] py-[7px] text-[13px] transition-all duration-150 disabled:opacity-40 ${
+                            form.hours === String(STANDARD_WEEK_HOURS) ? "bg-accent font-[590] text-white" : "bg-control-track font-[500] text-text-secondary hover:text-text"
+                          }`}
+                        >
+                          Full week ({STANDARD_WEEK_HOURS}h)
+                        </button>
                       </div>
                     </div>
 
@@ -323,23 +403,33 @@ export function CaptureClient({ weekKey, projects: initialProjects }: { weekKey:
                               })}
                             </div>
                             {selection?.type && selection.type !== "NO_PROGRESS" && (
-                              <div className="mt-2 flex items-center gap-2">
+                              <div className="mt-2 flex flex-col gap-[6px]">
+                                <div className="flex items-center gap-2">
+                                  <input
+                                    type="text"
+                                    placeholder="One line about what happened"
+                                    value={selection.body}
+                                    onChange={(e) => setNoteBody(project.projectId, uncertainty.id, e.target.value)}
+                                    className={input}
+                                  />
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    step="0.25"
+                                    placeholder="hrs"
+                                    title="Hours spent specifically on this uncertainty (optional — feeds the planner's plan-vs-actual view)"
+                                    value={selection.hours}
+                                    onChange={(e) => setNoteHours(project.projectId, uncertainty.id, e.target.value)}
+                                    className="w-16 shrink-0 rounded-[10px] border border-black/[.11] bg-white px-[10px] py-[9px] text-[13px] text-text outline-none"
+                                  />
+                                </div>
                                 <input
                                   type="text"
-                                  placeholder="One line about what happened"
-                                  value={selection.body}
-                                  onChange={(e) => setNoteBody(project.projectId, uncertainty.id, e.target.value)}
-                                  className={input}
-                                />
-                                <input
-                                  type="number"
-                                  min="0"
-                                  step="0.25"
-                                  placeholder="hrs"
-                                  title="Hours spent specifically on this uncertainty (optional — feeds the planner's plan-vs-actual view)"
-                                  value={selection.hours}
-                                  onChange={(e) => setNoteHours(project.projectId, uncertainty.id, e.target.value)}
-                                  className="w-16 shrink-0 rounded-[10px] border border-black/[.11] bg-white px-[10px] py-[9px] text-[13px] text-text outline-none"
+                                  placeholder="Evidence — commit URL, ticket reference, calendar link…"
+                                  title="A link or reference a reviewer could follow up on. Optional, but it's what turns a note green."
+                                  value={selection.evidenceRef}
+                                  onChange={(e) => setNoteEvidenceRef(project.projectId, uncertainty.id, e.target.value)}
+                                  className={`${input} text-[13px]`}
                                 />
                               </div>
                             )}
@@ -394,7 +484,7 @@ export function CaptureClient({ weekKey, projects: initialProjects }: { weekKey:
         })}
       </div>
 
-      <div className="mt-7 flex items-center justify-between">
+      <div className="sticky bottom-0 z-10 -mx-12 mt-7 flex items-center justify-between border-t border-black/[.06] bg-white/90 px-12 py-4 backdrop-blur-[12px]">
         <span className="text-[14.5px] text-text-secondary">
           Total <span className="font-[590] text-text">{totalHours.toFixed(1)}h</span> across {touchedCount} project{touchedCount === 1 ? "" : "s"}
         </span>
