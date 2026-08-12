@@ -34,7 +34,7 @@ export default async function PlannerPage({
   } catch (error) {
     if (error instanceof AuthorizationError) {
       return (
-        <div className="px-12 py-11">
+        <div className="px-4 py-8 sm:px-8 sm:py-11 lg:px-12">
           <p className="text-[15px] text-text-secondary">You don&apos;t have access to this project&apos;s plan.</p>
         </div>
       );

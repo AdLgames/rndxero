@@ -54,7 +54,7 @@ export default async function ProjectsPage() {
   );
 
   return (
-    <div className="px-12 py-11">
+    <div className="px-4 py-8 sm:px-8 sm:py-11 lg:px-12">
       {companiesWithProjects.map(({ company, rows, members, canWriteCost }, i) => (
         <section key={company.id} className={i > 0 ? "mt-16 border-t border-black/[.06] pt-11" : ""}>
           <div className="mb-8">
@@ -65,7 +65,7 @@ export default async function ProjectsPage() {
             </p>
           </div>
 
-          <div className="grid grid-cols-[1.6fr_1fr] items-start gap-7">
+          <div className="grid grid-cols-1 items-start gap-7 lg:grid-cols-[1.6fr_1fr]">
             <div className="flex flex-col gap-3">
               {rows.map((project) => (
                 <ProjectRow key={project.id} project={project} companyId={company.id} canWriteCost={canWriteCost} />

@@ -59,7 +59,7 @@ export default async function GithubPage() {
   const currentWeekKey = getIsoWeekKey(new Date());
 
   return (
-    <div className="mx-auto max-w-[800px] px-12 py-13">
+    <div className="mx-auto max-w-[800px] px-4 py-8 sm:px-8 sm:py-11 lg:px-12 lg:py-13">
       <h2 className="m-0 text-[30px] font-[640] tracking-[-0.028em] text-text">GitHub</h2>
       <p className="m-0 mt-[7px] mb-8 text-[15px] leading-[1.5] text-text-secondary">
         Commits and pull requests never become evidence on their own — link a repo, and anything it sends over shows

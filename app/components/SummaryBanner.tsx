@@ -34,16 +34,16 @@ export async function SummaryBanner() {
   const currentYear = new Date().getFullYear();
 
   return (
-    <div className="flex items-center gap-8 border-b border-black/[.055] bg-surface-header px-8 py-[10px]">
-      <span className="flex items-baseline gap-[6px] text-[13px]">
+    <div className="flex items-center gap-6 overflow-x-auto border-b border-black/[.055] bg-surface-header px-4 py-[10px] sm:gap-8 sm:px-8">
+      <span className="flex shrink-0 items-baseline gap-[6px] whitespace-nowrap text-[13px]">
         <span className="text-text-tertiary">Hours logged ({currentYear})</span>
         <span className="font-[590] text-text">{hoursLabel(totalMinutesYtd)}h</span>
       </span>
-      <span className="flex items-baseline gap-[6px] text-[13px]">
+      <span className="hidden shrink-0 items-baseline gap-[6px] whitespace-nowrap text-[13px] sm:flex">
         <span className="text-text-tertiary">Qualifying expenditure logged</span>
         <span className="font-[590] text-text">{moneyLabel(qualifyingExpenditureMinorUnits)}</span>
       </span>
-      <span className="flex items-baseline gap-[6px] text-[13px]">
+      <span className="flex shrink-0 items-baseline gap-[6px] whitespace-nowrap text-[13px]">
         <span className="text-text-tertiary">Audit readiness</span>
         <span className={`font-[590] ${auditReadinessPct >= 70 ? "text-accent" : auditReadinessPct >= 40 ? "text-[#C88A1E]" : "text-[#C0392B]"}`}>
           {auditReadinessPct}%

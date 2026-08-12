@@ -237,22 +237,24 @@ function Lane({
         </span>
       </div>
 
-      <div className="flex items-end gap-[6px]">
-        {weekKeys.map((weekKey) => (
-          <WeekColumn
-            key={weekKey}
-            weekKey={weekKey}
-            isCurrentWeek={weekKey === currentWeekKey}
-            plannedMinutes={lane.plannedMinutesByWeek[weekKey] ?? 0}
-            actualMinutes={lane.actualMinutesByWeek[weekKey] ?? 0}
-            notes={lane.notesByWeek[weekKey] ?? []}
-            companyId={companyId}
-            projectId={lane.projectId}
-            canRemap={canRemap}
-            uncertainties={uncertainties}
-            onRemapped={onRemapped}
-          />
-        ))}
+      <div className="overflow-x-auto">
+        <div className="flex w-max items-end gap-[6px]">
+          {weekKeys.map((weekKey) => (
+            <WeekColumn
+              key={weekKey}
+              weekKey={weekKey}
+              isCurrentWeek={weekKey === currentWeekKey}
+              plannedMinutes={lane.plannedMinutesByWeek[weekKey] ?? 0}
+              actualMinutes={lane.actualMinutesByWeek[weekKey] ?? 0}
+              notes={lane.notesByWeek[weekKey] ?? []}
+              companyId={companyId}
+              projectId={lane.projectId}
+              canRemap={canRemap}
+              uncertainties={uncertainties}
+              onRemapped={onRemapped}
+            />
+          ))}
+        </div>
       </div>
     </div>
   );

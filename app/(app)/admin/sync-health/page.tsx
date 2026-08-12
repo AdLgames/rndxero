@@ -18,7 +18,7 @@ export default async function SyncHealthPage() {
   const health = await getSyncHealthForCompanies(prisma, companyIds);
 
   return (
-    <div className="px-12 py-11">
+    <div className="px-4 py-8 sm:px-8 sm:py-11 lg:px-12">
       <h2 className="m-0 text-[30px] font-[640] tracking-[-0.028em] text-text">Xero sync health</h2>
       <div className="mt-8 flex flex-col gap-[10px]">
         {health.map((row) => (
