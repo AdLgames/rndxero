@@ -4,13 +4,21 @@ import { notFound, redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { getCurrentUser, SESSION_COOKIE_NAME } from "@/lib/auth/session";
 import { AuthorizationError, authorize, canDo } from "@/lib/authz/service";
-import { getIsoWeekKey, shiftWeekKey } from "@/lib/capture/week-key";
+import { getIsoWeekKey, getWeekBoundaries, shiftWeekKey } from "@/lib/capture/week-key";
+import { getOpenUncertainties, getPrefillMinutes } from "@/lib/capture/repository";
+import { computePlannedCostMinorUnits, getCurrentPlanVersion, getPlanVsActual, listPlanVersions } from "@/lib/plan/repository";
 import { getProjectClaimPack, type ClaimPackNoteEntry, type ClaimPackUncertainty } from "@/lib/export/pack";
 import { isNoteBacked } from "@/lib/compliance/readiness";
 import { badgeAccent, badgeNeutral, eyebrow } from "@/app/components/ui";
 import { LockIcon } from "@/app/components/icons";
+import { ProjectDescription } from "./ProjectDescription";
+import { ProjectWeekLogCard, type WeekLogData } from "./ProjectWeekLogCard";
+import { PlannerClient, type CurrentPlanData, type UncertaintyOption, type VersionHistoryEntry } from "../../planner/[projectId]/PlannerClient";
 
 const GANTT_WEEK_COUNT = 16;
+const PLAN_WEEK_SPAN = 5;
+/** Matches lib/locking's real auto-lock deadline (close + 7 days) — same constant capture/page.tsx uses. */
+const AUTO_LOCK_DAYS_AFTER_CLOSE = 7;
 
 const TYPE_LABEL: Record<ClaimPackNoteEntry["type"], string> = {
   NO_PROGRESS: "No progress",
@@ -45,8 +53,8 @@ function barHeight(minutes: number): number {
  * grammar as the Board (BoardClient.tsx), just re-scoped from "lanes are
  * projects" to "lanes are uncertainties within one project" so plan vs
  * actual is visible per line of inquiry, not just per project total.
- * Read-only: no click-to-expand popover here, unlike Board's WeekColumn —
- * the narratives below already give the full chronology.
+ * Read-only overview across a wide (16-week) window; the editable
+ * near-term plan lives in the embedded Planner matrix below it.
  */
 function GanttChart({
   uncertainties,
@@ -186,9 +194,12 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
     throw error;
   }
 
-  const [canViewPlan, canViewCosts] = await Promise.all([
+  const [canViewPlan, canWritePlan, canViewCosts, canEditProject, canLogTime] = await Promise.all([
     canDo(prisma, { userId: currentUser.id, companyId: project.companyId, projectId, action: "plan:read" }),
+    canDo(prisma, { userId: currentUser.id, companyId: project.companyId, projectId, action: "plan:write" }),
     canDo(prisma, { userId: currentUser.id, companyId: project.companyId, projectId, action: "cost:read" }),
+    canDo(prisma, { userId: currentUser.id, companyId: project.companyId, projectId, action: "project:update" }),
+    canDo(prisma, { userId: currentUser.id, companyId: project.companyId, projectId, action: "submission:create" }),
   ]);
 
   const pack = await getProjectClaimPack(prisma, { projectId, includeCosts: canViewCosts });
@@ -200,6 +211,91 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
   const lockedWeeks = pack.integrity.filter((row) => row.lockedAt !== null).length;
   const allNotes = pack.uncertainties.flatMap((u) => u.chronology.filter((e) => e.type !== "NO_PROGRESS"));
   const missingEvidenceCount = allNotes.filter((n) => !isNoteBacked(n)).length;
+
+  // --- "Add time & notes" this week, scoped to this one project (mirrors capture/page.tsx) ---
+  let weekLogData: WeekLogData | null = null;
+  if (canLogTime) {
+    const { start } = getWeekBoundaries(currentWeekKey);
+    const previousWeekKey = getIsoWeekKey(new Date(start.getTime() - 24 * 60 * 60 * 1000));
+    const daysUntilAutoLock = Math.floor(
+      (getWeekBoundaries(currentWeekKey).end.getTime() + AUTO_LOCK_DAYS_AFTER_CLOSE * 86_400_000 - new Date().getTime()) / 86_400_000
+    );
+    const [openUncertainties, prefillMinutes, existingSubmission] = await Promise.all([
+      getOpenUncertainties(prisma, projectId),
+      getPrefillMinutes(prisma, { projectId, userId: currentUser.id, previousWeekKey }),
+      prisma.weeklySubmission.findUnique({
+        where: { projectId_userId_weekKey: { projectId, userId: currentUser.id, weekKey: currentWeekKey } },
+      }),
+    ]);
+    weekLogData = {
+      projectId,
+      companyId: project.companyId,
+      weekKey: currentWeekKey,
+      daysUntilAutoLock,
+      uncertainties: openUncertainties.map((u) => ({ id: u.id, title: u.title })),
+      prefillMinutes,
+      existing: existingSubmission
+        ? { minutes: existingSubmission.minutes, basis: existingSubmission.basis, locked: existingSubmission.lockedAt !== null }
+        : null,
+    };
+  }
+
+  // --- Editable near-term plan, embedded rather than just linked to (mirrors planner/[projectId]/page.tsx) ---
+  let plannerProps: {
+    uncertainties: UncertaintyOption[];
+    currentPlan: CurrentPlanData | null;
+    plannedCostMinorUnits: number | null;
+    weekKeys: string[];
+    actualMinutesByWeek: Record<string, number>;
+    versionHistory: VersionHistoryEntry[];
+  } | null = null;
+  if (canViewPlan) {
+    const planWeekKeys = Array.from({ length: PLAN_WEEK_SPAN }, (_, i) => shiftWeekKey(currentWeekKey, i));
+    const [allUncertainties, currentPlan, versions] = await Promise.all([
+      prisma.uncertainty.findMany({ where: { projectId }, orderBy: { createdAt: "asc" } }),
+      getCurrentPlanVersion(prisma, projectId),
+      listPlanVersions(prisma, projectId),
+    ]);
+    const plannedCostMinorUnits =
+      canViewCosts && currentPlan ? await computePlannedCostMinorUnits(prisma, { companyId: project.companyId, planVersion: currentPlan }) : null;
+
+    const varianceByUncertainty = await Promise.all(
+      allUncertainties.map(async (u) => ({ weeks: await getPlanVsActual(prisma, { projectId, uncertaintyId: u.id }) }))
+    );
+    const actualMinutesByWeek: Record<string, number> = {};
+    for (const { weeks } of varianceByUncertainty) {
+      for (const w of weeks) {
+        actualMinutesByWeek[w.weekKey] = (actualMinutesByWeek[w.weekKey] ?? 0) + w.actualMinutes;
+      }
+    }
+
+    plannerProps = {
+      uncertainties: allUncertainties.map((u) => ({ id: u.id, title: u.title })),
+      currentPlan: currentPlan
+        ? {
+            versionNumber: currentPlan.versionNumber,
+            note: currentPlan.note,
+            totalPlannedMinutes: currentPlan.plannedAllocations.reduce((sum, a) => sum + a.plannedMinutes, 0),
+            allocations: currentPlan.plannedAllocations.map((a) => ({
+              uncertaintyId: a.uncertaintyId,
+              userId: a.userId,
+              weekKey: a.weekKey,
+              plannedMinutes: a.plannedMinutes,
+            })),
+          }
+        : null,
+      plannedCostMinorUnits,
+      weekKeys: planWeekKeys,
+      actualMinutesByWeek,
+      versionHistory: versions.map((v) => ({
+        versionNumber: v.versionNumber,
+        note: v.note,
+        createdAt: v.createdAt.toISOString(),
+        supersededAt: v.supersededAt ? v.supersededAt.toISOString() : null,
+        totalPlannedMinutes: v.plannedAllocations.reduce((sum, a) => sum + a.plannedMinutes, 0),
+      })),
+    };
+  }
 
   const STAT_TILES = [
     { label: "Logged", value: hoursLabel(pack.totals.actualMinutes) },
@@ -220,11 +316,9 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
             Started {new Date(project.startDate).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
             {pack.project.competentProfessionals.length > 0 ? ` · ${pack.project.competentProfessionals.join(", ")}` : ""}
           </p>
+          <ProjectDescription projectId={projectId} companyId={project.companyId} description={project.description} canEdit={canEditProject} />
         </div>
         <div className="flex shrink-0 gap-2">
-          <Link href={`/planner/${projectId}`} className="rounded-[10px] border border-black/[.11] bg-white px-[15px] py-[9px] text-[13px] font-[590] text-text transition-colors duration-150 hover:bg-[#FAFAFA]">
-            Planner
-          </Link>
           <Link href={`/export/${projectId}`} className="rounded-[10px] border border-black/[.11] bg-white px-[15px] py-[9px] text-[13px] font-[590] text-text transition-colors duration-150 hover:bg-[#FAFAFA]">
             Export
           </Link>
@@ -247,10 +341,36 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
         </div>
       )}
 
+      {weekLogData && (
+        <>
+          <p className={`mt-9 mb-3 ${eyebrow}`}>Add time &amp; notes</p>
+          <ProjectWeekLogCard data={weekLogData} />
+        </>
+      )}
+
       {canViewPlan && pack.uncertainties.length > 0 && (
         <>
           <p className={`mt-9 mb-3 ${eyebrow}`}>Plan vs actual — last {GANTT_WEEK_COUNT} weeks</p>
           <GanttChart uncertainties={pack.uncertainties} variance={pack.variance} weekKeys={weekKeys} currentWeekKey={currentWeekKey} />
+        </>
+      )}
+
+      {plannerProps && (
+        <>
+          <p className={`mt-9 mb-3 ${eyebrow}`}>{canWritePlan ? "Edit planned hours" : "Planned hours"}</p>
+          <PlannerClient
+            companyId={project.companyId}
+            projectId={projectId}
+            canWrite={canWritePlan}
+            canViewCosts={canViewCosts}
+            uncertainties={plannerProps.uncertainties}
+            currentPlan={plannerProps.currentPlan}
+            plannedCostMinorUnits={plannerProps.plannedCostMinorUnits}
+            weekKeys={plannerProps.weekKeys}
+            currentWeekKey={currentWeekKey}
+            actualMinutesByWeek={plannerProps.actualMinutesByWeek}
+            versionHistory={plannerProps.versionHistory}
+          />
         </>
       )}
 

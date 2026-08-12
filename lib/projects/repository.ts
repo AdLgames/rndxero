@@ -2,10 +2,10 @@ import type { PrismaClient, Project, ProjectCompetentProfessional } from "@/lib/
 
 /**
  * Projects are the unit everything else (evidence, time, cost, export)
- * hangs off. Competent professionals are named at creation time — this
- * is the only place they're set, since there's no edit-project flow yet
- * — so a project can't exist without at least one named, matching
- * PLAN.md's evidence-pack requirement to always have one to show.
+ * hangs off. Competent professionals are named at creation time and stay
+ * fixed after that — so a project can't exist without at least one named,
+ * matching PLAN.md's evidence-pack requirement to always have one to show.
+ * Description is the one field with a post-creation edit path, below.
  */
 export interface CreateProjectInput {
   companyId: string;
@@ -33,6 +33,17 @@ export async function createProject(
       competentProfessionals: { create: names.map((name) => ({ name })) },
     },
     include: { competentProfessionals: true },
+  });
+}
+
+/** Only description is editable post-creation — name, dates and competent professionals stay fixed at what was recorded when the project was created. */
+export async function updateProjectDescription(
+  prisma: PrismaClient,
+  params: { projectId: string; description: string | null }
+): Promise<Project> {
+  return prisma.project.update({
+    where: { id: params.projectId },
+    data: { description: params.description },
   });
 }
 
