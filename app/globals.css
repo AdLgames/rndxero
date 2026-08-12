@@ -80,6 +80,32 @@
     outline-offset: 2px;
   }
 
+  /*
+   * Baseline click/hover feedback for every <button>, so a button with no
+   * bespoke hover/active styling of its own (an icon-only toggle, a
+   * calendar cell, anything added without reaching for buttonPrimary/
+   * buttonSecondary) still visibly reacts. Targets transform + filter,
+   * which the shared button classes in ui.ts don't otherwise set beyond
+   * their own precise active:scale value, so this layers underneath
+   * rather than fighting component-level Tailwind utilities — a class
+   * selector always outranks a plain type selector in the cascade, so a
+   * component's own hover:bg- or active:scale- utility still wins outright
+   * wherever it is defined; this only fills the gap where nothing was.
+   */
+  button:not(:disabled) {
+    cursor: pointer;
+    transition: filter 120ms ease-out, transform 80ms ease-out, opacity 120ms ease-out;
+  }
+  button:disabled {
+    cursor: not-allowed;
+  }
+  button:not(:disabled):hover {
+    filter: brightness(0.97);
+  }
+  button:not(:disabled):active {
+    transform: scale(0.98);
+  }
+
   input:focus-visible,
   textarea:focus-visible,
   select:focus-visible {

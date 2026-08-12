@@ -5,6 +5,7 @@ import Link from "next/link";
 import type { UncertaintyNoteType } from "@/lib/generated/prisma/client";
 import { getIsoWeekKey } from "@/lib/capture/week-key";
 import type { BoardData, BoardNote } from "@/lib/board/repository";
+import { ArrowRightIcon, Spinner } from "@/app/components/icons";
 
 export interface LaneUncertaintyOption {
   id: string;
@@ -112,8 +113,9 @@ function NoteDetail({
             type="button"
             disabled={busy || target === note.uncertaintyId}
             onClick={move}
-            className="shrink-0 rounded-[7px] bg-accent px-[9px] py-1 text-[12px] font-[590] text-white transition-colors duration-150 hover:bg-accent-hover disabled:opacity-50"
+            className="flex shrink-0 items-center gap-[5px] rounded-[7px] bg-accent px-[9px] py-1 text-[12px] font-[590] text-white transition-colors duration-150 hover:bg-accent-hover disabled:opacity-50"
           >
+            {busy && <Spinner />}
             {busy ? "Moving…" : "Move"}
           </button>
         </div>
@@ -263,34 +265,81 @@ function Lane({
   );
 }
 
+/**
+ * `board.weekKeys` is a much wider band than what's shown at once — the
+ * server pre-fetches it all in one query (see board/page.tsx) so paging
+ * forward/back through nearby weeks is instant, just re-slicing an array
+ * already on the client, rather than a fresh page navigation and DB
+ * round-trip every time someone clicks "next 12 weeks".
+ */
 export function BoardClient({
   companyId,
   board,
   uncertaintiesByProject,
   remappableByProject,
+  visibleWeekCount = 12,
 }: {
   companyId: string;
   board: BoardData;
   uncertaintiesByProject: Record<string, LaneUncertaintyOption[]>;
   remappableByProject: Record<string, boolean>;
+  /** How many weeks to show at once — Home's embed uses a smaller count than the full /board page. */
+  visibleWeekCount?: number;
 }) {
   const currentWeekKey = useMemo(() => getIsoWeekKey(new Date()), []);
 
+  const [offset, setOffset] = useState(() => {
+    const currentIndex = board.weekKeys.indexOf(currentWeekKey);
+    const defaultOffset = currentIndex >= 0 ? currentIndex - (visibleWeekCount - 1) : board.weekKeys.length - visibleWeekCount;
+    return Math.min(Math.max(defaultOffset, 0), Math.max(board.weekKeys.length - visibleWeekCount, 0));
+  });
+
+  const maxOffset = Math.max(board.weekKeys.length - visibleWeekCount, 0);
+  const visibleWeekKeys = board.weekKeys.slice(offset, offset + visibleWeekCount);
+  const canGoBack = offset > 0;
+  const canGoForward = offset < maxOffset;
+
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-wrap items-center gap-[22px] text-[12.5px] text-text-tertiary">
-        <span className="flex items-center gap-[6px]">
-          <span className="h-3 w-3 rounded-[6px] bg-track" /> Planned
-        </span>
-        <span className="flex items-center gap-[10px]">
-          Progress
-          <span className="flex items-center gap-[3px]">
-            {(["NO_PROGRESS", "ATTEMPT", "BLOCKER", "FAILED_ATTEMPT", "RESOLUTION"] as UncertaintyNoteType[]).map((type) => (
-              <span key={type} className="h-3 w-3 rounded-[6px]" style={{ background: TYPE_STYLE[type].ramp }} title={TYPE_STYLE[type].label} />
-            ))}
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div className="flex flex-wrap items-center gap-[22px] text-[12.5px] text-text-tertiary">
+          <span className="flex items-center gap-[6px]">
+            <span className="h-3 w-3 rounded-[6px] bg-track" /> Planned
           </span>
-          none → solved
-        </span>
+          <span className="flex items-center gap-[10px]">
+            Progress
+            <span className="flex items-center gap-[3px]">
+              {(["NO_PROGRESS", "ATTEMPT", "BLOCKER", "FAILED_ATTEMPT", "RESOLUTION"] as UncertaintyNoteType[]).map((type) => (
+                <span key={type} className="h-3 w-3 rounded-[6px]" style={{ background: TYPE_STYLE[type].ramp }} title={TYPE_STYLE[type].label} />
+              ))}
+            </span>
+            none → solved
+          </span>
+        </div>
+
+        <div className="inline-flex shrink-0 items-center rounded-[10px] bg-control-track p-[3px]">
+          <button
+            type="button"
+            disabled={!canGoBack}
+            onClick={() => setOffset((o) => Math.max(o - visibleWeekCount, 0))}
+            aria-label={`Previous ${visibleWeekCount} weeks`}
+            className="rounded-[8px] p-[7px] text-text-secondary transition-colors duration-150 hover:text-text disabled:opacity-30 disabled:hover:text-text-secondary"
+          >
+            <ArrowRightIcon className="rotate-180" />
+          </button>
+          <span className="px-[10px] text-[13px] font-[590] text-text">
+            {visibleWeekKeys[0]} – {visibleWeekKeys[visibleWeekKeys.length - 1]}
+          </span>
+          <button
+            type="button"
+            disabled={!canGoForward}
+            onClick={() => setOffset((o) => Math.min(o + visibleWeekCount, maxOffset))}
+            aria-label={`Next ${visibleWeekCount} weeks`}
+            className="rounded-[8px] p-[7px] text-text-secondary transition-colors duration-150 hover:text-text disabled:opacity-30 disabled:hover:text-text-secondary"
+          >
+            <ArrowRightIcon />
+          </button>
+        </div>
       </div>
 
       <div className="flex flex-col gap-[14px]">
@@ -298,7 +347,7 @@ export function BoardClient({
           <Lane
             key={lane.projectId}
             lane={lane}
-            weekKeys={board.weekKeys}
+            weekKeys={visibleWeekKeys}
             currentWeekKey={currentWeekKey}
             companyId={companyId}
             uncertainties={uncertaintiesByProject[lane.projectId] ?? []}

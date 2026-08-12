@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { PublicHeader } from "../components/PublicHeader";
+import { Spinner } from "../components/icons";
 import { buttonPrimary, input } from "../components/ui";
 
 export default function SignupPage() {
@@ -47,6 +48,7 @@ export default function SignupPage() {
               <input type="email" required placeholder="you@company.com" value={email} onChange={(e) => setEmail(e.target.value)} className={input} />
               <input type="text" required placeholder="Company name" value={companyName} onChange={(e) => setCompanyName(e.target.value)} className={input} />
               <button type="submit" disabled={status === "saving"} className={`${buttonPrimary} w-full py-[11px]`}>
+                {status === "saving" && <Spinner />}
                 {status === "saving" ? "Creating…" : "Create company"}
               </button>
               {status === "error" && <p className="m-0 text-[13px] text-red-700">{errorMessage}</p>}

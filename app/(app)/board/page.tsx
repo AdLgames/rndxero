@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
@@ -8,14 +7,12 @@ import { getIsoWeekKey, shiftWeekKey } from "@/lib/capture/week-key";
 import { getBoardData } from "@/lib/board/repository";
 import { BoardClient, type LaneUncertaintyOption } from "./BoardClient";
 
-const WEEK_COUNT = 12;
-const WEEK_KEY_PATTERN = /^\d{4}-W\d{2}$/;
+const VISIBLE_WEEK_COUNT = 12;
+/** Pre-fetched once, well beyond what's shown at once, so paging forward/back through nearby weeks in BoardClient never needs a fresh request. */
+const FETCH_WEEKS_BACK = 24;
+const FETCH_WEEKS_FORWARD = 12;
 
-export default async function BoardPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ from?: string; company?: string }>;
-}) {
+export default async function BoardPage({ searchParams }: { searchParams: Promise<{ company?: string }> }) {
   const cookieStore = await cookies();
   const currentUser = await getCurrentUser(prisma, cookieStore.get(SESSION_COOKIE_NAME)?.value);
   if (!currentUser) {
@@ -36,11 +33,8 @@ export default async function BoardPage({
   const company = await prisma.company.findUniqueOrThrow({ where: { id: companyId } });
 
   const currentWeekKey = getIsoWeekKey(new Date());
-  const defaultFromWeekKey = shiftWeekKey(currentWeekKey, -(WEEK_COUNT - 1));
-  const fromWeekKey = params.from && WEEK_KEY_PATTERN.test(params.from) ? params.from : defaultFromWeekKey;
-  const lastWeekKey = shiftWeekKey(fromWeekKey, WEEK_COUNT - 1);
-  const prevFrom = shiftWeekKey(fromWeekKey, -WEEK_COUNT);
-  const nextFrom = shiftWeekKey(fromWeekKey, WEEK_COUNT);
+  const fetchFromWeekKey = shiftWeekKey(currentWeekKey, -FETCH_WEEKS_BACK);
+  const fetchWeekCount = FETCH_WEEKS_BACK + FETCH_WEEKS_FORWARD + 1;
 
   const accessibleProjectIds = await listAccessibleProjectIds(prisma, { userId: currentUser.id, companyId });
   const projects = await prisma.project.findMany({
@@ -57,42 +51,17 @@ export default async function BoardPage({
   const projectIds = readableProjectIds.filter((p) => p.readable).map((p) => p.id);
   const remappableByProject = Object.fromEntries(readableProjectIds.map((p) => [p.id, p.remappable]));
 
-  const pager = (
-    <div className="inline-flex shrink-0 items-center rounded-[10px] bg-control-track p-[3px]">
-      <Link
-        href={`/board?company=${companyId}&from=${prevFrom}`}
-        aria-label="Previous 12 weeks"
-        className="rounded-[8px] px-[13px] py-[7px] text-[13px] font-[500] text-text-secondary transition-colors duration-150 hover:text-text"
-      >
-        ←
-      </Link>
-      <span className="px-[13px] py-[7px] text-[13px] font-[590] text-text">
-        {fromWeekKey} – {lastWeekKey}
-      </span>
-      <Link
-        href={`/board?company=${companyId}&from=${nextFrom}`}
-        aria-label="Next 12 weeks"
-        className="rounded-[8px] px-[13px] py-[7px] text-[13px] font-[500] text-text-secondary transition-colors duration-150 hover:text-text"
-      >
-        →
-      </Link>
-    </div>
-  );
-
   if (projectIds.length === 0) {
     return (
       <div className="px-4 py-8 sm:px-8 sm:py-11 lg:px-12">
-        <div className="mb-7 flex flex-col items-start gap-4 sm:flex-row sm:items-end sm:justify-between">
-          <h2 className="m-0 text-[30px] font-[640] tracking-[-0.028em] text-text">Board</h2>
-          {pager}
-        </div>
+        <h2 className="m-0 mb-7 text-[30px] font-[640] tracking-[-0.028em] text-text">Board</h2>
         <p className="text-[15px] text-text-secondary">No projects to show yet.</p>
       </div>
     );
   }
 
   const [board, uncertainties] = await Promise.all([
-    getBoardData(prisma, { companyId, projectIds, fromWeekKey, weekCount: WEEK_COUNT }),
+    getBoardData(prisma, { companyId, projectIds, fromWeekKey: fetchFromWeekKey, weekCount: fetchWeekCount }),
     prisma.uncertainty.findMany({ where: { projectId: { in: projectIds } }, select: { id: true, title: true, projectId: true } }),
   ]);
 
@@ -103,18 +72,19 @@ export default async function BoardPage({
 
   return (
     <div className="px-4 py-8 sm:px-8 sm:py-11 lg:px-12">
-      <div className="mb-7 flex flex-col items-start gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <h2 className="m-0 text-[30px] font-[640] tracking-[-0.028em] text-text">{companyIds.length > 1 ? `Board — ${company.name}` : "Board"}</h2>
-          <p className="m-0 mt-[7px] max-w-[58ch] text-[15px] leading-[1.5] text-text-secondary">
-            The at-a-glance evidence view, not a delivery tracker. Pale bars are planned hours; coloured bars are what
-            got logged.
-          </p>
-        </div>
-        {pager}
-      </div>
+      <h2 className="m-0 text-[30px] font-[640] tracking-[-0.028em] text-text">{companyIds.length > 1 ? `Board — ${company.name}` : "Board"}</h2>
+      <p className="m-0 mt-[7px] mb-7 max-w-[58ch] text-[15px] leading-[1.5] text-text-secondary">
+        The at-a-glance evidence view, not a delivery tracker. Pale bars are planned hours; coloured bars are what got
+        logged.
+      </p>
 
-      <BoardClient companyId={companyId} board={board} uncertaintiesByProject={uncertaintiesByProject} remappableByProject={remappableByProject} />
+      <BoardClient
+        companyId={companyId}
+        board={board}
+        uncertaintiesByProject={uncertaintiesByProject}
+        remappableByProject={remappableByProject}
+        visibleWeekCount={VISIBLE_WEEK_COUNT}
+      />
     </div>
   );
 }

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { PublicHeader } from "../components/PublicHeader";
+import { Spinner } from "../components/icons";
 import { buttonPrimary, input } from "../components/ui";
 
 export default function LoginPage() {
@@ -36,6 +37,7 @@ export default function LoginPage() {
             <form onSubmit={handleSubmit} className="mt-6 flex flex-col gap-3">
               <input type="email" required placeholder="you@company.com" value={email} onChange={(e) => setEmail(e.target.value)} className={input} />
               <button type="submit" disabled={status === "sending"} className={`${buttonPrimary} w-full py-[11px]`}>
+                {status === "sending" && <Spinner />}
                 {status === "sending" ? "Sending…" : "Send sign-in link"}
               </button>
               {status === "error" && <p className="m-0 text-[13px] text-red-700">Something went wrong. Try again.</p>}

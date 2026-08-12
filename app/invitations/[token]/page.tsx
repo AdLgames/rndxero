@@ -3,6 +3,7 @@
 import { use, useState } from "react";
 import { useRouter } from "next/navigation";
 import { PublicHeader } from "../../components/PublicHeader";
+import { Spinner } from "../../components/icons";
 import { buttonPrimary, input } from "../../components/ui";
 
 export default function AcceptInvitationPage({ params }: { params: Promise<{ token: string }> }) {
@@ -41,6 +42,7 @@ export default function AcceptInvitationPage({ params }: { params: Promise<{ tok
           <form onSubmit={handleSubmit} className="mt-6 flex flex-col gap-3">
             <input type="text" required placeholder="Your name" value={name} onChange={(e) => setName(e.target.value)} className={input} />
             <button type="submit" disabled={status === "saving"} className={`${buttonPrimary} w-full py-[11px]`}>
+              {status === "saving" && <Spinner />}
               {status === "saving" ? "Joining…" : "Accept invitation"}
             </button>
             {status === "error" && <p className="m-0 text-[13px] text-red-700">{error}</p>}

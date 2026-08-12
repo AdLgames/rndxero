@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
-import { PlusIcon, XIcon } from "./icons";
+import { PlusIcon, Spinner, XIcon } from "./icons";
 import { buttonPrimary, fieldLabel, input } from "./ui";
 
 export interface DrawerCompany {
@@ -198,6 +198,7 @@ export function NewProjectDrawer({ companies }: { companies: DrawerCompany[] }) 
 
                 <div className="mt-auto flex items-center gap-3 pt-2">
                   <button type="submit" disabled={status === "saving"} className={`${buttonPrimary} flex-1`}>
+                    {status === "saving" && <Spinner />}
                     {status === "saving" ? "Creating…" : "Create project"}
                   </button>
                 </div>

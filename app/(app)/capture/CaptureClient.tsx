@@ -5,7 +5,7 @@ import type { SubmissionBasis, UncertaintyNoteType } from "@/lib/generated/prism
 import { weekComplianceStatus, type WeekComplianceStatus } from "@/lib/compliance/readiness";
 import { SegmentedControl } from "@/app/components/SegmentedControl";
 import { Toggle } from "@/app/components/Toggle";
-import { ArrowRightIcon, CrosshairIcon } from "@/app/components/icons";
+import { ArrowRightIcon, CrosshairIcon, Spinner } from "@/app/components/icons";
 import { buttonGhost, buttonPrimary, input } from "@/app/components/ui";
 
 export interface ProjectCaptureData {
@@ -493,6 +493,7 @@ export function CaptureClient({
           Total <span className="font-[590] text-text">{totalHours.toFixed(1)}h</span> across {touchedCount} project{touchedCount === 1 ? "" : "s"}
         </span>
         <button type="button" onClick={logThisWeek} disabled={status === "saving"} className={buttonPrimary}>
+          {status === "saving" && <Spinner />}
           {status === "saving" ? "Logging…" : "Log this week"}
           <ArrowRightIcon />
         </button>

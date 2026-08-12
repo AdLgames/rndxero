@@ -8,18 +8,21 @@ import { canDo, listAccessibleProjectIds } from "@/lib/authz/service";
 import { getIsoWeekKey, getWeekBoundaries, shiftWeekKey } from "@/lib/capture/week-key";
 import { isNoteBacked } from "@/lib/compliance/readiness";
 import { buildNextActions, type NextAction, type UnloggedProject } from "@/lib/dashboard/tasks";
+import { getBoardData } from "@/lib/board/repository";
 import { ArrowRightIcon } from "@/app/components/icons";
 import { eyebrow } from "@/app/components/ui";
 import { NAV_GROUPS } from "@/app/components/nav-groups";
+import { BoardClient } from "@/app/(app)/board/BoardClient";
 
 /** Matches lib/locking's real auto-lock deadline (close + 7 days) — same constant capture/page.tsx uses. */
 const AUTO_LOCK_DAYS_AFTER_CLOSE = 7;
-const TOP_PROJECT_COUNT = 5;
-const BOARD_WEEK_COUNT = 8;
 const RECENT_ACTIVITY_COUNT = 8;
+/** Home's board embed is a lighter preview of the real /board — fewer weeks visible at once, but still pre-fetched wide enough to page a couple of times without a reload (see board/page.tsx for the same pattern at full size). */
+const HOME_BOARD_VISIBLE_WEEKS = 8;
+const HOME_BOARD_WEEKS_BACK = 16;
+const HOME_BOARD_WEEKS_FORWARD = 6;
 
-/** Same colour-scale grammar as the pre-login marketing page's board illustration and BoardClient.tsx's real board — opacity ramps with how hard-won the week's evidence was, not a second hue. */
-const TYPE_PRIORITY: UncertaintyNoteType[] = ["FAILED_ATTEMPT", "BLOCKER", "RESOLUTION", "ATTEMPT", "NO_PROGRESS"];
+/** Colour-scale grammar shared with BoardClient.tsx's real board and the pre-login marketing page's illustration — opacity ramps with how hard-won the week's evidence was, not a second hue. Used here for the Latest Activity feed's per-entry dot. */
 const CELL_STYLE: Record<UncertaintyNoteType, string> = {
   NO_PROGRESS: "border border-dashed border-black/[.12]",
   ATTEMPT: "bg-accent/40",
@@ -27,7 +30,6 @@ const CELL_STYLE: Record<UncertaintyNoteType, string> = {
   FAILED_ATTEMPT: "bg-accent/80",
   RESOLUTION: "bg-accent",
 };
-const EMPTY_CELL_STYLE = "border border-dashed border-black/[.12]";
 
 const NOTE_TYPE_LABEL: Record<UncertaintyNoteType, string> = {
   NO_PROGRESS: "no progress",
@@ -36,13 +38,6 @@ const NOTE_TYPE_LABEL: Record<UncertaintyNoteType, string> = {
   FAILED_ATTEMPT: "hit a wall",
   RESOLUTION: "solved it",
 };
-
-function dominantType(types: UncertaintyNoteType[]): UncertaintyNoteType | null {
-  for (const t of TYPE_PRIORITY) {
-    if (types.includes(t)) return t;
-  }
-  return null;
-}
 
 function fmtHours(minutes: number): string {
   const hours = minutes / 60;
@@ -131,55 +126,40 @@ export default async function HomePage() {
     pendingSuggestionCount,
   });
 
-  // --- Top projects (board-style graphic) + latest activity, across every accessible project ---
+  // --- Board preview + latest activity, across every accessible project ---
   const allAccessibleProjectIds = [
     ...new Set((await Promise.all(companyIds.map((companyId) => listAccessibleProjectIds(prisma, { userId: currentUser.id, companyId })))).flat()),
   ];
 
-  const boardWeekKeys = Array.from({ length: BOARD_WEEK_COUNT }, (_, i) => shiftWeekKey(currentWeekKey, i - (BOARD_WEEK_COUNT - 1)));
+  // The board is inherently per-company (lanes are projects within one company) — feature whichever
+  // company has the most recent submission activity, same "recency wins" logic Projects' own
+  // /projects redirect uses, rather than trying to merge lanes from several companies into one board.
+  let homeBoard: { companyId: string; companyName: string; board: Awaited<ReturnType<typeof getBoardData>> } | null = null;
+  if (companyIds.length > 0) {
+    const mostRecentlyActive = await prisma.weeklySubmission.findFirst({
+      where: { companyId: { in: companyIds } },
+      orderBy: { submittedAt: "desc" },
+      select: { companyId: true },
+    });
+    const boardCompanyId = mostRecentlyActive?.companyId ?? companyIds[0];
+    const boardProjectIds = await listAccessibleProjectIds(prisma, { userId: currentUser.id, companyId: boardCompanyId });
+    if (boardProjectIds.length > 0) {
+      const [company, board] = await Promise.all([
+        prisma.company.findUniqueOrThrow({ where: { id: boardCompanyId }, select: { name: true } }),
+        getBoardData(prisma, {
+          companyId: boardCompanyId,
+          projectIds: boardProjectIds,
+          fromWeekKey: shiftWeekKey(currentWeekKey, -HOME_BOARD_WEEKS_BACK),
+          weekCount: HOME_BOARD_WEEKS_BACK + HOME_BOARD_WEEKS_FORWARD + 1,
+        }),
+      ]);
+      homeBoard = { companyId: boardCompanyId, companyName: company.name, board };
+    }
+  }
 
-  let topProjects: Array<{ id: string; name: string; cellsByWeek: Record<string, UncertaintyNoteType | null> }> = [];
   let recentActivity: Array<{ id: string; projectId: string; projectName: string; userName: string; type: UncertaintyNoteType; body: string; weekKey: string }> = [];
 
   if (allAccessibleProjectIds.length > 0) {
-    const [recentByActivity, recentlyCreated] = await Promise.all([
-      prisma.weeklySubmission.groupBy({
-        by: ["projectId"],
-        where: { projectId: { in: allAccessibleProjectIds } },
-        _max: { submittedAt: true },
-        orderBy: { _max: { submittedAt: "desc" } },
-        take: TOP_PROJECT_COUNT,
-      }),
-      prisma.project.findMany({
-        where: { id: { in: allAccessibleProjectIds } },
-        orderBy: { createdAt: "desc" },
-        take: TOP_PROJECT_COUNT,
-        select: { id: true },
-      }),
-    ]);
-    const topProjectIds = [...new Set([...recentByActivity.map((r) => r.projectId), ...recentlyCreated.map((p) => p.id)])].slice(0, TOP_PROJECT_COUNT);
-
-    if (topProjectIds.length > 0) {
-      const [projects, submissions] = await Promise.all([
-        prisma.project.findMany({ where: { id: { in: topProjectIds } }, select: { id: true, name: true } }),
-        prisma.weeklySubmission.findMany({
-          where: { projectId: { in: topProjectIds }, weekKey: { in: boardWeekKeys } },
-          select: { projectId: true, weekKey: true, notes: { select: { type: true } } },
-        }),
-      ]);
-      const projectNameById = new Map(projects.map((p) => [p.id, p.name]));
-      topProjects = topProjectIds
-        .filter((id) => projectNameById.has(id))
-        .map((id) => {
-          const cellsByWeek: Record<string, UncertaintyNoteType | null> = {};
-          for (const wk of boardWeekKeys) {
-            const types = submissions.filter((s) => s.projectId === id && s.weekKey === wk).flatMap((s) => s.notes.map((n) => n.type));
-            cellsByWeek[wk] = dominantType(types);
-          }
-          return { id, name: projectNameById.get(id)!, cellsByWeek };
-        });
-    }
-
     const recentNotes = await prisma.uncertaintyNote.findMany({
       where: { type: { not: "NO_PROGRESS" }, submission: { projectId: { in: allAccessibleProjectIds } } },
       orderBy: { createdAt: "desc" },
@@ -244,10 +224,21 @@ export default async function HomePage() {
         </div>
       )}
 
-      {topProjects.length > 0 && (
+      {homeBoard && (
         <>
-          <p className={`mt-10 mb-3 ${eyebrow}`}>Top projects</p>
-          <TopProjectsBoard projects={topProjects} weekKeys={boardWeekKeys} />
+          <div className="mt-10 mb-3 flex items-center justify-between">
+            <p className={`m-0 ${eyebrow}`}>{companyIds.length > 1 ? `Board — ${homeBoard.companyName}` : "Board"}</p>
+            <Link href="/board" className="text-[12.5px] font-[590] text-accent hover:text-accent-hover">
+              View full board →
+            </Link>
+          </div>
+          <BoardClient
+            companyId={homeBoard.companyId}
+            board={homeBoard.board}
+            uncertaintiesByProject={{}}
+            remappableByProject={{}}
+            visibleWeekCount={HOME_BOARD_VISIBLE_WEEKS}
+          />
         </>
       )}
 
@@ -287,57 +278,6 @@ export default async function HomePage() {
             <ArrowRightIcon className="shrink-0 text-text-quaternary" />
           </Link>
         ))}
-      </div>
-    </div>
-  );
-}
-
-/**
- * The same schematic-board visual language as the pre-login marketing
- * homepage's illustration (app/page.tsx's BoardIllustration — one lane
- * per project, one cell per week, opacity ramping with how hard the
- * week's evidence was won) — except every cell here is real, computed
- * from this person's actual accessible projects rather than a fixed
- * decorative mock.
- */
-function TopProjectsBoard({
-  projects,
-  weekKeys,
-}: {
-  projects: Array<{ id: string; name: string; cellsByWeek: Record<string, UncertaintyNoteType | null> }>;
-  weekKeys: string[];
-}) {
-  return (
-    <div className="rounded-[16px] border border-black/[.06] bg-surface-sunken p-5">
-      <div className="flex flex-col gap-3">
-        {projects.map((project) => (
-          <Link key={project.id} href={`/projects/${project.id}`} className="flex items-center gap-3 rounded-[10px] p-2 transition-colors duration-150 hover:bg-white">
-            <span className="w-32 shrink-0 truncate text-[12.5px] font-[500] text-text-secondary sm:w-40">{project.name}</span>
-            <span className="flex gap-1">
-              {weekKeys.map((wk) => {
-                const type = project.cellsByWeek[wk];
-                return <span key={wk} className={`h-4 w-4 shrink-0 rounded-[4px] ${type ? CELL_STYLE[type] : EMPTY_CELL_STYLE}`} title={`${wk}${type ? `: ${NOTE_TYPE_LABEL[type]}` : ""}`} />;
-              })}
-            </span>
-          </Link>
-        ))}
-      </div>
-      <div className="mt-4 flex flex-wrap items-center gap-[14px] border-t border-black/[.055] pt-3 text-[11px] text-text-tertiary">
-        <span className="flex items-center gap-[6px]">
-          <span className={`h-3 w-3 rounded-[4px] ${EMPTY_CELL_STYLE}`} /> No progress
-        </span>
-        <span className="flex items-center gap-[6px]">
-          <span className="h-3 w-3 rounded-[4px] bg-accent/40" /> Tried something
-        </span>
-        <span className="flex items-center gap-[6px]">
-          <span className="h-3 w-3 rounded-[4px] bg-accent/60" /> Blocker
-        </span>
-        <span className="flex items-center gap-[6px]">
-          <span className="h-3 w-3 rounded-[4px] bg-accent/80" /> Hit a wall
-        </span>
-        <span className="flex items-center gap-[6px]">
-          <span className="h-3 w-3 rounded-[4px] bg-accent" /> Solved it
-        </span>
       </div>
     </div>
   );
