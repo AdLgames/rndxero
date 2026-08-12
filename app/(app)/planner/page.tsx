@@ -32,7 +32,7 @@ export default async function PlannerIndexPage() {
   const allProjects = projectsByCompany.flatMap((c) => c.projects);
 
   return (
-    <div className="px-12 py-11">
+    <div className="px-4 py-8 sm:px-8 sm:py-11 lg:px-12">
       <h2 className="m-0 text-[30px] font-[640] tracking-[-0.028em] text-text">Planner</h2>
       <p className="m-0 mt-[7px] max-w-[58ch] text-[15px] leading-[1.5] text-text-secondary">
         Plan proposed hours per uncertainty per week, then compare against what actually got logged.

@@ -79,7 +79,7 @@ export default async function CapturePage({
   );
 
   return (
-    <div className="mx-auto max-w-[800px] px-12 py-13">
+    <div className="mx-auto max-w-[800px] px-4 py-8 sm:px-8 sm:py-11 lg:px-12 lg:py-13">
       <div className="mb-2 flex items-center gap-3">
         <h2 className="m-0 text-[30px] font-[640] tracking-[-0.028em] text-text">This week</h2>
         <span className={badgeAccent}>{weekKey}</span>

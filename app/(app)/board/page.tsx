@@ -81,8 +81,8 @@ export default async function BoardPage({
 
   if (projectIds.length === 0) {
     return (
-      <div className="px-12 py-11">
-        <div className="mb-7 flex items-end justify-between">
+      <div className="px-4 py-8 sm:px-8 sm:py-11 lg:px-12">
+        <div className="mb-7 flex flex-col items-start gap-4 sm:flex-row sm:items-end sm:justify-between">
           <h2 className="m-0 text-[30px] font-[640] tracking-[-0.028em] text-text">Board</h2>
           {pager}
         </div>
@@ -102,8 +102,8 @@ export default async function BoardPage({
   }
 
   return (
-    <div className="px-12 py-11">
-      <div className="mb-7 flex items-end justify-between gap-6">
+    <div className="px-4 py-8 sm:px-8 sm:py-11 lg:px-12">
+      <div className="mb-7 flex flex-col items-start gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h2 className="m-0 text-[30px] font-[640] tracking-[-0.028em] text-text">{companyIds.length > 1 ? `Board — ${company.name}` : "Board"}</h2>
           <p className="m-0 mt-[7px] max-w-[58ch] text-[15px] leading-[1.5] text-text-secondary">

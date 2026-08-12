@@ -49,7 +49,7 @@ export default async function Home() {
   const cookieStore = await cookies();
   const currentUser = await getCurrentUser(prisma, cookieStore.get(SESSION_COOKIE_NAME)?.value);
   if (currentUser) {
-    redirect("/projects");
+    redirect("/home");
   }
 
   return (

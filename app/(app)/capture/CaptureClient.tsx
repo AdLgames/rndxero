@@ -484,7 +484,7 @@ export function CaptureClient({
         })}
       </div>
 
-      <div className="sticky bottom-0 z-10 -mx-12 mt-7 flex items-center justify-between border-t border-black/[.06] bg-white/90 px-12 py-4 backdrop-blur-[12px]">
+      <div className="sticky bottom-0 z-10 -mx-4 mt-7 flex flex-wrap items-center justify-between gap-3 border-t border-black/[.06] bg-white/90 px-4 py-4 backdrop-blur-[12px] sm:-mx-8 sm:px-8 lg:-mx-12 lg:px-12">
         <span className="text-[14.5px] text-text-secondary">
           Total <span className="font-[590] text-text">{totalHours.toFixed(1)}h</span> across {touchedCount} project{touchedCount === 1 ? "" : "s"}
         </span>

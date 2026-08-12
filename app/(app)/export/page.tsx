@@ -30,7 +30,7 @@ export default async function ExportIndexPage() {
   const allProjects = projectsByCompany.flat();
 
   return (
-    <div className="px-12 py-11">
+    <div className="px-4 py-8 sm:px-8 sm:py-11 lg:px-12">
       <h2 className="m-0 text-[30px] font-[640] tracking-[-0.028em] text-text">Export</h2>
       <p className="m-0 mt-[7px] max-w-[58ch] text-[15px] leading-[1.5] text-text-secondary">
         Hand an adviser a complete, dated record. Pick a project to assemble its evidence dossier.

@@ -87,9 +87,14 @@ export function NewProjectDrawer({ companies }: { companies: DrawerCompany[] }) 
 
   return (
     <>
-      <button type="button" onClick={() => setOpen(true)} className={`${buttonPrimary} shrink-0`}>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        aria-label="New R&D project"
+        className={`${buttonPrimary} shrink-0 px-[13px] sm:px-[18px]`}
+      >
         <PlusIcon />
-        New R&amp;D project
+        <span className="hidden sm:inline">New R&amp;D project</span>
       </button>
 
       {open && (

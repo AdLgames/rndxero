@@ -20,7 +20,7 @@ export default async function FinancePage() {
 
   if (financeCompanyIds.length === 0) {
     return (
-      <div className="mx-auto max-w-[880px] px-12 py-13">
+      <div className="mx-auto max-w-[880px] px-4 py-8 sm:px-8 sm:py-11 lg:px-12 lg:py-13">
         <h2 className="m-0 text-[30px] font-[640] tracking-[-0.028em] text-text">Finance</h2>
         <p className="m-0 mt-3 text-[15px] leading-[1.5] text-text-secondary">
           You need to be an Owner or Finance member of a company to lock weeks or review amendments.
@@ -106,7 +106,7 @@ export default async function FinancePage() {
   }));
 
   return (
-    <div className="mx-auto max-w-[880px] px-12 py-13">
+    <div className="mx-auto max-w-[880px] px-4 py-8 sm:px-8 sm:py-11 lg:px-12 lg:py-13">
       <h2 className="m-0 text-[30px] font-[640] tracking-[-0.028em] text-text">Finance</h2>
       <p className="m-0 mt-3 mb-8 text-[15px] leading-[1.5] text-text-secondary">
         Lock weeks once they&apos;re settled. After that the only correction is an attributed amendment — the

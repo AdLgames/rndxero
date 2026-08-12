@@ -29,7 +29,7 @@ export default async function ExportPage({ params }: { params: Promise<{ project
   } catch (error) {
     if (error instanceof AuthorizationError) {
       return (
-        <div className="px-12 py-11">
+        <div className="px-4 py-8 sm:px-8 sm:py-11 lg:px-12">
           <p className="text-[15px] text-text-secondary">You don&apos;t have access to export this project.</p>
         </div>
       );
@@ -54,7 +54,7 @@ export default async function ExportPage({ params }: { params: Promise<{ project
   const filenameBase = `${project.name.replace(/[^a-z0-9]+/gi, "-")}-claim-pack`;
 
   return (
-    <div className="px-12 py-11">
+    <div className="px-4 py-8 sm:px-8 sm:py-11 lg:px-12">
       <h2 className="m-0 text-[30px] font-[640] tracking-[-0.028em] text-text">{project.name}</h2>
       <p className="m-0 mt-[7px] max-w-[62ch] text-[15px] leading-[1.5] text-text-secondary">
         A claim pack for this project: the per-uncertainty evidence narrative, plan-vs-actual, and integrity
@@ -66,7 +66,7 @@ export default async function ExportPage({ params }: { params: Promise<{ project
         eligibility, decide what qualifies as R&amp;D, or calculate any relief value.
       </div>
 
-      <div className="mt-8 grid grid-cols-[1fr_1fr] items-start gap-[26px]">
+      <div className="mt-8 grid grid-cols-1 items-start gap-[26px] sm:grid-cols-[1fr_1fr]">
         <div className="rounded-[16px] border border-black/[.06] bg-surface-sunken p-[26px]">
           <h5 className="m-0 mb-[6px] text-[15px] font-[600] tracking-[-0.02em] text-text">What to export</h5>
           <p className="m-0 mb-5 text-[13.5px] leading-[1.5] text-text-secondary">
