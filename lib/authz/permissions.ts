@@ -48,6 +48,8 @@ const ROLE_ACTIONS: Record<AuthzSubject["companyRole"] & string, ReadonlySet<Act
     "plan:read",
     "plan:write",
     "export:read",
+    "ai:configure",
+    "ai:query",
   ]),
   FINANCE: new Set<Action>([
     "project:read",
@@ -64,6 +66,10 @@ const ROLE_ACTIONS: Record<AuthzSubject["companyRole"] & string, ReadonlySet<Act
     "cost:write",
     "plan:read",
     "export:read",
+    "ai:query",
+    // ai:configure deliberately absent — same footing as billing:manage,
+    // Owner-only, since a provider swap changes what every company member
+    // sees and what data leaves the company's infrastructure.
     // Deliberately absent: submission:update, note:update, submission:create,
     // note:create, project:create, uncertainty:create/update, membership/billing.
     // "Cannot edit submissions" is explicit in the spec — Finance locks and
@@ -87,6 +93,7 @@ const ROLE_ACTIONS: Record<AuthzSubject["companyRole"] & string, ReadonlySet<Act
     "note:remap",
     "plan:read",
     "plan:write",
+    "ai:query",
     // rate:*, export:read absent entirely — Lead never sees raw rates
     // (that's Finance's alone), only derived cost:read, and even that is
     // additionally gated on canViewCosts below.
@@ -100,6 +107,7 @@ const ROLE_ACTIONS: Record<AuthzSubject["companyRole"] & string, ReadonlySet<Act
     "note:create",
     "note:read",
     "note:update",
+    "ai:query",
     // No rate:*, no cost:*, no plan:write, no export, no invite.
   ]),
   ADVISER: new Set<Action>([
@@ -109,6 +117,7 @@ const ROLE_ACTIONS: Record<AuthzSubject["companyRole"] & string, ReadonlySet<Act
     "note:read",
     "plan:read",
     "export:read",
+    "ai:query",
     // "Submits nothing, edits nothing" — no create/update/amend of any kind.
   ]),
 };

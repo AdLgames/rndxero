@@ -226,6 +226,28 @@ describe("the hard rule (ownership), independent of role", () => {
   });
 });
 
+describe("AI (ai:configure / ai:query)", () => {
+  it("only Owner can configure the AI provider — Finance, same footing as billing:manage, cannot", () => {
+    expect(can(subject({ companyRole: "OWNER", projectRole: null }), "ai:configure")).toBe(true);
+    expect(can(subject({ companyRole: "FINANCE", projectRole: null }), "ai:configure")).toBe(false);
+    expect(can(subject({ companyRole: "LEAD" }), "ai:configure")).toBe(false);
+    expect(can(subject({ companyRole: "CONTRIBUTOR" }), "ai:configure")).toBe(false);
+    expect(can(subject({ companyRole: "ADVISER" }), "ai:configure")).toBe(false);
+  });
+
+  it("every active role can query the AI (HMRC guidance Q&A is informational, not sensitive)", () => {
+    expect(can(subject({ companyRole: "OWNER", projectRole: null }), "ai:query")).toBe(true);
+    expect(can(subject({ companyRole: "FINANCE", projectRole: null }), "ai:query")).toBe(true);
+    expect(can(subject({ companyRole: "LEAD" }), "ai:query")).toBe(true);
+    expect(can(subject({ companyRole: "CONTRIBUTOR" }), "ai:query")).toBe(true);
+    expect(can(subject({ companyRole: "ADVISER" }), "ai:query")).toBe(true);
+  });
+
+  it("ai:query is not project-scoped — no ProjectMember row needed", () => {
+    expect(can(subject({ companyRole: "CONTRIBUTOR", projectRole: null }), "ai:query")).toBe(true);
+  });
+});
+
 describe("BOARD-PLAN.md Phase 2 'done when' scenarios", () => {
   it("a contributor's session provably cannot read a rate", () => {
     const contributor = subject({ companyRole: "CONTRIBUTOR", projectRole: "CONTRIBUTOR", canViewCosts: false });

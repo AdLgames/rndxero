@@ -49,18 +49,19 @@ model User {
   /// — see lib/auth/rate-limit.ts.
   lastMagicLinkSentAt DateTime?
 
-  memberships         Membership[]
-  projectMemberships  ProjectMember[]
-  weeklySubmissions   WeeklySubmission[]
-  plannedAllocations  PlannedAllocation[]
-  rates               Rate[]
-  directCostsEntered  DirectCost[]
-  auditLogEntries     AuditLog[]
-  amendments          Amendment[]
-  planVersionsCreated PlanVersion[]
-  competentOn         ProjectCompetentProfessional[]
-  invitationsSentBy   Invitation[]                   @relation("InvitationInviter")
-  suggestionsResolved Suggestion[]
+  memberships              Membership[]
+  projectMemberships       ProjectMember[]
+  weeklySubmissions        WeeklySubmission[]
+  plannedAllocations       PlannedAllocation[]
+  rates                    Rate[]
+  directCostsEntered       DirectCost[]
+  auditLogEntries          AuditLog[]
+  amendments               Amendment[]
+  planVersionsCreated      PlanVersion[]
+  competentOn              ProjectCompetentProfessional[]
+  invitationsSentBy        Invitation[]                   @relation("InvitationInviter")
+  suggestionsResolved      Suggestion[]
+  aiProviderConfigsCreated AiProviderConfig[]
 }
 
 model Company {
@@ -80,6 +81,7 @@ model Company {
   rates             Rate[]
   auditLogEntries   AuditLog[]
   githubRepoLinks   GithubRepoLink[]
+  aiProviderConfig  AiProviderConfig?
 }
 
 // A membership scopes a user's role to a company. Adviser memberships are
@@ -168,12 +170,12 @@ enum WorkerCostCategory {
 }
 
 model ProjectMember {
-  id            String              @id @default(cuid())
-  projectId     String
-  userId        String
-  role          ProjectRole
-  costCategory  WorkerCostCategory?
-  createdAt     DateTime            @default(now())
+  id           String              @id @default(cuid())
+  projectId    String
+  userId       String
+  role         ProjectRole
+  costCategory WorkerCostCategory?
+  createdAt    DateTime            @default(now())
 
   project Project @relation(fields: [projectId], references: [id])
   user    User    @relation(fields: [userId], references: [id])
@@ -512,6 +514,50 @@ model ManualCostLine {
 
   manualCostImport ManualCostImport @relation(fields: [manualCostImportId], references: [id])
   directCosts      DirectCost[]
+}
+
+// --- AI (bring-your-own provider) ------------------------------------------
+
+// One company, one configured AI provider — same 1:1 shape as
+// XeroConnection. baseUrl must speak the OpenAI-compatible chat
+// completions API (works for OpenAI, Azure OpenAI, and most self-hosted
+// servers: Ollama, vLLM, LM Studio, etc.), so this app never needs to run
+// or pay for its own inference. apiKeyEncrypted is optional because many
+// self-hosted endpoints don't require one at all.
+model AiProviderConfig {
+  id              String   @id @default(cuid())
+  companyId       String   @unique
+  label           String
+  baseUrl         String
+  apiKeyEncrypted String?
+  model           String
+  enabled         Boolean  @default(true)
+  createdById     String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  company   Company @relation(fields: [companyId], references: [id])
+  createdBy User    @relation(fields: [createdById], references: [id])
+}
+
+// Public HMRC guidance text, chunked for retrieval — shared across every
+// company, not company-scoped, since it's the same public source
+// regardless of who's asking. `searchVector` is a generated tsvector
+// column added by hand in this model's migration (Prisma has no native
+// generated-column support), indexed with GIN for the Q&A feature's
+// full-text retrieval — no embeddings/vector DB needed, and no
+// dependency on a company's chosen AI provider exposing an embeddings
+// endpoint at all.
+model HmrcGuidanceChunk {
+  id          String   @id @default(cuid())
+  sourceTitle String
+  sourceUrl   String
+  heading     String?
+  content     String
+  chunkIndex  Int
+  createdAt   DateTime @default(now())
+
+  @@index([sourceUrl])
 }
 
 // --- Billing ---------------------------------------------------------------

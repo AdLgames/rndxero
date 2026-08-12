@@ -33,7 +33,9 @@ export type Action =
   | "cost:write"
   | "plan:read"
   | "plan:write"
-  | "export:read";
+  | "export:read"
+  | "ai:configure"
+  | "ai:query";
 
 /**
  * Already-resolved membership facts for one user in one company (and,
