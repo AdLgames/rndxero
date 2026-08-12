@@ -37,6 +37,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { href: "/finance", label: "Finance" },
       { href: "/export", label: "Export" },
       { href: "/team", label: "Team" },
+      { href: "/ai", label: "AI Assistant" },
     ],
   },
 ];
