@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import type { SubmissionBasis, UncertaintyNoteType } from "@/lib/generated/prisma/client";
 import { weekComplianceStatus, type WeekComplianceStatus } from "@/lib/compliance/readiness";
 import { SegmentedControl } from "@/app/components/SegmentedControl";
@@ -219,7 +220,10 @@ function SubmissionCard({ row, onChange }: { row: SubmissionRow; onChange: (upda
         <div>
           <div className="flex items-center gap-[10px]">
             <p className="m-0 text-[15.5px] font-[600] tracking-[-0.02em] text-text">
-              {row.projectName} · {row.userName} · {row.weekKey}
+              <Link href={`/projects/${row.projectId}`} className="hover:underline">
+                {row.projectName}
+              </Link>{" "}
+              · {row.userName} · {row.weekKey}
             </p>
             {complianceStatus && (
               <span
