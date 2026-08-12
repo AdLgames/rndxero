@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import type { ProjectRole } from "@/lib/generated/prisma/client";
 import { SegmentedControl } from "@/app/components/SegmentedControl";
 import { badgeAccent, badgeNeutral, buttonGhost, buttonPrimary, input } from "@/app/components/ui";
-import { XIcon } from "@/app/components/icons";
+import { Spinner, XIcon } from "@/app/components/icons";
 
 const ROLE_LABEL: Record<ProjectRole, string> = { LEAD: "Owner", CONTRIBUTOR: "Contributor", ADVISER: "Adviser" };
 
@@ -275,6 +275,7 @@ export function CalendarPlanner({ companyId, projectId, canWrite, members, chall
           )}
           <div className="flex items-center gap-3">
             <button type="button" disabled={status === "saving"} onClick={saveRevision} className={buttonPrimary}>
+              {status === "saving" && <Spinner />}
               {status === "saving" ? "Saving…" : "Save revision"}
             </button>
             {status === "error" && <span className="text-[13px] text-red-700">{error}</span>}

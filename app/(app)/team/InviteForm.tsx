@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { MembershipRole } from "@/lib/generated/prisma/client";
 import { SegmentedControl } from "@/app/components/SegmentedControl";
+import { Spinner } from "@/app/components/icons";
 import { badgeAccent, badgeNeutral, buttonSecondary, fieldLabel, input } from "@/app/components/ui";
 
 const ROLE_LABEL: Record<MembershipRole, string> = {
@@ -72,6 +73,7 @@ export function InviteForm({ companyId, seats }: { companyId: string; seats: Sea
           onChange={setSegment}
         />
         <button type="submit" disabled={status === "saving"} className={`${buttonSecondary} w-full`}>
+          {status === "saving" && <Spinner />}
           {status === "saving" ? "Sending…" : "Send invite"}
         </button>
         {status === "done" && <p className="mt-2 text-[13px] font-[500] text-accent">Invitation sent.</p>}

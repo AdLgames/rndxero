@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import type { SubmissionBasis, UncertaintyNoteType } from "@/lib/generated/prisma/client";
 import { SegmentedControl } from "@/app/components/SegmentedControl";
 import { Toggle } from "@/app/components/Toggle";
-import { ArrowRightIcon } from "@/app/components/icons";
+import { ArrowRightIcon, Spinner } from "@/app/components/icons";
 import { buttonGhost, buttonPrimary, eyebrow, input } from "@/app/components/ui";
 
 export interface WeekLogUncertainty {
@@ -299,6 +299,7 @@ export function ProjectWeekLogCard({ data }: { data: WeekLogData }) {
 
           <div className="mt-6 flex flex-wrap items-center gap-3 border-t border-black/[.055] pt-5">
             <button type="button" onClick={logThisWeek} disabled={status === "saving"} className={buttonPrimary}>
+              {status === "saving" && <Spinner />}
               {status === "saving" ? "Saving…" : "Save this week"}
               <ArrowRightIcon />
             </button>

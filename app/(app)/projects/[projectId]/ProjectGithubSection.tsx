@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Spinner } from "@/app/components/icons";
 import { badgeNeutral, buttonPrimary, eyebrow, input } from "@/app/components/ui";
 
 export interface ProjectGithubData {
@@ -51,6 +52,7 @@ function RepoLinkForm({
       <div className="flex flex-wrap gap-2">
         <input type="text" placeholder="owner/repo" value={repoFullName} onChange={(e) => setRepoFullName(e.target.value)} className={`${input} flex-1`} />
         <button type="button" disabled={status === "saving"} onClick={submit} className={buttonPrimary}>
+          {status === "saving" && <Spinner />}
           {status === "saving" ? "Linking…" : "Link repo"}
         </button>
       </div>
@@ -135,10 +137,22 @@ function SuggestionRow({
           onChange={(e) => setWeekKey(e.target.value)}
           className="w-[92px] rounded-[8px] border border-black/[.11] bg-white px-2 py-[6px] text-[12.5px] text-text outline-none"
         />
-        <button type="button" disabled={busy || !challengeId} onClick={confirm} className="rounded-[8px] bg-accent px-3 py-[6px] text-[12.5px] font-[590] text-white transition-colors duration-150 hover:bg-accent-hover disabled:opacity-50">
+        <button
+          type="button"
+          disabled={busy || !challengeId}
+          onClick={confirm}
+          className="flex items-center gap-[5px] rounded-[8px] bg-accent px-3 py-[6px] text-[12.5px] font-[590] text-white transition-colors duration-150 hover:bg-accent-hover disabled:opacity-50"
+        >
+          {busy && <Spinner />}
           Confirm
         </button>
-        <button type="button" disabled={busy} onClick={dismiss} className="rounded-[8px] border border-black/[.11] bg-white px-3 py-[6px] text-[12.5px] font-[590] text-text transition-colors duration-150 hover:bg-[#FAFAFA] disabled:opacity-50">
+        <button
+          type="button"
+          disabled={busy}
+          onClick={dismiss}
+          className="flex items-center gap-[5px] rounded-[8px] border border-black/[.11] bg-white px-3 py-[6px] text-[12.5px] font-[590] text-text transition-colors duration-150 hover:bg-[#FAFAFA] disabled:opacity-50"
+        >
+          {busy && <Spinner />}
           Dismiss
         </button>
       </div>

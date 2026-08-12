@@ -5,7 +5,7 @@ import Link from "next/link";
 import type { SubmissionBasis, UncertaintyNoteType } from "@/lib/generated/prisma/client";
 import { weekComplianceStatus, type WeekComplianceStatus } from "@/lib/compliance/readiness";
 import { SegmentedControl } from "@/app/components/SegmentedControl";
-import { LockIcon } from "@/app/components/icons";
+import { LockIcon, Spinner } from "@/app/components/icons";
 import { badgeAccent, badgeNeutral, buttonGhost, buttonPrimary, buttonSecondary, input } from "@/app/components/ui";
 
 interface AmendmentData {
@@ -108,6 +108,7 @@ function AddCorrectionForm({ onSubmit }: { onSubmit: (body: string) => Promise<v
           }}
           className={buttonPrimary}
         >
+          {saving && <Spinner />}
           {saving ? "Saving…" : "Save correction"}
         </button>
         <button type="button" onClick={() => setOpen(false)} className={buttonGhost}>
@@ -251,6 +252,7 @@ function SubmissionCard({ row, onChange }: { row: SubmissionRow; onChange: (upda
             <>
               <span className={badgeNeutral}>Open</span>
               <button type="button" disabled={busy} onClick={lock} className={buttonSecondary}>
+                {busy && <Spinner />}
                 {busy ? "Locking…" : "Lock week"}
               </button>
             </>
@@ -304,6 +306,7 @@ function SubmissionCard({ row, onChange }: { row: SubmissionRow; onChange: (upda
               />
               <div className="flex items-center gap-3">
                 <button type="button" disabled={busy || !unlockReason.trim()} onClick={unlock} className={buttonPrimary}>
+                  {busy && <Spinner />}
                   {busy ? "Unlocking…" : "Confirm unlock"}
                 </button>
                 <button type="button" onClick={() => setUnlockOpen(false)} className={buttonGhost}>

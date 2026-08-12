@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Spinner } from "@/app/components/icons";
 import { buttonGhost, buttonPrimary, input } from "@/app/components/ui";
 
 /** The one editable field on a project post-creation — see lib/projects/repository.ts. Owner/Lead only (project:update). */
@@ -57,6 +58,7 @@ export function ProjectDescription({
         />
         <div className="flex items-center gap-3">
           <button type="button" onClick={save} disabled={status === "saving"} className={buttonPrimary}>
+            {status === "saving" && <Spinner />}
             {status === "saving" ? "Saving…" : "Save"}
           </button>
           <button

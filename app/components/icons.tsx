@@ -89,3 +89,12 @@ export function MenuIcon({ className }: { className?: string }) {
     </svg>
   );
 }
+
+/** A three-quarter ring, not a full spinner graphic — `animate-spin` does the rotating, this just needs one open gap so the motion actually reads as spinning rather than a static ring. Used on every async button's busy state, since a text swap alone ("Saving…") is easy to miss. */
+export function Spinner({ className }: { className?: string }) {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" className={`animate-spin ${className ?? ""}`}>
+      <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeDasharray="42 100" />
+    </svg>
+  );
+}
