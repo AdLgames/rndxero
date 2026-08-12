@@ -57,7 +57,7 @@ export default async function ExportPage({ params }: { params: Promise<{ project
     <div className="px-4 py-8 sm:px-8 sm:py-11 lg:px-12">
       <h2 className="m-0 text-[30px] font-[640] tracking-[-0.028em] text-text">{project.name}</h2>
       <p className="m-0 mt-[7px] max-w-[62ch] text-[15px] leading-[1.5] text-text-secondary">
-        A claim pack for this project: the per-uncertainty evidence narrative, plan-vs-actual, and integrity
+        A claim pack for this project: the per-challenge evidence narrative, plan-vs-actual, and integrity
         metadata.
       </p>
 
@@ -71,7 +71,7 @@ export default async function ExportPage({ params }: { params: Promise<{ project
           <h5 className="m-0 mb-[6px] text-[15px] font-[600] tracking-[-0.02em] text-text">What to export</h5>
           <p className="m-0 mb-5 text-[13.5px] leading-[1.5] text-text-secondary">
             Includes every logged week, planned-vs-actual, corrections and amendments, competent professionals, and
-            uncertainty narratives for this project.
+            challenge narratives for this project.
           </p>
           <ExportActions downloadUrl={downloadUrl} filenameBase={filenameBase} />
         </div>
@@ -82,7 +82,7 @@ export default async function ExportPage({ params }: { params: Promise<{ project
           <dl className="m-0">
             {[
               ["Weeks covered", weekKeys.size.toString()],
-              ["Uncertainties", pack.uncertainties.length.toString()],
+              ["Challenges", pack.uncertainties.length.toString()],
               ["Total logged", hoursLabel(pack.totals.actualMinutes)],
               ["Planned", hoursLabel(pack.totals.plannedMinutes)],
               ["Locked weeks", `${lockedWeeks} / ${weekKeys.size}`],
@@ -108,7 +108,7 @@ export default async function ExportPage({ params }: { params: Promise<{ project
         </div>
       )}
 
-      <p className={`mt-9 mb-3 ${eyebrow}`}>Uncertainty narratives</p>
+      <p className={`mt-9 mb-3 ${eyebrow}`}>Challenge narratives</p>
       <ul className="m-0 flex list-none flex-col gap-[10px] p-0">
         {pack.uncertainties.map((u) => (
           <li key={u.id} className="rounded-[14px] border border-black/[.06] bg-surface-sunken px-[18px] py-4">
@@ -118,7 +118,7 @@ export default async function ExportPage({ params }: { params: Promise<{ project
             </p>
           </li>
         ))}
-        {pack.uncertainties.length === 0 && <li className="text-[14px] text-text-secondary">No uncertainties recorded yet.</li>}
+        {pack.uncertainties.length === 0 && <li className="text-[14px] text-text-secondary">No challenges recorded yet.</li>}
       </ul>
     </div>
   );

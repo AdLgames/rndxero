@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
     await authorize(prisma, { userId: currentUser.id, companyId, projectId, action: "uncertainty:create" });
   } catch (error) {
     if (error instanceof AuthorizationError) {
-      return NextResponse.json({ error: "Not permitted to raise an uncertainty on this project" }, { status: 403 });
+      return NextResponse.json({ error: "Not permitted to raise a challenge on this project" }, { status: 403 });
     }
     throw error;
   }

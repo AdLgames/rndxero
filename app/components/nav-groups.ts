@@ -20,11 +20,7 @@ export const NAV_GROUPS: NavGroup[] = [
   {
     label: "Time & Activity",
     href: "/capture",
-    links: [
-      { href: "/capture", label: "Capture" },
-      { href: "/planner", label: "Planner" },
-      { href: "/github", label: "GitHub" },
-    ],
+    links: [{ href: "/capture", label: "Quick Capture" }],
   },
   {
     label: "Technical Register",
@@ -40,6 +36,7 @@ export const NAV_GROUPS: NavGroup[] = [
     links: [
       { href: "/finance", label: "Finance" },
       { href: "/export", label: "Export" },
+      { href: "/team", label: "Team" },
     ],
   },
 ];

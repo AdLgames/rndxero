@@ -376,7 +376,7 @@ export function CaptureClient({
 
                     {primaryUncertainty && (
                       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-5">
-                        <span className="text-[13.5px] text-text-secondary sm:w-[110px] sm:shrink-0">Uncertainty</span>
+                        <span className="text-[13.5px] text-text-secondary sm:w-[110px] sm:shrink-0">Challenge</span>
                         <span className="text-[14px] text-text">{primaryUncertainty.title}</span>
                       </div>
                     )}
@@ -421,7 +421,7 @@ export function CaptureClient({
                                     min="0"
                                     step="0.25"
                                     placeholder="hrs"
-                                    title="Hours spent specifically on this uncertainty (optional — feeds the planner's plan-vs-actual view)"
+                                    title="Hours spent specifically on this challenge (optional — feeds the plan-vs-actual view)"
                                     value={selection.hours}
                                     onChange={(e) => setNoteHours(project.projectId, uncertainty.id, e.target.value)}
                                     className="w-16 shrink-0 rounded-[10px] border border-black/[.11] bg-white px-[10px] py-[9px] text-[13px] text-text outline-none"
@@ -445,7 +445,7 @@ export function CaptureClient({
                         <div className="rounded-[12px] border border-dashed border-black/[.16] p-[14px]">
                           <input
                             type="text"
-                            placeholder="What's the uncertainty?"
+                            placeholder="What's the challenge?"
                             value={form.newTitle}
                             onChange={(e) => updateProject(project.projectId, { newTitle: e.target.value })}
                             className={input}
@@ -478,7 +478,7 @@ export function CaptureClient({
                     {project.commitSignal.count} commit{project.commitSignal.count === 1 ? "" : "s"} detected on{" "}
                     <span className="text-text">{project.commitSignal.repoFullName}</span> this week
                   </span>
-                  <a href="/github" className="ml-auto text-[13px] font-[500]">
+                  <a href={`/projects/${project.projectId}`} className="ml-auto text-[13px] font-[500]">
                     Review
                   </a>
                 </div>
