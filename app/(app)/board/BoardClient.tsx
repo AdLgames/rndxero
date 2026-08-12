@@ -308,12 +308,11 @@ export function BoardClient({
           </span>
           <span className="flex items-center gap-[10px]">
             Progress
-            <span className="flex items-center gap-[3px]">
+            <span className="flex items-center gap-[3px]" title="Shade ramps from no progress to solved">
               {(["NO_PROGRESS", "ATTEMPT", "BLOCKER", "FAILED_ATTEMPT", "RESOLUTION"] as UncertaintyNoteType[]).map((type) => (
                 <span key={type} className="h-3 w-3 rounded-[6px]" style={{ background: TYPE_STYLE[type].ramp }} title={TYPE_STYLE[type].label} />
               ))}
             </span>
-            none → solved
           </span>
         </div>
 

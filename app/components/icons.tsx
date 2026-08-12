@@ -5,14 +5,6 @@
  * six fixed glyphs would be pure overhead.
  */
 
-export function PulseIcon({ className }: { className?: string }) {
-  return (
-    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" className={className}>
-      <path d="M4 15c4 0 5-9 8-9s4 9 8 9" />
-    </svg>
-  );
-}
-
 export function CrosshairIcon({ className }: { className?: string }) {
   return (
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" className={className}>

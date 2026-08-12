@@ -45,9 +45,13 @@ export async function SummaryBanner() {
       </span>
       <span className="flex shrink-0 items-baseline gap-[6px] whitespace-nowrap text-[13px]">
         <span className="text-text-tertiary">Audit readiness</span>
-        <span className={`font-[590] ${auditReadinessPct >= 70 ? "text-accent" : auditReadinessPct >= 40 ? "text-[#C88A1E]" : "text-[#C0392B]"}`}>
-          {auditReadinessPct}%
-        </span>
+        {totalMinutesYtd === 0 ? (
+          <span className="font-[590] text-text-tertiary">Not started</span>
+        ) : (
+          <span className={`font-[590] ${auditReadinessPct >= 70 ? "text-accent" : auditReadinessPct >= 40 ? "text-[#C88A1E]" : "text-[#C0392B]"}`}>
+            {auditReadinessPct}%
+          </span>
+        )}
       </span>
     </div>
   );
