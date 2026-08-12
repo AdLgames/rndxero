@@ -255,7 +255,7 @@ export function ProjectWeekLogCard({ data }: { data: WeekLogData }) {
                             min="0"
                             step="0.25"
                             placeholder="hrs"
-                            title="Hours spent specifically on this uncertainty (optional — feeds the plan-vs-actual chart)"
+                            title="Hours spent specifically on this challenge (optional — feeds the plan-vs-actual chart)"
                             value={selection.hours}
                             onChange={(e) => patchNote(uncertainty.id, { hours: e.target.value })}
                             className="w-16 shrink-0 rounded-[10px] border border-black/[.11] bg-white px-[10px] py-[9px] text-[13px] text-text outline-none"
@@ -277,7 +277,7 @@ export function ProjectWeekLogCard({ data }: { data: WeekLogData }) {
 
               {newUncertaintyOpen ? (
                 <div className="rounded-[12px] border border-dashed border-black/[.16] p-[14px]">
-                  <input type="text" placeholder="What's the uncertainty?" value={newTitle} onChange={(e) => setNewTitle(e.target.value)} className={input} />
+                  <input type="text" placeholder="What's the challenge?" value={newTitle} onChange={(e) => setNewTitle(e.target.value)} className={input} />
                   <input
                     type="text"
                     placeholder="What didn't we know?"

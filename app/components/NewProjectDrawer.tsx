@@ -162,19 +162,19 @@ export function NewProjectDrawer({ companies }: { companies: DrawerCompany[] }) 
                     className={input}
                   />
                   <p className="m-0 mt-[6px] text-[12.5px] text-text-quaternary">
-                    The people whose judgement resolved the uncertainty. List the technical lead first.
+                    The people whose judgement resolved the challenge. List the technical lead first.
                   </p>
                 </label>
 
                 <div className="border-t border-black/[.06] pt-5">
                   <p className="m-0 mb-1 text-[13px] font-[600] text-text">Technical baseline</p>
                   <p className="m-0 mb-4 text-[12.5px] leading-[1.5] text-text-quaternary">
-                    Optional here — you can raise it later from Capture instead. Recorded as this project&apos;s first open
-                    uncertainty.
+                    Optional here — you can raise it later from Quick Capture instead. Recorded as this project&apos;s first
+                    open challenge.
                   </p>
 
                   <label className="mb-4 block">
-                    <span className={fieldLabel}>Scientific / technological uncertainty</span>
+                    <span className={fieldLabel}>Scientific / technological challenge</span>
                     <input
                       type="text"
                       placeholder="What specific technical obstacle can't a competent professional readily resolve?"

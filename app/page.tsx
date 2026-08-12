@@ -87,7 +87,7 @@ export default async function Home() {
           <div>
             <h2 className={eyebrow}>What it does</h2>
             <p className="mt-2 text-[13.5px] leading-[1.6] text-text-secondary">
-              A minute a week per project logs hours and what happened to each open uncertainty. A plan sets
+              A minute a week per project logs hours and what happened to each open challenge. A plan sets
               proposed hours in advance; the board shows planned against actual, week by week, at a glance. Once a
               week closes, finance can seal it — corrections after that append, they never overwrite.
             </p>

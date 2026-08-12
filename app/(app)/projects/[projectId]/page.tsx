@@ -1,22 +1,29 @@
 import Link from "next/link";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { getCurrentUser, SESSION_COOKIE_NAME } from "@/lib/auth/session";
 import { AuthorizationError, authorize, canDo } from "@/lib/authz/service";
 import { getIsoWeekKey, getWeekBoundaries, shiftWeekKey } from "@/lib/capture/week-key";
 import { getOpenUncertainties, getPrefillMinutes } from "@/lib/capture/repository";
-import { computePlannedCostMinorUnits, getCurrentPlanVersion, getPlanVsActual, listPlanVersions } from "@/lib/plan/repository";
-import { getProjectClaimPack, type ClaimPackNoteEntry, type ClaimPackUncertainty } from "@/lib/export/pack";
+import { getCurrentPlanVersion, listPlanVersions } from "@/lib/plan/repository";
+import { findApplicableRate } from "@/lib/cost/rate";
+import { summarizeCostByPerson, summarizeCostByRole, type CostedRow } from "@/lib/plan/cost-summary";
+import { getProjectClaimPack, type ClaimPackNoteEntry } from "@/lib/export/pack";
 import { isNoteBacked } from "@/lib/compliance/readiness";
 import { badgeAccent, badgeNeutral, eyebrow } from "@/app/components/ui";
 import { LockIcon } from "@/app/components/icons";
+import { BackToProjects } from "../ProjectRail";
 import { ProjectDescription } from "./ProjectDescription";
 import { ProjectWeekLogCard, type WeekLogData } from "./ProjectWeekLogCard";
-import { PlannerClient, type CurrentPlanData, type UncertaintyOption, type VersionHistoryEntry } from "../../planner/[projectId]/PlannerClient";
+import { ProjectMembers, type ProjectMemberRow } from "./ProjectMembers";
+import { ProjectGithubSection, type ProjectGithubData } from "./ProjectGithubSection";
+import { CalendarPlanner, type CalendarAllocation, type CalendarActual } from "./CalendarPlanner";
+import { ProjectCostSummary } from "./ProjectCostSummary";
 
-const GANTT_WEEK_COUNT = 16;
-const PLAN_WEEK_SPAN = 5;
+/** Pre-fetched scroll band for the calendar planner: 4 weeks of history plus 20 forward — wide enough to genuinely scroll through, not just page through. */
+const CALENDAR_WEEKS_BACK = 4;
+const CALENDAR_WEEKS_FORWARD = 20;
 /** Matches lib/locking's real auto-lock deadline (close + 7 days) — same constant capture/page.tsx uses. */
 const AUTO_LOCK_DAYS_AFTER_CLOSE = 7;
 
@@ -39,92 +46,6 @@ function moneyLabel(minorUnits: number): string {
 
 function isLikelyUrl(value: string): boolean {
   return /^https?:\/\//i.test(value.trim());
-}
-
-/** 24h fills the 40px plot; anything above clamps to full height rather than overflowing — a shorter cap than Board's since this is a per-uncertainty (not per-project) weekly figure. */
-function barHeight(minutes: number): number {
-  const hours = Math.min(minutes / 60, 24);
-  return Math.round((hours / 24) * 40);
-}
-
-/**
- * A lightweight Gantt-style read: one lane per uncertainty, one column per
- * week, a pale planned bar behind a solid actual bar — the same visual
- * grammar as the Board (BoardClient.tsx), just re-scoped from "lanes are
- * projects" to "lanes are uncertainties within one project" so plan vs
- * actual is visible per line of inquiry, not just per project total.
- * Read-only overview across a wide (16-week) window; the editable
- * near-term plan lives in the embedded Planner matrix below it.
- */
-function GanttChart({
-  uncertainties,
-  variance,
-  weekKeys,
-  currentWeekKey,
-}: {
-  uncertainties: ClaimPackUncertainty[];
-  variance: Array<{ uncertaintyTitle: string; weekKey: string; plannedMinutes: number; actualMinutes: number }>;
-  weekKeys: string[];
-  currentWeekKey: string;
-}) {
-  return (
-    <div className="flex flex-col gap-5 rounded-[16px] border border-black/[.06] p-5">
-      <div className="flex items-center gap-[22px] text-[12px] text-text-tertiary">
-        <span className="flex items-center gap-[6px]">
-          <span className="h-3 w-3 rounded-[6px] bg-track" /> Planned
-        </span>
-        <span className="flex items-center gap-[6px]">
-          <span className="h-3 w-3 rounded-[6px] bg-accent" /> Logged
-        </span>
-      </div>
-
-      {uncertainties.map((u) => {
-        const rows = variance.filter((v) => v.uncertaintyTitle === u.title);
-        const byWeek = new Map(rows.map((r) => [r.weekKey, r]));
-
-        return (
-          <div key={u.id}>
-            {/* Title sits outside the horizontal-scroll region below — sharing one scroll
-                container with the bars would put the title's containing block at the
-                bars' full width, so at the default (leftmost) scroll position a title
-                longer than the viewport gets cut off mid-word instead of wrapping. */}
-            <p className="m-0 mb-2 text-[13.5px] font-[600] tracking-[-0.01em] text-text">{u.title}</p>
-            <div className="overflow-x-auto">
-              <div className="flex w-max items-end gap-[6px]">
-                {weekKeys.map((weekKey) => {
-                  const row = byWeek.get(weekKey);
-                  const planned = row?.plannedMinutes ?? 0;
-                  const actual = row?.actualMinutes ?? 0;
-                  const isCurrentWeek = weekKey === currentWeekKey;
-                  return (
-                    <div
-                      key={weekKey}
-                      className={`relative flex h-[54px] w-[26px] shrink-0 flex-col items-center justify-end gap-[3px] ${
-                        isCurrentWeek ? "rounded-[8px] bg-accent-wash" : ""
-                      }`}
-                      title={`${weekKey}: ${hoursLabel(planned)} planned, ${hoursLabel(actual)} logged`}
-                    >
-                      <span className="relative h-[40px] w-full">
-                        <span className="absolute bottom-0 left-1/2 w-[12px] -translate-x-1/2 rounded-[6px] bg-track" style={{ height: barHeight(planned) }} />
-                        <span className="absolute bottom-0 left-1/2 w-[12px] -translate-x-1/2 rounded-[6px] bg-accent" style={{ height: barHeight(actual) }} />
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-              <div className="mt-1 flex w-max items-end gap-[6px]">
-                {weekKeys.map((weekKey) => (
-                  <span key={weekKey} className={`w-[26px] shrink-0 text-center text-[10.5px] ${weekKey === currentWeekKey ? "font-[590] text-accent" : "text-text-quaternary"}`}>
-                    {weekKey.slice(6)}
-                  </span>
-                ))}
-              </div>
-            </div>
-          </div>
-        );
-      })}
-    </div>
-  );
 }
 
 function NoteEntry({ entry }: { entry: ClaimPackNoteEntry }) {
@@ -194,19 +115,50 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
     throw error;
   }
 
-  const [canViewPlan, canWritePlan, canViewCosts, canEditProject, canLogTime] = await Promise.all([
+  const [canViewPlan, canWritePlan, canViewCosts, canEditProject, canLogTime, canWriteCost, canManageRepos, canReviewSuggestions] = await Promise.all([
     canDo(prisma, { userId: currentUser.id, companyId: project.companyId, projectId, action: "plan:read" }),
     canDo(prisma, { userId: currentUser.id, companyId: project.companyId, projectId, action: "plan:write" }),
     canDo(prisma, { userId: currentUser.id, companyId: project.companyId, projectId, action: "cost:read" }),
     canDo(prisma, { userId: currentUser.id, companyId: project.companyId, projectId, action: "project:update" }),
     canDo(prisma, { userId: currentUser.id, companyId: project.companyId, projectId, action: "submission:create" }),
+    canDo(prisma, { userId: currentUser.id, companyId: project.companyId, projectId, action: "cost:write" }),
+    canDo(prisma, { userId: currentUser.id, companyId: project.companyId, projectId, action: "project:update" }),
+    canDo(prisma, { userId: currentUser.id, companyId: project.companyId, projectId, action: "note:create" }),
   ]);
+
+  const projectMembers = await prisma.projectMember.findMany({
+    where: { projectId },
+    include: { user: { select: { id: true, name: true } } },
+    orderBy: { createdAt: "asc" },
+  });
+  const memberRows: ProjectMemberRow[] = projectMembers.map((m) => ({ id: m.id, userId: m.userId, name: m.user.name, role: m.role, costCategory: m.costCategory }));
+
+  let githubData: ProjectGithubData | null = null;
+  if (canManageRepos || canReviewSuggestions) {
+    const [repoLinks, suggestions, openChallenges, headerList] = await Promise.all([
+      canManageRepos ? prisma.githubRepoLink.findMany({ where: { projectId } }) : Promise.resolve([]),
+      canReviewSuggestions ? prisma.suggestion.findMany({ where: { projectId, status: "PENDING" }, orderBy: { createdAt: "desc" } }) : Promise.resolve([]),
+      prisma.uncertainty.findMany({ where: { projectId, outcome: "OPEN" }, select: { id: true, title: true } }),
+      headers(),
+    ]);
+    const host = headerList.get("host") ?? "localhost:3000";
+    const protocol = host.startsWith("localhost") ? "http" : "https";
+    githubData = {
+      projectId,
+      companyId: project.companyId,
+      canManageRepos,
+      canReviewSuggestions,
+      repoLinks: repoLinks.map((r) => ({ id: r.id, repoFullName: r.repoFullName, webhookSecret: r.webhookSecret })),
+      suggestions: suggestions.map((s) => ({ id: s.id, summary: s.summary, externalRef: s.externalRef })),
+      challenges: openChallenges,
+      webhookUrl: `${protocol}://${host}/api/github/webhook`,
+      currentWeekKey: getIsoWeekKey(new Date()),
+    };
+  }
 
   const pack = await getProjectClaimPack(prisma, { projectId, includeCosts: canViewCosts });
 
   const currentWeekKey = getIsoWeekKey(new Date());
-  const weekKeys = Array.from({ length: GANTT_WEEK_COUNT }, (_, i) => shiftWeekKey(currentWeekKey, i - (GANTT_WEEK_COUNT - 1)));
-
   const weekKeysWithActivity = new Set(pack.integrity.map((row) => row.weekKey));
   const lockedWeeks = pack.integrity.filter((row) => row.lockedAt !== null).length;
   const allNotes = pack.uncertainties.flatMap((u) => u.chronology.filter((e) => e.type !== "NO_PROGRESS"));
@@ -240,61 +192,75 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
     };
   }
 
-  // --- Editable near-term plan, embedded rather than just linked to (mirrors planner/[projectId]/page.tsx) ---
-  let plannerProps: {
-    uncertainties: UncertaintyOption[];
-    currentPlan: CurrentPlanData | null;
-    plannedCostMinorUnits: number | null;
+  // --- Calendar planner: rows are people, not challenges (BOARD-PLAN's plan model already supports an
+  // optional userId per allocation — this just pivots the same PlannedAllocation data by person instead
+  // of by uncertainty, and reads plan-vs-actual per person/week instead of per challenge/week). ---
+  let calendarProps: {
     weekKeys: string[];
-    actualMinutesByWeek: Record<string, number>;
-    versionHistory: VersionHistoryEntry[];
+    hasExistingPlan: boolean;
+    allocations: CalendarAllocation[];
+    actuals: CalendarActual[];
+    versionHistory: Array<{ versionNumber: number; note: string | null; supersededAt: string | null; totalPlannedMinutes: number }>;
   } | null = null;
+  let costSummary: { byPerson: ReturnType<typeof summarizeCostByPerson>; byRole: ReturnType<typeof summarizeCostByRole> } | null = null;
   if (canViewPlan) {
-    const planWeekKeys = Array.from({ length: PLAN_WEEK_SPAN }, (_, i) => shiftWeekKey(currentWeekKey, i));
-    const [allUncertainties, currentPlan, versions] = await Promise.all([
-      prisma.uncertainty.findMany({ where: { projectId }, orderBy: { createdAt: "asc" } }),
+    const calendarWeekKeys = Array.from({ length: CALENDAR_WEEKS_BACK + CALENDAR_WEEKS_FORWARD + 1 }, (_, i) => shiftWeekKey(currentWeekKey, i - CALENDAR_WEEKS_BACK));
+    const [currentPlan, allSubmissions, planVersions] = await Promise.all([
       getCurrentPlanVersion(prisma, projectId),
+      prisma.weeklySubmission.findMany({ where: { projectId }, select: { userId: true, weekKey: true, minutes: true } }),
       listPlanVersions(prisma, projectId),
     ]);
-    const plannedCostMinorUnits =
-      canViewCosts && currentPlan ? await computePlannedCostMinorUnits(prisma, { companyId: project.companyId, planVersion: currentPlan }) : null;
 
-    const varianceByUncertainty = await Promise.all(
-      allUncertainties.map(async (u) => ({ weeks: await getPlanVsActual(prisma, { projectId, uncertaintyId: u.id }) }))
-    );
-    const actualMinutesByWeek: Record<string, number> = {};
-    for (const { weeks } of varianceByUncertainty) {
-      for (const w of weeks) {
-        actualMinutesByWeek[w.weekKey] = (actualMinutesByWeek[w.weekKey] ?? 0) + w.actualMinutes;
-      }
-    }
+    const allocations: CalendarAllocation[] = (currentPlan?.plannedAllocations ?? []).map((a) => ({
+      userId: a.userId,
+      uncertaintyId: a.uncertaintyId,
+      weekKey: a.weekKey,
+      plannedMinutes: a.plannedMinutes,
+    }));
+    const calendarWeekSet = new Set(calendarWeekKeys);
+    const actuals: CalendarActual[] = allSubmissions.filter((s) => calendarWeekSet.has(s.weekKey)).map((s) => ({ userId: s.userId, weekKey: s.weekKey, minutes: s.minutes }));
 
-    plannerProps = {
-      uncertainties: allUncertainties.map((u) => ({ id: u.id, title: u.title })),
-      currentPlan: currentPlan
-        ? {
-            versionNumber: currentPlan.versionNumber,
-            note: currentPlan.note,
-            totalPlannedMinutes: currentPlan.plannedAllocations.reduce((sum, a) => sum + a.plannedMinutes, 0),
-            allocations: currentPlan.plannedAllocations.map((a) => ({
-              uncertaintyId: a.uncertaintyId,
-              userId: a.userId,
-              weekKey: a.weekKey,
-              plannedMinutes: a.plannedMinutes,
-            })),
-          }
-        : null,
-      plannedCostMinorUnits,
-      weekKeys: planWeekKeys,
-      actualMinutesByWeek,
-      versionHistory: versions.map((v) => ({
+    calendarProps = {
+      weekKeys: calendarWeekKeys,
+      hasExistingPlan: currentPlan !== null,
+      allocations,
+      actuals,
+      versionHistory: planVersions.map((v) => ({
         versionNumber: v.versionNumber,
         note: v.note,
-        createdAt: v.createdAt.toISOString(),
         supersededAt: v.supersededAt ? v.supersededAt.toISOString() : null,
         totalPlannedMinutes: v.plannedAllocations.reduce((sum, a) => sum + a.plannedMinutes, 0),
       })),
     };
+
+    if (canViewCosts && memberRows.length > 0) {
+      const rates = await prisma.rate.findMany({ where: { companyId: project.companyId, userId: { in: memberRows.map((m) => m.userId) } } });
+      const rowsMap = new Map<string, { userId: string; weekKey: string; plannedMinutes: number; actualMinutes: number }>();
+      for (const a of currentPlan?.plannedAllocations ?? []) {
+        if (!a.userId) continue;
+        const key = `${a.userId}:${a.weekKey}`;
+        const existing = rowsMap.get(key) ?? { userId: a.userId, weekKey: a.weekKey, plannedMinutes: 0, actualMinutes: 0 };
+        existing.plannedMinutes += a.plannedMinutes;
+        rowsMap.set(key, existing);
+      }
+      for (const s of allSubmissions) {
+        const key = `${s.userId}:${s.weekKey}`;
+        const existing = rowsMap.get(key) ?? { userId: s.userId, weekKey: s.weekKey, plannedMinutes: 0, actualMinutes: 0 };
+        existing.actualMinutes += s.minutes;
+        rowsMap.set(key, existing);
+      }
+      const costedRows: CostedRow[] = [...rowsMap.values()].map((r) => {
+        const { start } = getWeekBoundaries(r.weekKey);
+        const rate = findApplicableRate(rates, r.userId, start);
+        return {
+          ...r,
+          plannedCostMinorUnits: rate ? Math.round((r.plannedMinutes / 60) * rate.hourlyRateMinorUnits) : null,
+          actualCostMinorUnits: rate ? Math.round((r.actualMinutes / 60) * rate.hourlyRateMinorUnits) : null,
+        };
+      });
+      const byPerson = summarizeCostByPerson(memberRows.map((m) => ({ userId: m.userId, name: m.name, role: m.role })), costedRows);
+      costSummary = { byPerson, byRole: summarizeCostByRole(byPerson) };
+    }
   }
 
   const STAT_TILES = [
@@ -306,6 +272,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
 
   return (
     <div className="px-4 py-8 sm:px-8 sm:py-11 lg:px-12">
+      <BackToProjects />
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <div className="flex flex-wrap items-center gap-[10px]">
@@ -341,6 +308,18 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
         </div>
       )}
 
+      <p className={`mt-9 mb-3 ${eyebrow}`}>Owner &amp; contributors</p>
+      <div className="rounded-[16px] border border-black/[.06] bg-surface-sunken px-6 py-2">
+        <ProjectMembers companyId={project.companyId} members={memberRows} canWriteCost={canWriteCost} />
+      </div>
+
+      {githubData && (
+        <>
+          <p className={`mt-9 mb-3 ${eyebrow}`}>GitHub</p>
+          <ProjectGithubSection data={githubData} />
+        </>
+      )}
+
       {weekLogData && (
         <>
           <p className={`mt-9 mb-3 ${eyebrow}`}>Add time &amp; notes</p>
@@ -348,29 +327,29 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
         </>
       )}
 
-      {canViewPlan && pack.uncertainties.length > 0 && (
+      {calendarProps && (
         <>
-          <p className={`mt-9 mb-3 ${eyebrow}`}>Plan vs actual — last {GANTT_WEEK_COUNT} weeks</p>
-          <GanttChart uncertainties={pack.uncertainties} variance={pack.variance} weekKeys={weekKeys} currentWeekKey={currentWeekKey} />
-        </>
-      )}
-
-      {plannerProps && (
-        <>
-          <p className={`mt-9 mb-3 ${eyebrow}`}>{canWritePlan ? "Edit planned hours" : "Planned hours"}</p>
-          <PlannerClient
+          <p className={`mt-9 mb-3 ${eyebrow}`}>Planner</p>
+          <CalendarPlanner
             companyId={project.companyId}
             projectId={projectId}
             canWrite={canWritePlan}
-            canViewCosts={canViewCosts}
-            uncertainties={plannerProps.uncertainties}
-            currentPlan={plannerProps.currentPlan}
-            plannedCostMinorUnits={plannerProps.plannedCostMinorUnits}
-            weekKeys={plannerProps.weekKeys}
+            members={memberRows.map((m) => ({ userId: m.userId, name: m.name, role: m.role }))}
+            challenges={pack.uncertainties.map((u) => ({ id: u.id, title: u.title }))}
+            weekKeys={calendarProps.weekKeys}
             currentWeekKey={currentWeekKey}
-            actualMinutesByWeek={plannerProps.actualMinutesByWeek}
-            versionHistory={plannerProps.versionHistory}
+            hasExistingPlan={calendarProps.hasExistingPlan}
+            allocations={calendarProps.allocations}
+            actuals={calendarProps.actuals}
+            versionHistory={calendarProps.versionHistory}
           />
+        </>
+      )}
+
+      {costSummary && (
+        <>
+          <p className={`mt-9 mb-3 ${eyebrow}`}>Cost by person &amp; role</p>
+          <ProjectCostSummary byPerson={costSummary.byPerson} byRole={costSummary.byRole} />
         </>
       )}
 
@@ -390,14 +369,14 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
 
             <div className="mt-4 flex flex-col gap-2 border-t border-black/[.055] pt-4">
               {u.chronology.length === 0 ? (
-                <p className="m-0 text-[13px] text-text-quaternary">No entries logged against this uncertainty yet.</p>
+                <p className="m-0 text-[13px] text-text-quaternary">No entries logged against this challenge yet.</p>
               ) : (
                 u.chronology.map((entry, i) => <NoteEntry key={i} entry={entry} />)
               )}
             </div>
           </div>
         ))}
-        {pack.uncertainties.length === 0 && <p className="text-[14px] text-text-secondary">No uncertainties recorded for this project yet.</p>}
+        {pack.uncertainties.length === 0 && <p className="text-[14px] text-text-secondary">No challenges recorded for this project yet.</p>}
       </div>
     </div>
   );
