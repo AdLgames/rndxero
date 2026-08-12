@@ -51,7 +51,7 @@
   --color-track: var(--color-track);
   --color-track-empty: var(--color-track-empty);
   --color-toggle-off: var(--color-toggle-off);
-  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", system-ui, sans-serif;
+  --font-sans: var(--font-inter), -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", system-ui, sans-serif;
 }
 
 @layer base {
@@ -121,5 +121,28 @@
       transition-duration: 0.01ms !important;
       animation-duration: 0.01ms !important;
     }
+  }
+
+  /*
+   * A default OS scrollbar (thick, grey, square) on the board's
+   * horizontally-scrolling lanes reads as an unstyled library default
+   * against everything else here — this slims it down and mutes its
+   * colour on any element that scrolls, without hiding it outright
+   * (still discoverable, still usable with a mouse).
+   */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-track-empty) transparent;
+  }
+  *::-webkit-scrollbar {
+    height: 6px;
+    width: 6px;
+  }
+  *::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  *::-webkit-scrollbar-thumb {
+    background-color: var(--color-track-empty);
+    border-radius: 6px;
   }
 }

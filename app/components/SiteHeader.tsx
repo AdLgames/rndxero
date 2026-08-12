@@ -6,7 +6,6 @@ import { getCurrentUser, SESSION_COOKIE_NAME } from "@/lib/auth/session";
 import { NavLinks, NavSubLinks } from "./NavLinks";
 import { NewProjectDrawer } from "./NewProjectDrawer";
 import { MobileMenu } from "./MobileMenu";
-import { PulseIcon } from "./icons";
 
 function initials(name: string): string {
   const parts = name.trim().split(/\s+/);
@@ -36,10 +35,7 @@ export async function SiteHeader() {
   return (
     <div className="border-b border-black/[.06] bg-white/80 backdrop-blur-[20px] backdrop-saturate-[180%]">
       <nav className="flex items-center gap-4 px-4 pt-[18px] pb-[10px] sm:gap-7 sm:px-8">
-        <Link href="/home" className="mr-[6px] flex items-center gap-[9px] text-[15px] font-[640] tracking-[-0.02em] text-text">
-          <span className="flex h-[22px] w-[22px] items-center justify-center rounded-[7px] bg-accent text-white">
-            <PulseIcon />
-          </span>
+        <Link href="/home" className="mr-[6px] text-[17px] font-[700] tracking-[-0.025em] text-text">
           Trace
         </Link>
 

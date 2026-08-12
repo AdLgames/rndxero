@@ -10,7 +10,6 @@ import { isNoteBacked } from "@/lib/compliance/readiness";
 import { buildNextActions, type NextAction, type UnloggedProject } from "@/lib/dashboard/tasks";
 import { getBoardData } from "@/lib/board/repository";
 import { ArrowRightIcon } from "@/app/components/icons";
-import { eyebrow } from "@/app/components/ui";
 import { NAV_GROUPS } from "@/app/components/nav-groups";
 import { BoardClient } from "@/app/(app)/board/BoardClient";
 
@@ -153,7 +152,17 @@ export default async function HomePage() {
           weekCount: HOME_BOARD_WEEKS_BACK + HOME_BOARD_WEEKS_FORWARD + 1,
         }),
       ]);
-      homeBoard = { companyId: boardCompanyId, companyName: company.name, board };
+      // A brand-new project with nothing logged or planned yet renders as a
+      // near-blank strip of empty week columns — reads as broken, not as
+      // "nothing here yet". Home's preview only features lanes with some
+      // actual signal; the full /board still shows every project, gaps
+      // included, since that completeness is the point there.
+      const startedLanes = board.lanes.filter(
+        (lane) => Object.values(lane.actualMinutesByWeek).some((m) => m > 0) || Object.values(lane.plannedMinutesByWeek).some((m) => m > 0)
+      );
+      if (startedLanes.length > 0) {
+        homeBoard = { companyId: boardCompanyId, companyName: company.name, board: { ...board, lanes: startedLanes } };
+      }
     }
   }
 
@@ -194,30 +203,36 @@ export default async function HomePage() {
     { label: "Your hours — this year", value: `${fmtHours(yearToDate._sum.minutes ?? 0)}h`, caption: currentYear },
   ];
 
-  return (
-    <div className="px-4 py-8 sm:px-8 sm:py-11 lg:px-12">
-      <h2 className="m-0 text-[30px] font-[640] tracking-[-0.028em] text-text">Welcome back, {firstName}</h2>
-      <p className="m-0 mt-[7px] max-w-[58ch] text-[15px] leading-[1.5] text-text-secondary">
-        Where things stand across every company you belong to, and what&apos;s worth doing next.
-      </p>
+  const lockLabel = daysUntilAutoLock <= 0 ? "Locks today" : daysUntilAutoLock === 1 ? "Locks in 1 day" : `Locks in ${daysUntilAutoLock} days`;
 
-      <div className="mt-8 grid grid-cols-1 gap-3 sm:grid-cols-3">
-        {STAT_TILES.map((tile) => (
-          <div key={tile.label} className="rounded-[16px] border border-black/[.06] bg-surface-sunken px-6 py-5">
-            <p className={eyebrow}>{tile.label}</p>
-            <p className="m-0 mt-1 text-[32px] font-[640] tracking-[-0.03em] text-text">{tile.value}</p>
-            <p className="m-0 mt-[2px] text-[12.5px] text-text-quaternary">{tile.caption}</p>
+  return (
+    <div className="px-4 py-6 sm:px-8 sm:py-7 lg:px-12">
+      <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-end">
+        <h2 className="m-0 text-[24px] font-[700] tracking-[-0.025em] text-text">Welcome back, {firstName}</h2>
+        <div className="flex items-baseline gap-[7px] text-[13px] text-text-secondary">
+          <span className="font-[600] text-text">{currentWeekKey}</span>
+          <span aria-hidden>·</span>
+          <span className={daysUntilAutoLock <= 2 ? "font-[600] text-[#C0392B]" : "font-[500]"}>{lockLabel}</span>
+        </div>
+      </div>
+
+      <div className="mt-6 flex flex-col divide-y divide-black/[.07] sm:flex-row sm:divide-x sm:divide-y-0">
+        {STAT_TILES.map((tile, i) => (
+          <div key={tile.label} className={`py-3 sm:flex-1 sm:py-0 sm:pl-6 ${i === 0 ? "sm:pl-0" : ""}`}>
+            <p className="m-0 text-[12.5px] font-[500] text-text-secondary">{tile.label}</p>
+            <p className="m-0 mt-[3px] text-[25px] font-[650] tracking-[-0.025em] text-text">{tile.value}</p>
+            <p className="m-0 mt-[1px] text-[12px] font-[500] text-text-tertiary">{tile.caption}</p>
           </div>
         ))}
       </div>
 
-      <p className={`mt-10 mb-3 ${eyebrow}`}>What to do next</p>
+      <p className="mt-7 mb-[10px] text-[13px] font-[600] tracking-[-0.01em] text-text">Next steps</p>
       {nextActions.length === 0 ? (
-        <div className="rounded-[16px] border border-black/[.06] bg-accent-wash px-6 py-5">
+        <div className="rounded-[14px] bg-accent-wash px-6 py-5">
           <p className="m-0 text-[14.5px] font-[590] text-accent">You&apos;re all caught up — nothing needs your attention right now.</p>
         </div>
       ) : (
-        <div className="flex flex-col gap-[10px]">
+        <div className="flex flex-col gap-[8px]">
           {nextActions.map((action) => (
             <NextActionCard key={action.kind} action={action} />
           ))}
@@ -226,8 +241,8 @@ export default async function HomePage() {
 
       {homeBoard && (
         <>
-          <div className="mt-10 mb-3 flex items-center justify-between">
-            <p className={`m-0 ${eyebrow}`}>{companyIds.length > 1 ? `Board — ${homeBoard.companyName}` : "Board"}</p>
+          <div className="mt-7 mb-[10px] flex items-center justify-between">
+            <p className="m-0 text-[13px] font-[600] tracking-[-0.01em] text-text">{companyIds.length > 1 ? `Board — ${homeBoard.companyName}` : "Board"}</p>
             <Link href="/board" className="text-[12.5px] font-[590] text-accent hover:text-accent-hover">
               View full board →
             </Link>
@@ -244,38 +259,38 @@ export default async function HomePage() {
 
       {recentActivity.length > 0 && (
         <>
-          <p className={`mt-10 mb-3 ${eyebrow}`}>Latest activity</p>
-          <div className="flex flex-col gap-[10px]">
+          <p className="mt-7 mb-[10px] text-[13px] font-[600] tracking-[-0.01em] text-text">Latest activity</p>
+          <div className="flex flex-col gap-[6px]">
             {recentActivity.map((entry) => (
               <Link
                 key={entry.id}
                 href={`/projects/${entry.projectId}`}
-                className="flex items-start gap-3 rounded-[14px] border border-black/[.06] bg-surface-sunken px-5 py-4 transition-colors duration-150 hover:bg-surface-header"
+                className="flex items-start gap-3 rounded-[12px] bg-surface-sunken px-5 py-[14px] transition-colors duration-150 hover:bg-surface-header"
               >
                 <span className={`mt-[3px] h-[9px] w-[9px] shrink-0 rounded-[3px] ${CELL_STYLE[entry.type]}`} />
                 <div className="min-w-0 flex-1">
                   <p className="m-0 text-[13.5px] text-text">
                     <span className="font-[590]">{entry.userName}</span> {NOTE_TYPE_LABEL[entry.type]} on <span className="font-[590]">{entry.projectName}</span>
                   </p>
-                  <p className="m-0 mt-[3px] truncate text-[12.5px] text-text-tertiary">{entry.body}</p>
+                  <p className="m-0 mt-[3px] truncate text-[12.5px] text-text-secondary">{entry.body}</p>
                 </div>
-                <span className="shrink-0 text-[11.5px] text-text-quaternary">{entry.weekKey}</span>
+                <span className="shrink-0 text-[11.5px] font-[500] text-text-tertiary">{entry.weekKey}</span>
               </Link>
             ))}
           </div>
         </>
       )}
 
-      <p className={`mt-10 mb-3 ${eyebrow}`}>Jump to a workspace</p>
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+      <p className="mt-7 mb-[10px] text-[13px] font-[600] tracking-[-0.01em] text-text">Jump to a workspace</p>
+      <div className="grid grid-cols-1 gap-[8px] sm:grid-cols-3">
         {NAV_GROUPS.map((group) => (
           <Link
             key={group.label}
             href={group.href}
-            className="flex items-center justify-between rounded-[14px] border border-black/[.06] bg-surface-sunken px-5 py-4 text-[14.5px] font-[600] tracking-[-0.01em] text-text transition-colors duration-150 hover:bg-surface-header"
+            className="flex items-center justify-between rounded-[12px] bg-surface-sunken px-5 py-[14px] text-[14px] font-[600] tracking-[-0.01em] text-text transition-colors duration-150 hover:bg-surface-header"
           >
             {group.label}
-            <ArrowRightIcon className="shrink-0 text-text-quaternary" />
+            <ArrowRightIcon className="shrink-0 text-text-tertiary" />
           </Link>
         ))}
       </div>
@@ -287,7 +302,7 @@ function NextActionCard({ action }: { action: NextAction }) {
   return (
     <Link
       href={action.href}
-      className="flex items-center justify-between gap-4 rounded-[14px] border border-black/[.06] bg-surface-sunken px-[22px] py-[18px] transition-colors duration-150 hover:bg-surface-header"
+      className="flex items-center justify-between gap-4 rounded-[14px] bg-surface-sunken px-[22px] py-[16px] transition-colors duration-150 hover:bg-surface-header"
     >
       <div className="min-w-0">
         <div className="flex items-center gap-[10px]">
