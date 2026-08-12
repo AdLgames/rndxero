@@ -17,7 +17,7 @@ export function SegmentedControl<T extends string>({
   segmentClassName?: string;
 }) {
   return (
-    <div className={`inline-flex rounded-[10px] bg-control-track p-[3px] transition-colors duration-150 ${fullWidth ? "w-full" : ""} ${className}`}>
+    <div className={`inline-flex flex-wrap rounded-[10px] bg-control-track p-[3px] transition-colors duration-150 ${fullWidth ? "w-full" : ""} ${className}`}>
       {options.map((option) => {
         const active = option.value === value;
         return (

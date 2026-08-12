@@ -25,7 +25,7 @@ export default async function BoardPage({
   const companyIds = [...new Set(currentUser.memberships.map((m) => m.companyId))];
   if (companyIds.length === 0) {
     return (
-      <div className="px-12 py-11">
+      <div className="px-4 py-8 sm:px-8 sm:py-11 lg:px-12">
         <p className="text-[15px] text-text-secondary">You&apos;re not a member of any company yet.</p>
       </div>
     );

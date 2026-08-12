@@ -173,7 +173,10 @@ export function PlannerClient({
     }
   }
 
-  const gridColumns = `1fr repeat(${weekKeys.length}, 86px) 96px`;
+  // minmax(200px,1fr) rather than a bare 1fr: on the narrow end of the horizontal-scroll
+  // container below, a bare 1fr shrinks the uncertainty title column to whatever's left over
+  // (well under 100px), wrapping real titles into a dozen one-word lines instead of two or three.
+  const gridColumns = `minmax(200px,1fr) repeat(${weekKeys.length}, 86px) 96px`;
 
   return (
     <div className="flex flex-col gap-6">
@@ -189,7 +192,7 @@ export function PlannerClient({
         <p className="text-[14px] text-text-secondary">No uncertainties yet — add one below to start planning.</p>
       ) : (
         <div className="overflow-x-auto rounded-[16px] border border-black/[.06]">
-          <div className="min-w-[640px]">
+          <div className="min-w-[740px]">
             <div className="grid items-center bg-surface-header px-[22px] py-[13px] text-[12.5px] text-text-tertiary" style={{ gridTemplateColumns: gridColumns }}>
               <span>Uncertainty</span>
               {weekKeys.map((wk) => (
