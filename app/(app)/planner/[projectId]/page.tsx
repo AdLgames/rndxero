@@ -108,8 +108,8 @@ export default async function PlannerPage({
     : null;
 
   return (
-    <div className="px-12 py-11">
-      <div className="mb-7 flex items-end justify-between gap-6">
+    <div className="px-4 py-8 sm:px-8 sm:py-11 lg:px-12">
+      <div className="mb-7 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h2 className="m-0 text-[30px] font-[640] tracking-[-0.028em] text-text">{project.name}</h2>
           <p className="m-0 mt-[7px] max-w-[58ch] text-[15px] leading-[1.5] text-text-secondary">
@@ -117,7 +117,7 @@ export default async function PlannerPage({
           </p>
         </div>
         {siblingProjects.length > 1 && (
-          <div className="inline-flex shrink-0 items-center rounded-[10px] bg-control-track p-[3px]">
+          <div className="inline-flex flex-wrap items-center gap-1 rounded-[10px] bg-control-track p-[3px] sm:shrink-0">
             {readableSiblings.map((p) => (
               <Link
                 key={p.id}

@@ -295,8 +295,8 @@ export function CaptureClient({
 
           return (
             <div key={project.projectId} className="rounded-[16px] border border-black/[.06] bg-surface-sunken p-6">
-              <div className="mb-[22px] flex items-center justify-between">
-                <div className="flex items-center gap-[10px]">
+              <div className="mb-[22px] flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex flex-wrap items-center gap-[10px]">
                   <h4 className="m-0 text-[17px] font-[600] tracking-[-0.02em] text-text">{project.projectName}</h4>
                   {complianceStatus && (
                     <span
@@ -323,58 +323,62 @@ export function CaptureClient({
                 </p>
               ) : (
                 <>
-                  <div className="grid grid-cols-[110px_1fr] items-center gap-x-5 gap-y-[18px]">
-                    <span className="text-[13.5px] text-text-secondary">Hours</span>
-                    <div className="flex items-center gap-[10px]">
-                      <input
-                        type="number"
-                        min="0"
-                        step="0.25"
-                        value={form.hours}
-                        disabled={form.nothingThisWeek}
-                        onChange={(e) => updateProject(project.projectId, { hours: e.target.value })}
-                        className="w-[70px] box-border rounded-[10px] border border-black/[.11] bg-white px-3 py-[9px] text-[15px] font-[590] text-text outline-none disabled:opacity-50"
-                      />
-                      <div className="flex gap-[6px]">
-                        {project.prefillMinutes !== null && (
+                  <div className="flex flex-col gap-4">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-5">
+                      <span className="text-[13.5px] text-text-secondary sm:w-[110px] sm:shrink-0">Hours</span>
+                      <div className="flex flex-wrap items-center gap-[10px]">
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.25"
+                          value={form.hours}
+                          disabled={form.nothingThisWeek}
+                          onChange={(e) => updateProject(project.projectId, { hours: e.target.value })}
+                          className="w-[70px] box-border rounded-[10px] border border-black/[.11] bg-white px-3 py-[9px] text-[15px] font-[590] text-text outline-none disabled:opacity-50"
+                        />
+                        <div className="flex flex-wrap gap-[6px]">
+                          {project.prefillMinutes !== null && (
+                            <button
+                              type="button"
+                              disabled={form.nothingThisWeek}
+                              onClick={() => updateProject(project.projectId, { hours: minutesToHoursLabel(project.prefillMinutes!) })}
+                              className="rounded-full bg-control-track px-[13px] py-[7px] text-[13px] font-[500] text-text-secondary transition-all duration-150 hover:text-text disabled:opacity-40"
+                            >
+                              Copy previous week
+                            </button>
+                          )}
                           <button
                             type="button"
                             disabled={form.nothingThisWeek}
-                            onClick={() => updateProject(project.projectId, { hours: minutesToHoursLabel(project.prefillMinutes!) })}
-                            className="rounded-full bg-control-track px-[13px] py-[7px] text-[13px] font-[500] text-text-secondary transition-all duration-150 hover:text-text disabled:opacity-40"
+                            onClick={() => updateProject(project.projectId, { hours: String(STANDARD_WEEK_HOURS) })}
+                            className={`rounded-full px-[13px] py-[7px] text-[13px] transition-all duration-150 disabled:opacity-40 ${
+                              form.hours === String(STANDARD_WEEK_HOURS) ? "bg-accent font-[590] text-white" : "bg-control-track font-[500] text-text-secondary hover:text-text"
+                            }`}
                           >
-                            Copy previous week
+                            Full week ({STANDARD_WEEK_HOURS}h)
                           </button>
-                        )}
-                        <button
-                          type="button"
-                          disabled={form.nothingThisWeek}
-                          onClick={() => updateProject(project.projectId, { hours: String(STANDARD_WEEK_HOURS) })}
-                          className={`rounded-full px-[13px] py-[7px] text-[13px] transition-all duration-150 disabled:opacity-40 ${
-                            form.hours === String(STANDARD_WEEK_HOURS) ? "bg-accent font-[590] text-white" : "bg-control-track font-[500] text-text-secondary hover:text-text"
-                          }`}
-                        >
-                          Full week ({STANDARD_WEEK_HOURS}h)
-                        </button>
+                        </div>
                       </div>
                     </div>
 
-                    <span className="text-[13.5px] text-text-secondary">Basis</span>
-                    <SegmentedControl
-                      segmentClassName="px-4 py-[7px]"
-                      options={[
-                        { value: "ESTIMATED", label: "Estimated" },
-                        { value: "TRACKED", label: "From timesheet" },
-                      ]}
-                      value={form.basis}
-                      onChange={(value) => updateProject(project.projectId, { basis: value as SubmissionBasis })}
-                    />
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-5">
+                      <span className="text-[13.5px] text-text-secondary sm:w-[110px] sm:shrink-0">Basis</span>
+                      <SegmentedControl
+                        segmentClassName="px-4 py-[7px]"
+                        options={[
+                          { value: "ESTIMATED", label: "Estimated" },
+                          { value: "TRACKED", label: "From timesheet" },
+                        ]}
+                        value={form.basis}
+                        onChange={(value) => updateProject(project.projectId, { basis: value as SubmissionBasis })}
+                      />
+                    </div>
 
                     {primaryUncertainty && (
-                      <>
-                        <span className="text-[13.5px] text-text-secondary">Uncertainty</span>
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-5">
+                        <span className="text-[13.5px] text-text-secondary sm:w-[110px] sm:shrink-0">Uncertainty</span>
                         <span className="text-[14px] text-text">{primaryUncertainty.title}</span>
-                      </>
+                      </div>
                     )}
                   </div>
 

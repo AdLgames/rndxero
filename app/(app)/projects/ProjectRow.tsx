@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import type { WorkerCostCategory } from "@/lib/generated/prisma/client";
 import { ChevronDownIcon } from "@/app/components/icons";
 import { badgeAccent, badgeNeutral } from "@/app/components/ui";
@@ -65,24 +66,27 @@ export function ProjectRow({ project, companyId, canWriteCost }: { project: Proj
 
   return (
     <div className="rounded-[14px] border border-black/[.06] bg-surface-sunken">
-      <button
-        type="button"
-        onClick={() => setOpen((o) => !o)}
-        className="flex w-full items-center justify-between px-[22px] py-5 text-left"
-      >
-        <div className="flex items-center gap-[10px]">
-          <ChevronDownIcon className={`shrink-0 text-text-quaternary transition-transform duration-150 ${open ? "rotate-180" : ""}`} />
-          <h4 className={`m-0 text-[16.5px] font-[600] tracking-[-0.02em] ${archived ? "text-text-secondary" : "text-text"}`}>{project.name}</h4>
+      <div className="flex w-full items-center justify-between gap-[10px] px-[22px] py-5">
+        <button
+          type="button"
+          onClick={() => setOpen((o) => !o)}
+          aria-label={open ? "Collapse project" : "Expand project"}
+          className="shrink-0 text-text-quaternary"
+        >
+          <ChevronDownIcon className={`transition-transform duration-150 ${open ? "rotate-180" : ""}`} />
+        </button>
+        <Link href={`/projects/${project.id}`} className="flex min-w-0 flex-1 flex-wrap items-center gap-[10px]">
+          <h4 className={`m-0 text-[16.5px] font-[600] tracking-[-0.02em] hover:underline ${archived ? "text-text-secondary" : "text-text"}`}>{project.name}</h4>
           <span className={archived ? badgeNeutral : badgeAccent}>{archived ? "Archived" : "Active"}</span>
-        </div>
-        <div className="text-right">
+        </Link>
+        <button type="button" onClick={() => setOpen((o) => !o)} className="shrink-0 text-right">
           <div className={`text-[21px] font-[600] tracking-[-0.025em] ${archived ? "text-text-secondary" : "text-text"}`}>
             {value}
             <span className={`text-[14px] font-[500] ${archived ? "text-text-quaternary" : "text-text-tertiary"}`}>{unit}</span>
           </div>
           <div className="text-[11.5px] text-text-quaternary">logged</div>
-        </div>
-      </button>
+        </button>
+      </div>
 
       {open && (
         <div className="border-t border-black/[.055] px-[22px] py-5">

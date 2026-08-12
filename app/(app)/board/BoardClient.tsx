@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import type { UncertaintyNoteType } from "@/lib/generated/prisma/client";
 import { getIsoWeekKey } from "@/lib/capture/week-key";
 import type { BoardData, BoardNote } from "@/lib/board/repository";
@@ -231,7 +232,9 @@ function Lane({
   return (
     <div className="rounded-[16px] border border-black/[.06] bg-surface-sunken px-6 pb-6 pt-[22px]">
       <div className="mb-6 flex items-baseline justify-between">
-        <h4 className="m-0 text-[15.5px] font-[600] tracking-[-0.02em] text-text">{lane.projectName}</h4>
+        <Link href={`/projects/${lane.projectId}`} className="hover:underline">
+          <h4 className="m-0 text-[15.5px] font-[600] tracking-[-0.02em] text-text">{lane.projectName}</h4>
+        </Link>
         <span className="text-[13px] text-text-tertiary">
           {hoursLabel(totalActual)}h logged · <span className="text-text">{hoursLabel(totalPlanned)}h</span> planned
         </span>
