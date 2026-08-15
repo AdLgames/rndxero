@@ -54,8 +54,8 @@ export async function POST(request: NextRequest) {
 
   try {
     const amendment = noteId
-      ? await addAmendment(prisma, { noteId, authorId: currentUser.id, body })
-      : await addAmendment(prisma, { submissionId: submissionId!, authorId: currentUser.id, body });
+      ? await addAmendment(prisma, { noteId, companyId, authorId: currentUser.id, body })
+      : await addAmendment(prisma, { submissionId: submissionId!, companyId, authorId: currentUser.id, body });
     // The caller is always the author of the amendment they just created, so this
     // avoids a second query for the name the UI needs to attribute the correction.
     return NextResponse.json({ amendment: { ...amendment, authorName: currentUser.name } }, { status: 201 });

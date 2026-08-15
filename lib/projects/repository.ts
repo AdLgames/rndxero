@@ -1,4 +1,5 @@
 import type { PrismaClient, Project, ProjectCompetentProfessional, ProjectStatus, QualificationStatus } from "@/lib/generated/prisma/client";
+import { writeAuditLog } from "@/lib/locking/audit";
 
 /**
  * Projects are the unit everything else (evidence, time, cost, export)
@@ -40,6 +41,8 @@ export async function createProject(
 
 export interface UpdateProjectInput {
   projectId: string;
+  companyId: string;
+  actorId: string;
   description?: string | null;
   status?: ProjectStatus;
   fieldOfScienceOrTechnology?: string | null;
@@ -47,10 +50,23 @@ export interface UpdateProjectInput {
   qualificationStatus?: QualificationStatus;
 }
 
-/** A partial update — only the fields present in `input` are touched, so callers can PATCH one field (e.g. just status) without clobbering the others. */
+/** A partial update — only the fields present in `input` are touched, so callers can PATCH one field (e.g. just status) without clobbering the others. Logs before/after to AuditLog. */
 export async function updateProject(prisma: PrismaClient, input: UpdateProjectInput): Promise<Project> {
-  const { projectId, ...data } = input;
-  return prisma.project.update({ where: { id: projectId }, data });
+  const { projectId, companyId, actorId, ...data } = input;
+  const before = await prisma.project.findUniqueOrThrow({ where: { id: projectId } });
+  const after = await prisma.project.update({ where: { id: projectId }, data });
+
+  await writeAuditLog(prisma, {
+    companyId,
+    actorId,
+    action: "project:update",
+    entityType: "Project",
+    entityId: projectId,
+    before: Object.fromEntries(Object.keys(data).map((key) => [key, before[key as keyof Project]])),
+    after: Object.fromEntries(Object.keys(data).map((key) => [key, after[key as keyof Project]])),
+  });
+
+  return after;
 }
 
 export async function listCompanyProjects(

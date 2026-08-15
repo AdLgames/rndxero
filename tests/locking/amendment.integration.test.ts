@@ -13,7 +13,7 @@ describe.skipIf(!hasDatabase)("addAmendment (integration)", () => {
 
   beforeEach(async () => {
     await prisma.$executeRawUnsafe(
-      'TRUNCATE "Amendment", "UncertaintyNote", "WeeklySubmission", "Uncertainty", "Project", "Company", "User" RESTART IDENTITY CASCADE'
+      'TRUNCATE "AuditLog", "Amendment", "UncertaintyNote", "WeeklySubmission", "Uncertainty", "Project", "Company", "User" RESTART IDENTITY CASCADE'
     );
 
     const user = await prisma.user.create({ data: { email: "eng@example.com", name: "Eng" } });
@@ -48,13 +48,13 @@ describe.skipIf(!hasDatabase)("addAmendment (integration)", () => {
 
   afterAll(async () => {
     await prisma.$executeRawUnsafe(
-      'TRUNCATE "Amendment", "UncertaintyNote", "WeeklySubmission", "Uncertainty", "Project", "Company", "User" RESTART IDENTITY CASCADE'
+      'TRUNCATE "AuditLog", "Amendment", "UncertaintyNote", "WeeklySubmission", "Uncertainty", "Project", "Company", "User" RESTART IDENTITY CASCADE'
     );
     await prisma.$disconnect();
   });
 
   it("appends a correction to a note without touching the original", async () => {
-    const amendment = await addAmendment(prisma, { noteId, authorId: userId, body: "Actually it was a hash index" });
+    const amendment = await addAmendment(prisma, { noteId, companyId, authorId: userId, body: "Actually it was a hash index" });
 
     expect(amendment.noteId).toBe(noteId);
     expect(amendment.submissionId).toBeNull();
@@ -64,7 +64,7 @@ describe.skipIf(!hasDatabase)("addAmendment (integration)", () => {
   });
 
   it("appends a correction to a submission without touching the original", async () => {
-    const amendment = await addAmendment(prisma, { submissionId, authorId: userId, body: "Minutes should be 150" });
+    const amendment = await addAmendment(prisma, { submissionId, companyId, authorId: userId, body: "Minutes should be 150" });
 
     expect(amendment.submissionId).toBe(submissionId);
     expect(amendment.noteId).toBeNull();
@@ -74,12 +74,21 @@ describe.skipIf(!hasDatabase)("addAmendment (integration)", () => {
   });
 
   it("rejects an empty body", async () => {
-    await expect(addAmendment(prisma, { noteId, authorId: userId, body: "   " })).rejects.toThrow(AmendmentError);
+    await expect(addAmendment(prisma, { noteId, companyId, authorId: userId, body: "   " })).rejects.toThrow(AmendmentError);
+  });
+
+  it("writes an audit log entry attributed to the amending user", async () => {
+    const amendment = await addAmendment(prisma, { noteId, companyId, authorId: userId, body: "Actually it was a hash index" });
+
+    const entries = await prisma.auditLog.findMany({ where: { companyId, entityId: noteId } });
+    expect(entries).toHaveLength(1);
+    expect(entries[0]).toMatchObject({ actorId: userId, action: "note:amend", entityType: "UncertaintyNote" });
+    expect((entries[0].after as { amendmentId?: string })?.amendmentId).toBe(amendment.id);
   });
 
   it("a note can carry more than one amendment, all retained", async () => {
-    await addAmendment(prisma, { noteId, authorId: userId, body: "First correction" });
-    await addAmendment(prisma, { noteId, authorId: userId, body: "Second correction" });
+    await addAmendment(prisma, { noteId, companyId, authorId: userId, body: "First correction" });
+    await addAmendment(prisma, { noteId, companyId, authorId: userId, body: "Second correction" });
 
     const amendments = await prisma.amendment.findMany({ where: { noteId }, orderBy: { createdAt: "asc" } });
     expect(amendments.map((a) => a.body)).toEqual(["First correction", "Second correction"]);

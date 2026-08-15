@@ -28,7 +28,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   }
 
   const body = (await request.json()) as PatchBody;
-  const input: UpdateCompanyAifDetailsInput = { companyId };
+  const input: UpdateCompanyAifDetailsInput = { companyId, actorId: currentUser.id };
   if (body.utr !== undefined) input.utr = body.utr?.trim() || null;
   if (body.seniorOfficerName !== undefined) input.seniorOfficerName = body.seniorOfficerName?.trim() || null;
   if (body.seniorOfficerRole !== undefined) input.seniorOfficerRole = body.seniorOfficerRole?.trim() || null;

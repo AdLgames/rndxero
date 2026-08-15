@@ -166,6 +166,20 @@ export function renderClaimPackPdf(content: ClaimPackContent): Promise<Buffer> {
     doc.fillColor("#000");
     doc.moveDown();
 
+    doc.fontSize(13).fillColor("#000").text("Audit trail");
+    doc.fontSize(10).fillColor("#333");
+    if (content.auditTrail.length === 0) {
+      doc.text("No logged changes.");
+    }
+    for (const entry of content.auditTrail) {
+      doc.text(
+        `${entry.createdAt.slice(0, 10)} — ${entry.action} on ${entry.entityType} (${entry.actorName ?? "system"})` +
+          (entry.reason ? ` — ${entry.reason}` : "")
+      );
+    }
+    doc.fillColor("#000");
+    doc.moveDown();
+
     doc.fontSize(8).fillColor("#777").text(`Generated: ${content.generatedAt}`);
 
     doc.end();

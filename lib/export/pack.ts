@@ -7,6 +7,7 @@ import type {
 import { getWeekBoundaries } from "@/lib/capture/week-key";
 import { findApplicableRate } from "@/lib/cost/rate";
 import { getPlanVsActual, listPlanVersions, type WeekVariance } from "@/lib/plan/repository";
+import { getProjectAuditTrail, type ProjectAuditEntry } from "@/lib/audit/repository";
 
 export interface ClaimPackAmendment {
   body: string;
@@ -83,6 +84,8 @@ export interface ClaimPackContent {
   variance: ClaimPackVarianceRow[];
   totals: { plannedMinutes: number; actualMinutes: number; derivedCostMinorUnits: number | null };
   integrity: ClaimPackSubmissionIntegrity[];
+  /** Who changed what, when — project edits, amendments, locks/unlocks. The append-only evidence tables are the record; this is the record *of changes to* that record. */
+  auditTrail: ProjectAuditEntry[];
   includesCosts: boolean;
 }
 
@@ -228,6 +231,7 @@ export async function getProjectClaimPack(
   const totalCostMinorUnits = params.includeCosts
     ? uncertaintyPacks.reduce((sum, u) => sum + (u.derivedCostMinorUnits ?? 0), 0)
     : null;
+  const auditTrail = await getProjectAuditTrail(prisma, params.projectId);
 
   return {
     project: {
@@ -245,6 +249,7 @@ export async function getProjectClaimPack(
     variance,
     totals: { plannedMinutes: totalPlannedMinutes, actualMinutes: totalActualMinutes, derivedCostMinorUnits: totalCostMinorUnits },
     integrity,
+    auditTrail,
     includesCosts: params.includeCosts,
   };
 }

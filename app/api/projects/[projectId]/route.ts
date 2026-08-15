@@ -52,7 +52,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     return NextResponse.json({ error: "Invalid qualificationStatus" }, { status: 400 });
   }
 
-  const input: UpdateProjectInput = { projectId };
+  const input: UpdateProjectInput = { projectId, companyId: body.companyId, actorId: currentUser.id };
   if (body.description !== undefined) input.description = body.description?.trim() || null;
   if (body.status !== undefined) input.status = body.status as ProjectStatus;
   if (body.fieldOfScienceOrTechnology !== undefined) input.fieldOfScienceOrTechnology = body.fieldOfScienceOrTechnology?.trim() || null;
