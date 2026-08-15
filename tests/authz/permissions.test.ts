@@ -36,6 +36,7 @@ describe("Owner", () => {
     const s = subject({ companyRole: "OWNER", projectRole: null });
     expect(can(s, "billing:manage")).toBe(true);
     expect(can(s, "membership:manage")).toBe(true);
+    expect(can(s, "company:update")).toBe(true);
     expect(can(s, "rate:write")).toBe(true);
     expect(can(s, "submission:lock")).toBe(true);
   });
@@ -72,11 +73,12 @@ describe("Finance", () => {
     expect(can(finance(), "submission:amend")).toBe(true);
   });
 
-  it("cannot create projects or manage billing/membership", () => {
+  it("cannot create projects or manage billing/membership/company details", () => {
     const s = finance();
     expect(can(s, "project:create")).toBe(false);
     expect(can(s, "billing:manage")).toBe(false);
     expect(can(s, "membership:manage")).toBe(false);
+    expect(can(s, "company:update")).toBe(false);
   });
 
   it("acts company-wide for cost/rate/lock actions without a ProjectMember row", () => {
@@ -245,6 +247,26 @@ describe("AI (ai:configure / ai:query)", () => {
 
   it("ai:query is not project-scoped — no ProjectMember row needed", () => {
     expect(can(subject({ companyRole: "CONTRIBUTOR", projectRole: null }), "ai:query")).toBe(true);
+  });
+});
+
+describe("comment:create / comment:read (submission comment threads)", () => {
+  it("Owner, Finance, Lead, and Contributor can all post a comment", () => {
+    expect(can(subject({ companyRole: "OWNER", projectRole: null }), "comment:create")).toBe(true);
+    expect(can(subject({ companyRole: "FINANCE", projectRole: null }), "comment:create")).toBe(true);
+    expect(can(subject({ companyRole: "LEAD" }), "comment:create")).toBe(true);
+    expect(can(subject({ companyRole: "CONTRIBUTOR" }), "comment:create")).toBe(true);
+  });
+
+  it("Adviser can read but not post — read-only across the board", () => {
+    const adviser = subject({ companyRole: "ADVISER", projectRole: "ADVISER" });
+    expect(can(adviser, "comment:read")).toBe(true);
+    expect(can(adviser, "comment:create")).toBe(false);
+  });
+
+  it("is project-scoped — Owner/Finance act company-wide, everyone else needs standing on the project", () => {
+    expect(can(subject({ companyRole: "OWNER", projectRole: null }), "comment:read")).toBe(true);
+    expect(can(subject({ companyRole: "LEAD", projectRole: null }), "comment:read")).toBe(false);
   });
 });
 

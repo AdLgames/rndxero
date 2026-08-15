@@ -30,6 +30,13 @@ const STATUS_STYLE: Record<WeekComplianceStatus, { dot: string; label: string }>
   red: { dot: "bg-[#C0392B]", label: "Unconfirmed" },
 };
 
+interface CommentData {
+  id: string;
+  body: string;
+  authorName: string;
+  createdAt: string;
+}
+
 interface LockHistoryEntry {
   id: string;
   action: "submission.lock" | "submission.unlock" | "submission.auto_lock";
@@ -55,6 +62,7 @@ export interface SubmissionRow {
   notes: NoteData[];
   amendments: AmendmentData[];
   lockHistory: LockHistoryEntry[];
+  comments: CommentData[];
 }
 
 function formatDate(iso: string): string {
@@ -116,6 +124,61 @@ function AddCorrectionForm({ onSubmit }: { onSubmit: (body: string) => Promise<v
         </button>
       </div>
       {error && <p className="m-0 text-[13px] text-red-700">{error}</p>}
+    </div>
+  );
+}
+
+function CommentThread({ comments, onAdd }: { comments: CommentData[]; onAdd: (body: string) => Promise<void> }) {
+  const [body, setBody] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+
+  async function post() {
+    if (!body.trim()) return;
+    setSaving(true);
+    setError("");
+    try {
+      await onAdd(body.trim());
+      setBody("");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not post comment");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="mt-4 border-t border-black/[.055] pt-4">
+      <p className="m-0 mb-2 text-[12px] text-text-tertiary">Comments {comments.length > 0 ? `(${comments.length})` : ""}</p>
+      {comments.length > 0 && (
+        <ul className="m-0 mb-3 flex list-none flex-col gap-2 p-0">
+          {comments.map((c) => (
+            <li key={c.id} className="rounded-[10px] bg-white p-[10px_12px] text-[13px]">
+              <p className="m-0 text-text-secondary">{c.body}</p>
+              <p className="m-0 mt-1 text-[11.5px] text-text-quaternary">
+                {c.authorName} · {formatDate(c.createdAt)}
+              </p>
+            </li>
+          ))}
+        </ul>
+      )}
+      <div className="flex items-center gap-2">
+        <input
+          type="text"
+          value={body}
+          onChange={(e) => setBody(e.target.value)}
+          placeholder="Leave a comment for the team…"
+          className={`${input} text-[13px]`}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") post();
+          }}
+        />
+        <button type="button" disabled={saving || !body.trim()} onClick={post} className={buttonSecondary}>
+          {saving && <Spinner />}
+          {saving ? "Posting…" : "Post"}
+        </button>
+      </div>
+      {error && <p className="m-0 mt-2 text-[13px] text-red-700">{error}</p>}
     </div>
   );
 }
@@ -210,6 +273,17 @@ function SubmissionCard({ row, onChange }: { row: SubmissionRow; onChange: (upda
     onChange({ ...row, notes: row.notes.map((n) => (n.id === noteId ? { ...n, amendments: [...n.amendments, json.amendment!] } : n)) });
   }
 
+  async function postComment(body: string) {
+    const response = await fetch("/api/comments", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ companyId: row.companyId, submissionId: row.id, body }),
+    });
+    const json = (await response.json()) as { comment?: CommentData; error?: string };
+    if (!response.ok || !json.comment) throw new Error(json.error ?? "Could not post comment");
+    onChange({ ...row, comments: [...row.comments, json.comment] });
+  }
+
   const allAmendments = [
     ...row.amendments.map((a) => ({ ...a, context: null as string | null })),
     ...row.notes.flatMap((n) => n.amendments.map((a) => ({ ...a, context: n.uncertaintyTitle as string | null }))),
@@ -292,6 +366,8 @@ function SubmissionCard({ row, onChange }: { row: SubmissionRow; onChange: (upda
           </ul>
         </details>
       )}
+
+      <CommentThread comments={row.comments} onAdd={postComment} />
 
       {locked && (
         <div className="mt-4">

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { SubmissionBasis, UncertaintyNoteType } from "@/lib/generated/prisma/client";
 import { weekComplianceStatus, type WeekComplianceStatus } from "@/lib/compliance/readiness";
 import { SegmentedControl } from "@/app/components/SegmentedControl";
@@ -45,6 +45,10 @@ interface NoteSelection {
 
 interface ProjectFormState {
   hours: string;
+  /** Whether the visible input is being entered as raw hours or as a % of a standard week — `hours` is always kept as the source of truth for submission. */
+  hoursInputMode: "HOURS" | "PERCENT";
+  /** Raw percent text, only meaningful while hoursInputMode is "PERCENT" — kept separate so typing "5" doesn't get overwritten by a rounded hours->percent conversion. */
+  percent: string;
   nothingThisWeek: boolean;
   basis: SubmissionBasis;
   notes: Record<string, NoteSelection>;
@@ -55,6 +59,57 @@ interface ProjectFormState {
 
 function minutesToHoursLabel(minutes: number): string {
   return (minutes / 60).toString();
+}
+
+function percentToHoursLabel(percent: string): string {
+  const p = Number(percent);
+  if (Number.isNaN(p)) return "";
+  return (Math.round(((p / 100) * STANDARD_WEEK_HOURS) * 100) / 100).toString();
+}
+
+function hoursToPercentLabel(hours: string): string {
+  const h = Number(hours);
+  if (Number.isNaN(h)) return "";
+  return (Math.round((h / STANDARD_WEEK_HOURS) * 100 * 100) / 100).toString();
+}
+
+/**
+ * A partial week is easy to lose — a wrong-tab close, a laptop lid, a
+ * flaky wifi connection mid-form. This is a convenience cache only, keyed
+ * per-week in the browser's own storage: it never substitutes for an
+ * actual submission, and a real server-side `existing` submission always
+ * wins over a stale local draft for that project.
+ */
+function draftStorageKey(weekKey: string): string {
+  return `claimtrail:capture-draft:${weekKey}`;
+}
+
+function loadDraft(weekKey: string): Record<string, ProjectFormState> | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(draftStorageKey(weekKey));
+    if (!raw) return null;
+    return (JSON.parse(raw) as { state: Record<string, ProjectFormState> }).state;
+  } catch {
+    return null;
+  }
+}
+
+function saveDraft(weekKey: string, state: Record<string, ProjectFormState>): void {
+  try {
+    window.localStorage.setItem(draftStorageKey(weekKey), JSON.stringify({ savedAt: new Date().toISOString(), state }));
+  } catch {
+    // Quota exceeded or private-browsing storage disabled — losing the autosave
+    // is a minor inconvenience, not data loss, since nothing has been submitted yet.
+  }
+}
+
+function clearDraft(weekKey: string): void {
+  try {
+    window.localStorage.removeItem(draftStorageKey(weekKey));
+  } catch {
+    // ignore
+  }
 }
 
 export function CaptureClient({
@@ -68,25 +123,48 @@ export function CaptureClient({
   daysUntilAutoLock: number;
 }) {
   const [projects, setProjects] = useState(initialProjects);
-  const [state, setState] = useState<Record<string, ProjectFormState>>(() =>
-    Object.fromEntries(
-      initialProjects.map((p) => [
-        p.projectId,
-        {
-          hours: p.existing ? minutesToHoursLabel(p.existing.minutes) : p.prefillMinutes !== null ? minutesToHoursLabel(p.prefillMinutes) : "",
-          nothingThisWeek: false,
-          basis: p.existing?.basis ?? "ESTIMATED",
-          notes: {},
-          newUncertaintyOpen: false,
-          newTitle: "",
-          newBaseline: "",
-        },
-      ])
-    )
-  );
+  const [state, setState] = useState<Record<string, ProjectFormState>>(() => {
+    const draft = loadDraft(weekKey);
+    return Object.fromEntries(
+      initialProjects.map((p) => {
+        // A real submission for this project always wins over a stale local draft.
+        if (draft?.[p.projectId] && !p.existing) {
+          return [p.projectId, draft[p.projectId]];
+        }
+        return [
+          p.projectId,
+          {
+            hours: p.existing ? minutesToHoursLabel(p.existing.minutes) : p.prefillMinutes !== null ? minutesToHoursLabel(p.prefillMinutes) : "",
+            hoursInputMode: "HOURS",
+            percent: "",
+            nothingThisWeek: false,
+            basis: p.existing?.basis ?? "ESTIMATED",
+            notes: {},
+            newUncertaintyOpen: false,
+            newTitle: "",
+            newBaseline: "",
+          },
+        ];
+      })
+    );
+  });
   const [status, setStatus] = useState<"idle" | "saving" | "done" | "error">("idle");
   const [errorMessage, setErrorMessage] = useState("");
   const [loggedSummary, setLoggedSummary] = useState<Array<{ projectName: string; hours: number }>>([]);
+  const [draftSavedAt, setDraftSavedAt] = useState<string | null>(() => loadDraft(weekKey) !== null ? new Date().toISOString() : null);
+
+  const hasDraftableContent = Object.values(state).some(
+    (form) => form.nothingThisWeek || form.hours.trim() !== "" || Object.values(form.notes).some((n) => n.type !== null)
+  );
+
+  useEffect(() => {
+    if (!hasDraftableContent) return;
+    const timeout = setTimeout(() => {
+      saveDraft(weekKey, state);
+      setDraftSavedAt(new Date().toISOString());
+    }, 400);
+    return () => clearTimeout(timeout);
+  }, [state, weekKey, hasDraftableContent]);
 
   function updateProject(projectId: string, patch: Partial<ProjectFormState>) {
     setState((prev) => ({ ...prev, [projectId]: { ...prev[projectId], ...patch } }));
@@ -140,7 +218,7 @@ export function CaptureClient({
     setState((prev) => {
       const next = { ...prev };
       for (const p of eligible) {
-        next[p.projectId] = { ...next[p.projectId], nothingThisWeek: false, hours: each };
+        next[p.projectId] = { ...next[p.projectId], nothingThisWeek: false, hours: each, hoursInputMode: "HOURS", percent: "" };
       }
       return next;
     });
@@ -229,6 +307,8 @@ export function CaptureClient({
       }
       setLoggedSummary(summary);
       setStatus("done");
+      clearDraft(weekKey);
+      setDraftSavedAt(null);
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : "Something went wrong");
       setStatus("error");
@@ -271,7 +351,15 @@ export function CaptureClient({
   return (
     <div>
       <div className="mb-4 flex items-center justify-between">
-        <span className="text-[12.5px] text-text-tertiary">Quick-fill</span>
+        <span className="flex items-center gap-[6px] text-[12.5px] text-text-tertiary">
+          Quick-fill
+          {draftSavedAt && (
+            <span className="flex items-center gap-[4px] text-text-quaternary">
+              <span className="h-[5px] w-[5px] rounded-full bg-accent" aria-hidden />
+              Draft saved
+            </span>
+          )}
+        </span>
         <button type="button" onClick={equalSplit} className={buttonGhost}>
           Equal split ({STANDARD_WEEK_HOURS}h across active projects)
         </button>
@@ -280,6 +368,7 @@ export function CaptureClient({
       <div className="flex flex-col gap-[14px]">
         {projects.map((project, i) => {
           const form = state[project.projectId];
+          const hoursMode = form.hoursInputMode ?? "HOURS";
           const locked = project.existing?.locked ?? false;
           const primaryUncertainty = project.uncertainties[0];
 
@@ -312,7 +401,9 @@ export function CaptureClient({
                   <Toggle
                     label="Nothing this week"
                     checked={form.nothingThisWeek}
-                    onChange={(checked) => updateProject(project.projectId, { nothingThisWeek: checked, hours: checked ? "" : form.hours })}
+                    onChange={(checked) =>
+                      updateProject(project.projectId, { nothingThisWeek: checked, hours: checked ? "" : form.hours, percent: checked ? "" : form.percent })
+                    }
                   />
                 )}
               </div>
@@ -327,21 +418,58 @@ export function CaptureClient({
                     <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-5">
                       <span className="text-[13.5px] text-text-secondary sm:w-[110px] sm:shrink-0">Hours</span>
                       <div className="flex flex-wrap items-center gap-[10px]">
-                        <input
-                          type="number"
-                          min="0"
-                          step="0.25"
-                          value={form.hours}
-                          disabled={form.nothingThisWeek}
-                          onChange={(e) => updateProject(project.projectId, { hours: e.target.value })}
-                          className="w-[70px] box-border rounded-[10px] border border-black/[.11] bg-white px-3 py-[9px] text-[15px] font-[590] text-text outline-none disabled:opacity-50"
-                        />
+                        <div className="flex items-center gap-[6px]">
+                          <input
+                            type="number"
+                            min="0"
+                            step={hoursMode === "PERCENT" ? "1" : "0.25"}
+                            value={hoursMode === "PERCENT" ? form.percent : form.hours}
+                            disabled={form.nothingThisWeek}
+                            onChange={(e) =>
+                              hoursMode === "PERCENT"
+                                ? updateProject(project.projectId, { percent: e.target.value, hours: percentToHoursLabel(e.target.value) })
+                                : updateProject(project.projectId, { hours: e.target.value })
+                            }
+                            className="w-[70px] box-border rounded-[10px] border border-black/[.11] bg-white px-3 py-[9px] text-[15px] font-[590] text-text outline-none disabled:opacity-50"
+                          />
+                          <div className="flex rounded-full bg-control-track p-[2px]" title="Enter time as raw hours or as a % of a standard week">
+                            {(["HOURS", "PERCENT"] as const).map((mode) => (
+                              <button
+                                key={mode}
+                                type="button"
+                                disabled={form.nothingThisWeek}
+                                onClick={() =>
+                                  updateProject(
+                                    project.projectId,
+                                    mode === "PERCENT"
+                                      ? { hoursInputMode: "PERCENT", percent: hoursToPercentLabel(form.hours) }
+                                      : { hoursInputMode: "HOURS" }
+                                  )
+                                }
+                                className={`rounded-full px-[10px] py-[4px] text-[12px] font-[500] transition-all duration-150 disabled:opacity-40 ${
+                                  hoursMode === mode ? "bg-white text-text shadow-[0_1px_2px_rgba(0,0,0,0.08)]" : "text-text-tertiary hover:text-text-secondary"
+                                }`}
+                              >
+                                {mode === "HOURS" ? "hrs" : "%"}
+                              </button>
+                            ))}
+                          </div>
+                          {hoursMode === "PERCENT" && form.percent.trim() !== "" && (
+                            <span className="text-[12.5px] text-text-quaternary">= {form.hours}h</span>
+                          )}
+                        </div>
                         <div className="flex flex-wrap gap-[6px]">
                           {project.prefillMinutes !== null && (
                             <button
                               type="button"
                               disabled={form.nothingThisWeek}
-                              onClick={() => updateProject(project.projectId, { hours: minutesToHoursLabel(project.prefillMinutes!) })}
+                              onClick={() =>
+                                updateProject(project.projectId, {
+                                  hours: minutesToHoursLabel(project.prefillMinutes!),
+                                  hoursInputMode: "HOURS",
+                                  percent: "",
+                                })
+                              }
                               className="rounded-full bg-control-track px-[13px] py-[7px] text-[13px] font-[500] text-text-secondary transition-all duration-150 hover:text-text disabled:opacity-40"
                             >
                               Copy previous week
@@ -350,7 +478,9 @@ export function CaptureClient({
                           <button
                             type="button"
                             disabled={form.nothingThisWeek}
-                            onClick={() => updateProject(project.projectId, { hours: String(STANDARD_WEEK_HOURS) })}
+                            onClick={() =>
+                              updateProject(project.projectId, { hours: String(STANDARD_WEEK_HOURS), hoursInputMode: "HOURS", percent: "" })
+                            }
                             className={`rounded-full px-[13px] py-[7px] text-[13px] transition-all duration-150 disabled:opacity-40 ${
                               form.hours === String(STANDARD_WEEK_HOURS) ? "bg-accent font-[590] text-white" : "bg-control-track font-[500] text-text-secondary hover:text-text"
                             }`}

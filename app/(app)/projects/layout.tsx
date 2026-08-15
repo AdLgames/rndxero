@@ -37,7 +37,7 @@ export default async function ProjectsLayout({ children }: LayoutProps<"/project
             id: project.id,
             name: project.name,
             description: project.description,
-            archived: project.status !== "ACTIVE",
+            status: project.status,
             ownerName: lead?.user.name ?? null,
             minutes: totals._sum.minutes ?? 0,
           };

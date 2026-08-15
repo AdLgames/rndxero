@@ -58,6 +58,9 @@ function buildContent(overrides: Partial<ClaimPackContent> = {}): ClaimPackConte
         amendments: [],
       },
     ],
+    auditTrail: [
+      { action: "project:update", entityType: "Project", entityId: "p1", actorName: "Ada", before: { status: "PLANNED" }, after: { status: "ACTIVE" }, reason: null, createdAt: "2026-07-05T00:00:00.000Z" },
+    ],
     includesCosts: true,
     ...overrides,
   };

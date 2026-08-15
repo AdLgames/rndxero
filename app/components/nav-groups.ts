@@ -28,6 +28,7 @@ export const NAV_GROUPS: NavGroup[] = [
     links: [
       { href: "/projects", label: "Projects" },
       { href: "/board", label: "Board" },
+      { href: "/search", label: "Search" },
     ],
   },
   {

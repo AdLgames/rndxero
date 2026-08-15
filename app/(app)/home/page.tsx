@@ -9,9 +9,12 @@ import { getIsoWeekKey, getWeekBoundaries, shiftWeekKey } from "@/lib/capture/we
 import { isNoteBacked } from "@/lib/compliance/readiness";
 import { buildNextActions, type NextAction, type UnloggedProject } from "@/lib/dashboard/tasks";
 import { getBoardData } from "@/lib/board/repository";
+import { getAiProviderConfigSummary } from "@/lib/ai/repository";
+import { COMPANY_SUGGESTED_QUERIES } from "@/lib/ai/suggested-queries";
 import { ArrowRightIcon } from "@/app/components/icons";
 import { NAV_GROUPS } from "@/app/components/nav-groups";
 import { BoardClient } from "@/app/(app)/board/BoardClient";
+import { AiChatPanel } from "@/app/(app)/ai/AiChatPanel";
 
 /** Matches lib/locking's real auto-lock deadline (close + 7 days) — same constant capture/page.tsx uses. */
 const AUTO_LOCK_DAYS_AFTER_CLOSE = 7;
@@ -191,6 +194,16 @@ export default async function HomePage() {
     }));
   }
 
+  // Same company the board preview features, if there is one — Ask AI is a per-company
+  // capability (each company brings its own provider), so it has to pick one.
+  const aiCompanyId = homeBoard?.companyId ?? companyIds[0];
+  const [aiConfig, canQueryAi] = aiCompanyId
+    ? await Promise.all([
+        getAiProviderConfigSummary(prisma, aiCompanyId),
+        canDo(prisma, { userId: currentUser.id, companyId: aiCompanyId, action: "ai:query" }),
+      ])
+    : [null, false];
+
   const firstName = currentUser.name.trim().split(/\s+/)[0];
 
   const STAT_TILES = [
@@ -237,6 +250,13 @@ export default async function HomePage() {
             <NextActionCard key={action.kind} action={action} />
           ))}
         </div>
+      )}
+
+      {aiConfig && canQueryAi && aiCompanyId && (
+        <>
+          <p className="mt-7 mb-[10px] text-[13px] font-[600] tracking-[-0.01em] text-text">Ask AI</p>
+          <AiChatPanel companyId={aiCompanyId} suggestedQueries={COMPANY_SUGGESTED_QUERIES} />
+        </>
       )}
 
       {homeBoard && (

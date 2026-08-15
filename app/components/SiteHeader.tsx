@@ -45,10 +45,18 @@ export async function SiteHeader() {
 
         <span className="ml-auto flex items-center gap-[10px] sm:gap-[14px]">
           <NewProjectDrawer companies={ownerCompanies} />
-          <span className="hidden text-[13px] text-text-tertiary md:inline">{currentUser.email}</span>
-          <span className="flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-full bg-accent-tint text-[11px] font-[640] text-accent">
+          <Link href="/account" className="hidden items-center gap-[10px] md:flex">
+            <span className="text-[13px] text-text-tertiary">{currentUser.email}</span>
+            <span className="flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-full bg-accent-tint text-[11px] font-[640] text-accent">
+              {initials(currentUser.name)}
+            </span>
+          </Link>
+          <Link
+            href="/account"
+            className="flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-full bg-accent-tint text-[11px] font-[640] text-accent md:hidden"
+          >
             {initials(currentUser.name)}
-          </span>
+          </Link>
           <form action="/api/auth/signout" method="POST" className="hidden md:block">
             <button type="submit" className="text-[13px] font-[500] text-text-tertiary hover:text-text">
               Sign out

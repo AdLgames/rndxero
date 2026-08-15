@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { cookies, headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
+import type { Project } from "@/lib/generated/prisma/client";
 import { prisma } from "@/lib/db";
 import { getCurrentUser, SESSION_COOKIE_NAME } from "@/lib/auth/session";
 import { AuthorizationError, authorize, canDo } from "@/lib/authz/service";
@@ -8,18 +9,24 @@ import { getIsoWeekKey, getWeekBoundaries, shiftWeekKey } from "@/lib/capture/we
 import { getOpenUncertainties, getPrefillMinutes } from "@/lib/capture/repository";
 import { getCurrentPlanVersion, listPlanVersions } from "@/lib/plan/repository";
 import { findApplicableRate } from "@/lib/cost/rate";
+import { listProjectDirectCosts } from "@/lib/cost/direct-costs";
 import { summarizeCostByPerson, summarizeCostByRole, type CostedRow } from "@/lib/plan/cost-summary";
 import { getProjectClaimPack, type ClaimPackNoteEntry } from "@/lib/export/pack";
 import { isNoteBacked } from "@/lib/compliance/readiness";
+import { getAiProviderConfigSummary } from "@/lib/ai/repository";
+import { PROJECT_SUGGESTED_QUERIES } from "@/lib/ai/suggested-queries";
 import { badgeAccent, badgeNeutral, eyebrow } from "@/app/components/ui";
 import { LockIcon } from "@/app/components/icons";
+import { AiChatPanel } from "@/app/(app)/ai/AiChatPanel";
 import { BackToProjects } from "../ProjectRail";
 import { ProjectDescription } from "./ProjectDescription";
+import { ProjectClaimDetails } from "./ProjectClaimDetails";
 import { ProjectWeekLogCard, type WeekLogData } from "./ProjectWeekLogCard";
 import { ProjectMembers, type ProjectMemberRow } from "./ProjectMembers";
 import { ProjectGithubSection, type ProjectGithubData } from "./ProjectGithubSection";
 import { CalendarPlanner, type CalendarAllocation, type CalendarActual } from "./CalendarPlanner";
 import { ProjectCostSummary } from "./ProjectCostSummary";
+import { ProjectDirectCosts } from "./ProjectDirectCosts";
 
 /** Pre-fetched scroll band for the calendar planner: 4 weeks of history plus 20 forward — wide enough to genuinely scroll through, not just page through. */
 const CALENDAR_WEEKS_BACK = 4;
@@ -33,6 +40,14 @@ const TYPE_LABEL: Record<ClaimPackNoteEntry["type"], string> = {
   BLOCKER: "Blocker",
   FAILED_ATTEMPT: "Hit a wall",
   RESOLUTION: "Solved it",
+};
+
+const PROJECT_STATUS_LABEL: Record<Project["status"], string> = {
+  PLANNED: "Planned",
+  ACTIVE: "Active",
+  PAUSED: "Paused",
+  COMPLETED: "Completed",
+  ABANDONED: "Abandoned",
 };
 
 function hoursLabel(minutes: number): string {
@@ -115,7 +130,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
     throw error;
   }
 
-  const [canViewPlan, canWritePlan, canViewCosts, canEditProject, canLogTime, canWriteCost, canManageRepos, canReviewSuggestions] = await Promise.all([
+  const [canViewPlan, canWritePlan, canViewCosts, canEditProject, canLogTime, canWriteCost, canManageRepos, canReviewSuggestions, canQueryAi] = await Promise.all([
     canDo(prisma, { userId: currentUser.id, companyId: project.companyId, projectId, action: "plan:read" }),
     canDo(prisma, { userId: currentUser.id, companyId: project.companyId, projectId, action: "plan:write" }),
     canDo(prisma, { userId: currentUser.id, companyId: project.companyId, projectId, action: "cost:read" }),
@@ -124,7 +139,9 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
     canDo(prisma, { userId: currentUser.id, companyId: project.companyId, projectId, action: "cost:write" }),
     canDo(prisma, { userId: currentUser.id, companyId: project.companyId, projectId, action: "project:update" }),
     canDo(prisma, { userId: currentUser.id, companyId: project.companyId, projectId, action: "note:create" }),
+    canDo(prisma, { userId: currentUser.id, companyId: project.companyId, action: "ai:query" }),
   ]);
+  const aiConfig = canQueryAi ? await getAiProviderConfigSummary(prisma, project.companyId) : null;
 
   const projectMembers = await prisma.projectMember.findMany({
     where: { projectId },
@@ -263,6 +280,8 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
     }
   }
 
+  const directCosts = canViewCosts ? await listProjectDirectCosts(prisma, projectId) : [];
+
   const STAT_TILES = [
     { label: "Logged", value: hoursLabel(pack.totals.actualMinutes) },
     ...(canViewPlan ? [{ label: "Planned", value: hoursLabel(pack.totals.plannedMinutes) }] : []),
@@ -277,7 +296,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
         <div>
           <div className="flex flex-wrap items-center gap-[10px]">
             <h2 className="m-0 text-[30px] font-[640] tracking-[-0.028em] text-text">{project.name}</h2>
-            <span className={project.status === "ACTIVE" ? badgeAccent : badgeNeutral}>{project.status === "ACTIVE" ? "Active" : project.status === "COMPLETED" ? "Completed" : "Abandoned"}</span>
+            <span className={project.status === "ACTIVE" ? badgeAccent : badgeNeutral}>{PROJECT_STATUS_LABEL[project.status]}</span>
           </div>
           <p className="m-0 mt-[7px] max-w-[62ch] text-[15px] leading-[1.5] text-text-secondary">
             Started {new Date(project.startDate).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
@@ -306,6 +325,26 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
           {missingEvidenceCount} note{missingEvidenceCount === 1 ? "" : "s"} on this project {missingEvidenceCount === 1 ? "is" : "are"} missing a narrative
           or a linked piece of evidence.
         </div>
+      )}
+
+      <p className={`mt-9 mb-3 ${eyebrow}`}>Claim details</p>
+      <ProjectClaimDetails
+        projectId={projectId}
+        companyId={project.companyId}
+        canEdit={canEditProject}
+        data={{
+          status: project.status,
+          fieldOfScienceOrTechnology: project.fieldOfScienceOrTechnology,
+          advanceSought: project.advanceSought,
+          qualificationStatus: project.qualificationStatus,
+        }}
+      />
+
+      {aiConfig && (
+        <>
+          <p className={`mt-9 mb-3 ${eyebrow}`}>Ask AI</p>
+          <AiChatPanel companyId={project.companyId} projectId={projectId} suggestedQueries={PROJECT_SUGGESTED_QUERIES} />
+        </>
       )}
 
       <p className={`mt-9 mb-3 ${eyebrow}`}>Owner &amp; contributors</p>
@@ -350,6 +389,27 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
         <>
           <p className={`mt-9 mb-3 ${eyebrow}`}>Cost by person &amp; role</p>
           <ProjectCostSummary byPerson={costSummary.byPerson} byRole={costSummary.byRole} />
+        </>
+      )}
+
+      {canViewCosts && (
+        <>
+          <p className={`mt-9 mb-3 ${eyebrow}`}>Direct costs</p>
+          <ProjectDirectCosts
+            projectId={projectId}
+            companyId={project.companyId}
+            canWrite={canWriteCost}
+            costs={directCosts.map((c) => ({
+              id: c.id,
+              description: c.description,
+              category: c.category,
+              amountMinorUnits: c.amountMinorUnits,
+              currency: c.currency,
+              isOverseas: c.isOverseas,
+              isSubsidised: c.isSubsidised,
+              date: c.date.toISOString(),
+            }))}
+          />
         </>
       )}
 

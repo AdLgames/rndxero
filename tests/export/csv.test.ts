@@ -57,6 +57,7 @@ function buildContent(): ClaimPackContent {
     variance: [],
     totals: { plannedMinutes: 0, actualMinutes: 120, derivedCostMinorUnits: null },
     integrity: [],
+    auditTrail: [],
     includesCosts: false,
   };
 }

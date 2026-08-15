@@ -9,6 +9,7 @@ import type { MembershipRole, MembershipStatus, ProjectRole } from "@/lib/genera
 export type Action =
   | "billing:manage"
   | "membership:manage"
+  | "company:update"
   | "project:create"
   | "project:read"
   | "project:update"
@@ -27,6 +28,8 @@ export type Action =
   | "note:update"
   | "note:amend"
   | "note:remap"
+  | "comment:create"
+  | "comment:read"
   | "rate:read"
   | "rate:write"
   | "cost:read"

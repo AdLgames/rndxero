@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { badgeAccent, badgeNeutral, buttonGhost } from "@/app/components/ui";
 import type { AiProviderConfigSummary } from "@/lib/ai/repository";
+import { COMPANY_SUGGESTED_QUERIES } from "@/lib/ai/suggested-queries";
 import { AiChatPanel } from "./AiChatPanel";
 import { AiSettingsForm } from "./AiSettingsForm";
 
@@ -33,7 +34,7 @@ export function AiAssistantClient({
       {canConfigure && settingsOpen && <AiSettingsForm companyId={companyId} initialConfig={initialConfig} />}
 
       {initialConfig ? (
-        <AiChatPanel companyId={companyId} />
+        <AiChatPanel companyId={companyId} suggestedQueries={COMPANY_SUGGESTED_QUERIES} />
       ) : (
         <p className="text-[14px] text-text-secondary">
           {canConfigure
