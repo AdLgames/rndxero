@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Spinner } from "@/app/components/icons";
 import { buttonPrimary, input } from "@/app/components/ui";
-import type { GuidanceSource } from "@/lib/ai/guidance-qa";
+import type { GuidanceSource } from "@/lib/ai/assistant";
 
 interface ChatEntry {
   role: "user" | "assistant";
@@ -12,13 +12,22 @@ interface ChatEntry {
   isError?: boolean;
 }
 
-export function AiChatPanel({ companyId }: { companyId: string }) {
+export function AiChatPanel({
+  companyId,
+  projectId,
+  suggestedQueries,
+}: {
+  companyId: string;
+  /** Scopes the question to one project's own evidence, in addition to HMRC guidance — omit for a company-wide question. */
+  projectId?: string;
+  suggestedQueries?: string[];
+}) {
   const [question, setQuestion] = useState("");
   const [entries, setEntries] = useState<ChatEntry[]>([]);
   const [status, setStatus] = useState<"idle" | "asking">("idle");
 
-  async function ask() {
-    const trimmed = question.trim();
+  async function ask(explicitQuestion?: string) {
+    const trimmed = (explicitQuestion ?? question).trim();
     if (!trimmed || status === "asking") return;
 
     setEntries((prev) => [...prev, { role: "user", content: trimmed }]);
@@ -29,7 +38,7 @@ export function AiChatPanel({ companyId }: { companyId: string }) {
       const response = await fetch("/api/ai/ask", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ companyId, question: trimmed }),
+        body: JSON.stringify({ companyId, projectId, question: trimmed }),
       });
       const body = (await response.json().catch(() => ({}))) as { answer?: string; sources?: GuidanceSource[]; error?: string };
       if (!response.ok || !body.answer) {
@@ -46,9 +55,9 @@ export function AiChatPanel({ companyId }: { companyId: string }) {
 
   return (
     <div className="rounded-[16px] border border-black/[.06] bg-surface-sunken p-6">
-      <p className={`m-0 mb-4 text-[12.5px] text-text-tertiary`}>
-        Answers are drawn from HMRC&apos;s published guidance, with citations — not a determination of whether any
-        project qualifies. Confirm anything decision-critical with your advisor.
+      <p className="m-0 mb-4 text-[12.5px] text-text-tertiary">
+        Answers are drawn from HMRC&apos;s published guidance{projectId ? " and this project's own logged evidence" : ""}, with
+        citations — not a determination of whether any project qualifies. Confirm anything decision-critical with your advisor.
       </p>
 
       {entries.length > 0 && (
@@ -80,6 +89,25 @@ export function AiChatPanel({ companyId }: { companyId: string }) {
         </div>
       )}
 
+      {suggestedQueries && suggestedQueries.length > 0 && (
+        <select
+          value=""
+          disabled={status === "asking"}
+          onChange={(e) => {
+            const chosen = e.target.value;
+            if (chosen) ask(chosen);
+          }}
+          className={`${input} mb-[10px] cursor-pointer`}
+        >
+          <option value="">Suggested questions…</option>
+          {suggestedQueries.map((q) => (
+            <option key={q} value={q}>
+              {q}
+            </option>
+          ))}
+        </select>
+      )}
+
       <div className="flex items-center gap-3">
         <input
           value={question}
@@ -90,10 +118,10 @@ export function AiChatPanel({ companyId }: { companyId: string }) {
               ask();
             }
           }}
-          placeholder="Ask about HMRC R&D guidance…"
+          placeholder="Ask a question…"
           className={input}
         />
-        <button type="button" onClick={ask} disabled={!question.trim() || status === "asking"} className={buttonPrimary}>
+        <button type="button" onClick={() => ask()} disabled={!question.trim() || status === "asking"} className={buttonPrimary}>
           {status === "asking" && <Spinner />}
           {status === "asking" ? "Asking…" : "Ask"}
         </button>
