@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { SubmissionBasis, UncertaintyNoteType } from "@/lib/generated/prisma/client";
 import { weekComplianceStatus, type WeekComplianceStatus } from "@/lib/compliance/readiness";
 import { SegmentedControl } from "@/app/components/SegmentedControl";
@@ -57,6 +57,45 @@ function minutesToHoursLabel(minutes: number): string {
   return (minutes / 60).toString();
 }
 
+/**
+ * A partial week is easy to lose — a wrong-tab close, a laptop lid, a
+ * flaky wifi connection mid-form. This is a convenience cache only, keyed
+ * per-week in the browser's own storage: it never substitutes for an
+ * actual submission, and a real server-side `existing` submission always
+ * wins over a stale local draft for that project.
+ */
+function draftStorageKey(weekKey: string): string {
+  return `claimtrail:capture-draft:${weekKey}`;
+}
+
+function loadDraft(weekKey: string): Record<string, ProjectFormState> | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(draftStorageKey(weekKey));
+    if (!raw) return null;
+    return (JSON.parse(raw) as { state: Record<string, ProjectFormState> }).state;
+  } catch {
+    return null;
+  }
+}
+
+function saveDraft(weekKey: string, state: Record<string, ProjectFormState>): void {
+  try {
+    window.localStorage.setItem(draftStorageKey(weekKey), JSON.stringify({ savedAt: new Date().toISOString(), state }));
+  } catch {
+    // Quota exceeded or private-browsing storage disabled — losing the autosave
+    // is a minor inconvenience, not data loss, since nothing has been submitted yet.
+  }
+}
+
+function clearDraft(weekKey: string): void {
+  try {
+    window.localStorage.removeItem(draftStorageKey(weekKey));
+  } catch {
+    // ignore
+  }
+}
+
 export function CaptureClient({
   weekKey,
   projects: initialProjects,
@@ -68,25 +107,46 @@ export function CaptureClient({
   daysUntilAutoLock: number;
 }) {
   const [projects, setProjects] = useState(initialProjects);
-  const [state, setState] = useState<Record<string, ProjectFormState>>(() =>
-    Object.fromEntries(
-      initialProjects.map((p) => [
-        p.projectId,
-        {
-          hours: p.existing ? minutesToHoursLabel(p.existing.minutes) : p.prefillMinutes !== null ? minutesToHoursLabel(p.prefillMinutes) : "",
-          nothingThisWeek: false,
-          basis: p.existing?.basis ?? "ESTIMATED",
-          notes: {},
-          newUncertaintyOpen: false,
-          newTitle: "",
-          newBaseline: "",
-        },
-      ])
-    )
-  );
+  const [state, setState] = useState<Record<string, ProjectFormState>>(() => {
+    const draft = loadDraft(weekKey);
+    return Object.fromEntries(
+      initialProjects.map((p) => {
+        // A real submission for this project always wins over a stale local draft.
+        if (draft?.[p.projectId] && !p.existing) {
+          return [p.projectId, draft[p.projectId]];
+        }
+        return [
+          p.projectId,
+          {
+            hours: p.existing ? minutesToHoursLabel(p.existing.minutes) : p.prefillMinutes !== null ? minutesToHoursLabel(p.prefillMinutes) : "",
+            nothingThisWeek: false,
+            basis: p.existing?.basis ?? "ESTIMATED",
+            notes: {},
+            newUncertaintyOpen: false,
+            newTitle: "",
+            newBaseline: "",
+          },
+        ];
+      })
+    );
+  });
   const [status, setStatus] = useState<"idle" | "saving" | "done" | "error">("idle");
   const [errorMessage, setErrorMessage] = useState("");
   const [loggedSummary, setLoggedSummary] = useState<Array<{ projectName: string; hours: number }>>([]);
+  const [draftSavedAt, setDraftSavedAt] = useState<string | null>(() => loadDraft(weekKey) !== null ? new Date().toISOString() : null);
+
+  const hasDraftableContent = Object.values(state).some(
+    (form) => form.nothingThisWeek || form.hours.trim() !== "" || Object.values(form.notes).some((n) => n.type !== null)
+  );
+
+  useEffect(() => {
+    if (!hasDraftableContent) return;
+    const timeout = setTimeout(() => {
+      saveDraft(weekKey, state);
+      setDraftSavedAt(new Date().toISOString());
+    }, 400);
+    return () => clearTimeout(timeout);
+  }, [state, weekKey, hasDraftableContent]);
 
   function updateProject(projectId: string, patch: Partial<ProjectFormState>) {
     setState((prev) => ({ ...prev, [projectId]: { ...prev[projectId], ...patch } }));
@@ -229,6 +289,8 @@ export function CaptureClient({
       }
       setLoggedSummary(summary);
       setStatus("done");
+      clearDraft(weekKey);
+      setDraftSavedAt(null);
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : "Something went wrong");
       setStatus("error");
@@ -271,7 +333,15 @@ export function CaptureClient({
   return (
     <div>
       <div className="mb-4 flex items-center justify-between">
-        <span className="text-[12.5px] text-text-tertiary">Quick-fill</span>
+        <span className="flex items-center gap-[6px] text-[12.5px] text-text-tertiary">
+          Quick-fill
+          {draftSavedAt && (
+            <span className="flex items-center gap-[4px] text-text-quaternary">
+              <span className="h-[5px] w-[5px] rounded-full bg-accent" aria-hidden />
+              Draft saved
+            </span>
+          )}
+        </span>
         <button type="button" onClick={equalSplit} className={buttonGhost}>
           Equal split ({STANDARD_WEEK_HOURS}h across active projects)
         </button>
