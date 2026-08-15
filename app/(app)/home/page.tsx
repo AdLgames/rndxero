@@ -197,12 +197,13 @@ export default async function HomePage() {
   // Same company the board preview features, if there is one — Ask AI is a per-company
   // capability (each company brings its own provider), so it has to pick one.
   const aiCompanyId = homeBoard?.companyId ?? companyIds[0];
-  const [aiConfig, canQueryAi] = aiCompanyId
+  const [aiConfig, canQueryAi, canConfigureAi] = aiCompanyId
     ? await Promise.all([
         getAiProviderConfigSummary(prisma, aiCompanyId),
         canDo(prisma, { userId: currentUser.id, companyId: aiCompanyId, action: "ai:query" }),
+        canDo(prisma, { userId: currentUser.id, companyId: aiCompanyId, action: "ai:configure" }),
       ])
-    : [null, false];
+    : [null, false, false];
 
   const firstName = currentUser.name.trim().split(/\s+/)[0];
 
@@ -252,10 +253,15 @@ export default async function HomePage() {
         </div>
       )}
 
-      {aiConfig && canQueryAi && aiCompanyId && (
+      {canQueryAi && aiCompanyId && (
         <>
           <p className="mt-7 mb-[10px] text-[13px] font-[600] tracking-[-0.01em] text-text">Ask AI</p>
-          <AiChatPanel companyId={aiCompanyId} suggestedQueries={COMPANY_SUGGESTED_QUERIES} />
+          <AiChatPanel
+            companyId={aiCompanyId}
+            suggestedQueries={COMPANY_SUGGESTED_QUERIES}
+            configured={aiConfig !== null && aiConfig.enabled && aiConfig.hasApiKey}
+            canConfigure={canConfigureAi}
+          />
         </>
       )}
 

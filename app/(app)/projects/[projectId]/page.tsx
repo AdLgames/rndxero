@@ -130,17 +130,19 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
     throw error;
   }
 
-  const [canViewPlan, canWritePlan, canViewCosts, canEditProject, canLogTime, canWriteCost, canManageRepos, canReviewSuggestions, canQueryAi] = await Promise.all([
-    canDo(prisma, { userId: currentUser.id, companyId: project.companyId, projectId, action: "plan:read" }),
-    canDo(prisma, { userId: currentUser.id, companyId: project.companyId, projectId, action: "plan:write" }),
-    canDo(prisma, { userId: currentUser.id, companyId: project.companyId, projectId, action: "cost:read" }),
-    canDo(prisma, { userId: currentUser.id, companyId: project.companyId, projectId, action: "project:update" }),
-    canDo(prisma, { userId: currentUser.id, companyId: project.companyId, projectId, action: "submission:create" }),
-    canDo(prisma, { userId: currentUser.id, companyId: project.companyId, projectId, action: "cost:write" }),
-    canDo(prisma, { userId: currentUser.id, companyId: project.companyId, projectId, action: "project:update" }),
-    canDo(prisma, { userId: currentUser.id, companyId: project.companyId, projectId, action: "note:create" }),
-    canDo(prisma, { userId: currentUser.id, companyId: project.companyId, action: "ai:query" }),
-  ]);
+  const [canViewPlan, canWritePlan, canViewCosts, canEditProject, canLogTime, canWriteCost, canManageRepos, canReviewSuggestions, canQueryAi, canConfigureAi] =
+    await Promise.all([
+      canDo(prisma, { userId: currentUser.id, companyId: project.companyId, projectId, action: "plan:read" }),
+      canDo(prisma, { userId: currentUser.id, companyId: project.companyId, projectId, action: "plan:write" }),
+      canDo(prisma, { userId: currentUser.id, companyId: project.companyId, projectId, action: "cost:read" }),
+      canDo(prisma, { userId: currentUser.id, companyId: project.companyId, projectId, action: "project:update" }),
+      canDo(prisma, { userId: currentUser.id, companyId: project.companyId, projectId, action: "submission:create" }),
+      canDo(prisma, { userId: currentUser.id, companyId: project.companyId, projectId, action: "cost:write" }),
+      canDo(prisma, { userId: currentUser.id, companyId: project.companyId, projectId, action: "project:update" }),
+      canDo(prisma, { userId: currentUser.id, companyId: project.companyId, projectId, action: "note:create" }),
+      canDo(prisma, { userId: currentUser.id, companyId: project.companyId, action: "ai:query" }),
+      canDo(prisma, { userId: currentUser.id, companyId: project.companyId, action: "ai:configure" }),
+    ]);
   const aiConfig = canQueryAi ? await getAiProviderConfigSummary(prisma, project.companyId) : null;
 
   const projectMembers = await prisma.projectMember.findMany({
@@ -340,10 +342,16 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
         }}
       />
 
-      {aiConfig && (
+      {canQueryAi && (
         <>
           <p className={`mt-9 mb-3 ${eyebrow}`}>Ask AI</p>
-          <AiChatPanel companyId={project.companyId} projectId={projectId} suggestedQueries={PROJECT_SUGGESTED_QUERIES} />
+          <AiChatPanel
+            companyId={project.companyId}
+            projectId={projectId}
+            suggestedQueries={PROJECT_SUGGESTED_QUERIES}
+            configured={aiConfig !== null && aiConfig.enabled && aiConfig.hasApiKey}
+            canConfigure={canConfigureAi}
+          />
         </>
       )}
 

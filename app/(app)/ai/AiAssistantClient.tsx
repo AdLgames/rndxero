@@ -33,15 +33,12 @@ export function AiAssistantClient({
 
       {canConfigure && settingsOpen && <AiSettingsForm companyId={companyId} initialConfig={initialConfig} />}
 
-      {initialConfig ? (
-        <AiChatPanel companyId={companyId} suggestedQueries={COMPANY_SUGGESTED_QUERIES} />
-      ) : (
-        <p className="text-[14px] text-text-secondary">
-          {canConfigure
-            ? "Configure a provider above to start asking questions."
-            : "Ask a company Owner to connect an AI provider before this is usable."}
-        </p>
-      )}
+      <AiChatPanel
+        companyId={companyId}
+        suggestedQueries={COMPANY_SUGGESTED_QUERIES}
+        configured={initialConfig !== null && initialConfig.enabled && initialConfig.hasApiKey}
+        canConfigure={canConfigure}
+      />
     </div>
   );
 }

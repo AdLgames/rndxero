@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import { Spinner } from "@/app/components/icons";
-import { buttonPrimary, input } from "@/app/components/ui";
+import { buttonPrimary, buttonSecondary, input } from "@/app/components/ui";
 import type { GuidanceSource } from "@/lib/ai/assistant";
 
 interface ChatEntry {
@@ -12,24 +13,43 @@ interface ChatEntry {
   isError?: boolean;
 }
 
+const MAX_VISIBLE_SUGGESTIONS = 8;
+
 export function AiChatPanel({
   companyId,
   projectId,
   suggestedQueries,
+  configured,
+  canConfigure,
 }: {
   companyId: string;
   /** Scopes the question to one project's own evidence, in addition to HMRC guidance — omit for a company-wide question. */
   projectId?: string;
   suggestedQueries?: string[];
+  /** Whether the company has an AI provider set up at all — false renders an empty state instead of the chat UI. */
+  configured: boolean;
+  /** Whether the current user can reach /ai to set one up (Owner-only, per ai:configure). */
+  canConfigure: boolean;
 }) {
   const [question, setQuestion] = useState("");
   const [entries, setEntries] = useState<ChatEntry[]>([]);
   const [status, setStatus] = useState<"idle" | "asking">("idle");
+  const [suggestOpen, setSuggestOpen] = useState(false);
+  const [highlight, setHighlight] = useState(0);
+  const blurTimeout = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+
+  const filteredSuggestions = useMemo(() => {
+    if (!suggestedQueries) return [];
+    const needle = question.trim().toLowerCase();
+    const matches = needle ? suggestedQueries.filter((q) => q.toLowerCase().includes(needle)) : suggestedQueries;
+    return matches.slice(0, MAX_VISIBLE_SUGGESTIONS);
+  }, [suggestedQueries, question]);
 
   async function ask(explicitQuestion?: string) {
     const trimmed = (explicitQuestion ?? question).trim();
     if (!trimmed || status === "asking") return;
 
+    setSuggestOpen(false);
     setEntries((prev) => [...prev, { role: "user", content: trimmed }]);
     setQuestion("");
     setStatus("asking");
@@ -51,6 +71,24 @@ export function AiChatPanel({
     } finally {
       setStatus("idle");
     }
+  }
+
+  if (!configured) {
+    return (
+      <div className="rounded-[16px] border border-dashed border-black/[.14] bg-surface-sunken p-6 text-center">
+        <p className="m-0 text-[13.5px] font-[590] text-text">AI Assistant not configured</p>
+        <p className="m-0 mt-[6px] text-[13px] leading-[1.5] text-text-secondary">
+          {canConfigure
+            ? "Connect an AI provider to ask questions against HMRC guidance and this company's logged evidence."
+            : "Ask a company Owner to connect an AI provider under AI Assistant settings before you can ask questions here."}
+        </p>
+        {canConfigure && (
+          <Link href="/ai" className={`${buttonSecondary} mt-4 inline-flex`}>
+            Set up AI Assistant
+          </Link>
+        )}
+      </div>
+    );
   }
 
   return (
@@ -89,42 +127,68 @@ export function AiChatPanel({
         </div>
       )}
 
-      {suggestedQueries && suggestedQueries.length > 0 && (
-        <select
-          value=""
-          disabled={status === "asking"}
-          onChange={(e) => {
-            const chosen = e.target.value;
-            if (chosen) ask(chosen);
-          }}
-          className={`${input} mb-[10px] cursor-pointer`}
-        >
-          <option value="">Suggested questions…</option>
-          {suggestedQueries.map((q) => (
-            <option key={q} value={q}>
-              {q}
-            </option>
-          ))}
-        </select>
-      )}
-
-      <div className="flex items-center gap-3">
+      <div className="relative flex items-center gap-3">
         <input
           value={question}
-          onChange={(e) => setQuestion(e.target.value)}
+          onChange={(e) => {
+            setQuestion(e.target.value);
+            setHighlight(0);
+            if (suggestedQueries && suggestedQueries.length > 0) setSuggestOpen(true);
+          }}
+          onFocus={() => {
+            clearTimeout(blurTimeout.current);
+            if (suggestedQueries && suggestedQueries.length > 0) setSuggestOpen(true);
+          }}
+          onBlur={() => {
+            // Let a click on a suggestion register before the list disappears.
+            blurTimeout.current = setTimeout(() => setSuggestOpen(false), 120);
+          }}
           onKeyDown={(e) => {
+            if (e.key === "Escape") {
+              setSuggestOpen(false);
+              return;
+            }
+            if (suggestOpen && filteredSuggestions.length > 0 && (e.key === "ArrowDown" || e.key === "ArrowUp")) {
+              e.preventDefault();
+              const delta = e.key === "ArrowDown" ? 1 : -1;
+              setHighlight((h) => (h + delta + filteredSuggestions.length) % filteredSuggestions.length);
+              return;
+            }
             if (e.key === "Enter" && !e.shiftKey) {
               e.preventDefault();
-              ask();
+              if (suggestOpen && filteredSuggestions.length > 0) {
+                ask(filteredSuggestions[highlight]);
+              } else {
+                ask();
+              }
             }
           }}
-          placeholder="Ask a question…"
+          placeholder="Ask a question, or pick a suggestion below…"
           className={input}
         />
         <button type="button" onClick={() => ask()} disabled={!question.trim() || status === "asking"} className={buttonPrimary}>
           {status === "asking" && <Spinner />}
           {status === "asking" ? "Asking…" : "Ask"}
         </button>
+
+        {suggestOpen && filteredSuggestions.length > 0 && (
+          <div className="absolute left-0 right-[92px] top-[calc(100%+6px)] z-10 max-h-[240px] overflow-y-auto rounded-[12px] border border-black/[.08] bg-white py-[6px] shadow-[0_8px_24px_rgba(0,0,0,.10)]">
+            {filteredSuggestions.map((q, i) => (
+              <button
+                key={q}
+                type="button"
+                onMouseDown={(e) => e.preventDefault()}
+                onMouseEnter={() => setHighlight(i)}
+                onClick={() => ask(q)}
+                className={`block w-full px-[14px] py-[9px] text-left text-[13px] leading-[1.4] transition-colors duration-100 ${
+                  i === highlight ? "bg-control-track text-text" : "text-text-tertiary"
+                }`}
+              >
+                {q}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
