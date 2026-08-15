@@ -2,7 +2,10 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { getCurrentUser, SESSION_COOKIE_NAME } from "@/lib/auth/session";
+import { listCompanyAccountingPeriods } from "@/lib/finance/accounting-periods";
+import { claimNotificationDeadline, daysUntil } from "@/lib/compliance/deadlines";
 import { FinanceWeeksClient, type SubmissionRow } from "./FinanceWeeksClient";
+import { AccountingPeriods, type AccountingPeriodRow } from "./AccountingPeriods";
 
 export default async function FinancePage() {
   const cookieStore = await cookies();
@@ -64,6 +67,29 @@ export default async function FinancePage() {
   const companies = await prisma.company.findMany({ where: { id: { in: financeCompanyIds } } });
   const companyNameById = new Map(companies.map((c) => [c.id, c.name]));
 
+  const ownerCompanyIds = new Set(currentUser.memberships.filter((m) => m.role === "OWNER").map((m) => m.companyId));
+
+  const periodsByCompany = await Promise.all(
+    companies.map(async (company) => {
+      const periods = await listCompanyAccountingPeriods(prisma, company.id);
+      const rows: AccountingPeriodRow[] = periods.map((p) => {
+        const deadline = claimNotificationDeadline(p.endDate);
+        return {
+          id: p.id,
+          companyId: company.id,
+          companyName: company.name,
+          label: p.label,
+          startDate: p.startDate.toISOString(),
+          endDate: p.endDate.toISOString(),
+          claimNotifiedAt: p.claimNotifiedAt ? p.claimNotifiedAt.toISOString() : null,
+          notificationDeadline: deadline.toISOString(),
+          daysUntilDeadline: daysUntil(deadline),
+        };
+      });
+      return { company, rows };
+    })
+  );
+
   const rows: SubmissionRow[] = submissions.map((s) => ({
     id: s.id,
     companyId: s.companyId,
@@ -112,6 +138,20 @@ export default async function FinancePage() {
         Lock weeks once they&apos;re settled. After that the only correction is an attributed amendment — the
         original stays exactly as submitted.
       </p>
+
+      <p className="m-0 mb-3 text-[12.5px] text-text-tertiary">
+        Accounting periods — UK first-time claimants must notify HMRC within 6 months of the period end
+      </p>
+      <div className="mb-8 flex flex-col gap-7">
+        {periodsByCompany.map(({ company, rows: periodRows }) => (
+          <div key={company.id}>
+            {periodsByCompany.length > 1 && <h3 className="m-0 mb-2 text-[13.5px] font-[600] text-text">{company.name}</h3>}
+            <AccountingPeriods companyId={company.id} periods={periodRows} canWrite={ownerCompanyIds.has(company.id)} />
+          </div>
+        ))}
+      </div>
+
+      <p className="m-0 mb-3 text-[12.5px] text-text-tertiary">Weekly submissions</p>
       <FinanceWeeksClient submissions={rows} />
     </div>
   );
