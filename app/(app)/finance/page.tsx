@@ -54,6 +54,12 @@ export default async function FinancePage() {
     orderBy: { createdAt: "asc" },
   });
 
+  const submissionComments = await prisma.submissionComment.findMany({
+    where: { submissionId: { in: submissions.map((s) => s.id) } },
+    include: { author: { select: { name: true } } },
+    orderBy: { createdAt: "asc" },
+  });
+
   const lockAuditLogs = await prisma.auditLog.findMany({
     where: {
       entityType: "WeeklySubmission",
@@ -129,6 +135,9 @@ export default async function FinancePage() {
         reason: log.reason,
         createdAt: log.createdAt.toISOString(),
       })),
+    comments: submissionComments
+      .filter((c) => c.submissionId === s.id)
+      .map((c) => ({ id: c.id, body: c.body, authorName: c.author.name, createdAt: c.createdAt.toISOString() })),
   }));
 
   return (

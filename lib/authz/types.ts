@@ -28,6 +28,8 @@ export type Action =
   | "note:update"
   | "note:amend"
   | "note:remap"
+  | "comment:create"
+  | "comment:read"
   | "rate:read"
   | "rate:write"
   | "cost:read"

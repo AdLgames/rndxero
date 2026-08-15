@@ -250,6 +250,26 @@ describe("AI (ai:configure / ai:query)", () => {
   });
 });
 
+describe("comment:create / comment:read (submission comment threads)", () => {
+  it("Owner, Finance, Lead, and Contributor can all post a comment", () => {
+    expect(can(subject({ companyRole: "OWNER", projectRole: null }), "comment:create")).toBe(true);
+    expect(can(subject({ companyRole: "FINANCE", projectRole: null }), "comment:create")).toBe(true);
+    expect(can(subject({ companyRole: "LEAD" }), "comment:create")).toBe(true);
+    expect(can(subject({ companyRole: "CONTRIBUTOR" }), "comment:create")).toBe(true);
+  });
+
+  it("Adviser can read but not post — read-only across the board", () => {
+    const adviser = subject({ companyRole: "ADVISER", projectRole: "ADVISER" });
+    expect(can(adviser, "comment:read")).toBe(true);
+    expect(can(adviser, "comment:create")).toBe(false);
+  });
+
+  it("is project-scoped — Owner/Finance act company-wide, everyone else needs standing on the project", () => {
+    expect(can(subject({ companyRole: "OWNER", projectRole: null }), "comment:read")).toBe(true);
+    expect(can(subject({ companyRole: "LEAD", projectRole: null }), "comment:read")).toBe(false);
+  });
+});
+
 describe("BOARD-PLAN.md Phase 2 'done when' scenarios", () => {
   it("a contributor's session provably cannot read a rate", () => {
     const contributor = subject({ companyRole: "CONTRIBUTOR", projectRole: "CONTRIBUTOR", canViewCosts: false });
