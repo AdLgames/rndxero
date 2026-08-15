@@ -1,7 +1,6 @@
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { prisma } from "@/lib/db";
-import { BoardError, getBoardData, remapNote } from "@/lib/board/repository";
-import { createPlanVersion } from "@/lib/plan/repository";
+import { BoardError, remapNote } from "@/lib/board/repository";
 
 const hasDatabase = Boolean(process.env.DATABASE_URL);
 
@@ -41,70 +40,6 @@ describe.skipIf(!hasDatabase)("board repository (integration)", () => {
       'TRUNCATE "AuditLog", "PlannedAllocation", "PlanVersion", "UncertaintyNote", "WeeklySubmission", "Uncertainty", "Project", "Company", "User" RESTART IDENTITY CASCADE'
     );
     await prisma.$disconnect();
-  });
-
-  describe("getBoardData", () => {
-    it("returns the requested week window as column keys, in order", async () => {
-      const data = await getBoardData(prisma, { companyId, projectIds: [projectId], fromWeekKey: "2026-W30", weekCount: 4 });
-      expect(data.weekKeys).toEqual(["2026-W30", "2026-W31", "2026-W32", "2026-W33"]);
-    });
-
-    it("only includes lanes for the requested projects within this company", async () => {
-      const data = await getBoardData(prisma, { companyId, projectIds: [projectId], fromWeekKey: "2026-W30", weekCount: 4 });
-      expect(data.lanes.map((l) => l.projectId)).toEqual([projectId]);
-    });
-
-    it("aggregates planned minutes from the current plan version, within the window only", async () => {
-      await createPlanVersion(prisma, {
-        projectId,
-        createdById: userId,
-        allocations: [
-          { uncertaintyId: uncertaintyAId, weekKey: "2026-W30", plannedMinutes: 300 },
-          { uncertaintyId: uncertaintyBId, weekKey: "2026-W30", plannedMinutes: 120 },
-          { uncertaintyId: uncertaintyAId, weekKey: "2026-W50", plannedMinutes: 600 }, // outside the window
-        ],
-      });
-
-      const data = await getBoardData(prisma, { companyId, projectIds: [projectId], fromWeekKey: "2026-W30", weekCount: 4 });
-      const lane = data.lanes[0];
-      expect(lane.plannedMinutesByWeek["2026-W30"]).toBe(420);
-      expect(lane.plannedMinutesByWeek["2026-W50"]).toBeUndefined();
-    });
-
-    it("sums actual minutes per week and groups notes per week with the parent submission's lock state", async () => {
-      const submission = await prisma.weeklySubmission.create({
-        data: { companyId, projectId, userId, weekKey: "2026-W31", minutes: 240, basis: "TRACKED", isRetrospective: false, lockedAt: new Date() },
-      });
-      await prisma.uncertaintyNote.create({
-        data: { submissionId: submission.id, uncertaintyId: uncertaintyAId, type: "FAILED_ATTEMPT", body: "Cache thrashed under load" },
-      });
-      await prisma.uncertaintyNote.create({
-        data: { submissionId: submission.id, uncertaintyId: uncertaintyBId, type: "ATTEMPT", body: "Tried streaming" },
-      });
-
-      const data = await getBoardData(prisma, { companyId, projectIds: [projectId], fromWeekKey: "2026-W30", weekCount: 4 });
-      const lane = data.lanes[0];
-      expect(lane.actualMinutesByWeek["2026-W31"]).toBe(240);
-      expect(lane.notesByWeek["2026-W31"]).toHaveLength(2);
-      expect(lane.notesByWeek["2026-W31"].every((n) => n.locked)).toBe(true);
-      expect(lane.notesByWeek["2026-W31"].map((n) => n.type).sort()).toEqual(["ATTEMPT", "FAILED_ATTEMPT"]);
-    });
-
-    it("leaves a week absent from the maps entirely when nothing touched it (the visible gap)", async () => {
-      const data = await getBoardData(prisma, { companyId, projectIds: [projectId], fromWeekKey: "2026-W30", weekCount: 4 });
-      const lane = data.lanes[0];
-      expect(lane.actualMinutesByWeek["2026-W32"]).toBeUndefined();
-      expect(lane.notesByWeek["2026-W32"]).toBeUndefined();
-    });
-
-    it("excludes submissions for a project outside the requested set even in the same company", async () => {
-      await prisma.weeklySubmission.create({
-        data: { companyId, projectId: otherProjectId, userId, weekKey: "2026-W30", minutes: 100, basis: "ESTIMATED", isRetrospective: false },
-      });
-      const data = await getBoardData(prisma, { companyId, projectIds: [projectId], fromWeekKey: "2026-W30", weekCount: 4 });
-      expect(data.lanes).toHaveLength(1);
-      expect(data.lanes[0].projectId).toBe(projectId);
-    });
   });
 
   describe("remapNote", () => {

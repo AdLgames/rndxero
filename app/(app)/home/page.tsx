@@ -5,10 +5,10 @@ import type { UncertaintyNoteType } from "@/lib/generated/prisma/client";
 import { prisma } from "@/lib/db";
 import { getCurrentUser, SESSION_COOKIE_NAME } from "@/lib/auth/session";
 import { canDo, listAccessibleProjectIds } from "@/lib/authz/service";
-import { getIsoWeekKey, getWeekBoundaries, shiftWeekKey } from "@/lib/capture/week-key";
+import { getIsoWeekKey, getWeekBoundaries } from "@/lib/capture/week-key";
 import { isNoteBacked } from "@/lib/compliance/readiness";
 import { buildNextActions, type NextAction, type UnloggedProject } from "@/lib/dashboard/tasks";
-import { getBoardData } from "@/lib/board/repository";
+import { getPortfolioBoardData, type PortfolioCard } from "@/lib/board/portfolio";
 import { getAiProviderConfigSummary } from "@/lib/ai/repository";
 import { COMPANY_SUGGESTED_QUERIES } from "@/lib/ai/suggested-queries";
 import { ArrowRightIcon } from "@/app/components/icons";
@@ -19,10 +19,6 @@ import { AiChatPanel } from "@/app/(app)/ai/AiChatPanel";
 /** Matches lib/locking's real auto-lock deadline (close + 7 days) — same constant capture/page.tsx uses. */
 const AUTO_LOCK_DAYS_AFTER_CLOSE = 7;
 const RECENT_ACTIVITY_COUNT = 8;
-/** Home's board embed is a lighter preview of the real /board — fewer weeks visible at once, but still pre-fetched wide enough to page a couple of times without a reload (see board/page.tsx for the same pattern at full size). */
-const HOME_BOARD_VISIBLE_WEEKS = 8;
-const HOME_BOARD_WEEKS_BACK = 16;
-const HOME_BOARD_WEEKS_FORWARD = 6;
 
 /** Colour-scale grammar shared with BoardClient.tsx's real board and the pre-login marketing page's illustration — opacity ramps with how hard-won the week's evidence was, not a second hue. Used here for the Latest Activity feed's per-entry dot. */
 const CELL_STYLE: Record<UncertaintyNoteType, string> = {
@@ -133,10 +129,10 @@ export default async function HomePage() {
     ...new Set((await Promise.all(companyIds.map((companyId) => listAccessibleProjectIds(prisma, { userId: currentUser.id, companyId })))).flat()),
   ];
 
-  // The board is inherently per-company (lanes are projects within one company) — feature whichever
+  // The board is inherently per-company (cards are projects within one company) — feature whichever
   // company has the most recent submission activity, same "recency wins" logic Projects' own
-  // /projects redirect uses, rather than trying to merge lanes from several companies into one board.
-  let homeBoard: { companyId: string; companyName: string; board: Awaited<ReturnType<typeof getBoardData>> } | null = null;
+  // /projects redirect uses, rather than trying to merge cards from several companies into one board.
+  let homeBoard: { companyId: string; companyName: string; cards: PortfolioCard[] } | null = null;
   if (companyIds.length > 0) {
     const mostRecentlyActive = await prisma.weeklySubmission.findFirst({
       where: { companyId: { in: companyIds } },
@@ -146,25 +142,12 @@ export default async function HomePage() {
     const boardCompanyId = mostRecentlyActive?.companyId ?? companyIds[0];
     const boardProjectIds = await listAccessibleProjectIds(prisma, { userId: currentUser.id, companyId: boardCompanyId });
     if (boardProjectIds.length > 0) {
-      const [company, board] = await Promise.all([
+      const [company, cards] = await Promise.all([
         prisma.company.findUniqueOrThrow({ where: { id: boardCompanyId }, select: { name: true } }),
-        getBoardData(prisma, {
-          companyId: boardCompanyId,
-          projectIds: boardProjectIds,
-          fromWeekKey: shiftWeekKey(currentWeekKey, -HOME_BOARD_WEEKS_BACK),
-          weekCount: HOME_BOARD_WEEKS_BACK + HOME_BOARD_WEEKS_FORWARD + 1,
-        }),
+        getPortfolioBoardData(prisma, { companyId: boardCompanyId, projectIds: boardProjectIds }),
       ]);
-      // A brand-new project with nothing logged or planned yet renders as a
-      // near-blank strip of empty week columns — reads as broken, not as
-      // "nothing here yet". Home's preview only features lanes with some
-      // actual signal; the full /board still shows every project, gaps
-      // included, since that completeness is the point there.
-      const startedLanes = board.lanes.filter(
-        (lane) => Object.values(lane.actualMinutesByWeek).some((m) => m > 0) || Object.values(lane.plannedMinutesByWeek).some((m) => m > 0)
-      );
-      if (startedLanes.length > 0) {
-        homeBoard = { companyId: boardCompanyId, companyName: company.name, board: { ...board, lanes: startedLanes } };
+      if (cards.length > 0) {
+        homeBoard = { companyId: boardCompanyId, companyName: company.name, cards };
       }
     }
   }
@@ -267,19 +250,10 @@ export default async function HomePage() {
 
       {homeBoard && (
         <>
-          <div className="mt-7 mb-[10px] flex items-center justify-between">
-            <p className="m-0 text-[13px] font-[600] tracking-[-0.01em] text-text">{companyIds.length > 1 ? `Board — ${homeBoard.companyName}` : "Board"}</p>
-            <Link href="/board" className="text-[12.5px] font-[590] text-accent hover:text-accent-hover">
-              View full board →
-            </Link>
-          </div>
-          <BoardClient
-            companyId={homeBoard.companyId}
-            board={homeBoard.board}
-            uncertaintiesByProject={{}}
-            remappableByProject={{}}
-            visibleWeekCount={HOME_BOARD_VISIBLE_WEEKS}
-          />
+          <p className="mt-7 mb-[10px] text-[13px] font-[600] tracking-[-0.01em] text-text">
+            {companyIds.length > 1 ? `Board — ${homeBoard.companyName}` : "Board"}
+          </p>
+          <BoardClient companyId={homeBoard.companyId} cards={homeBoard.cards} editableByProject={{}} compact />
         </>
       )}
 
