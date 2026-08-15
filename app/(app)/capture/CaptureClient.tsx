@@ -45,6 +45,10 @@ interface NoteSelection {
 
 interface ProjectFormState {
   hours: string;
+  /** Whether the visible input is being entered as raw hours or as a % of a standard week — `hours` is always kept as the source of truth for submission. */
+  hoursInputMode: "HOURS" | "PERCENT";
+  /** Raw percent text, only meaningful while hoursInputMode is "PERCENT" — kept separate so typing "5" doesn't get overwritten by a rounded hours->percent conversion. */
+  percent: string;
   nothingThisWeek: boolean;
   basis: SubmissionBasis;
   notes: Record<string, NoteSelection>;
@@ -55,6 +59,18 @@ interface ProjectFormState {
 
 function minutesToHoursLabel(minutes: number): string {
   return (minutes / 60).toString();
+}
+
+function percentToHoursLabel(percent: string): string {
+  const p = Number(percent);
+  if (Number.isNaN(p)) return "";
+  return (Math.round(((p / 100) * STANDARD_WEEK_HOURS) * 100) / 100).toString();
+}
+
+function hoursToPercentLabel(hours: string): string {
+  const h = Number(hours);
+  if (Number.isNaN(h)) return "";
+  return (Math.round((h / STANDARD_WEEK_HOURS) * 100 * 100) / 100).toString();
 }
 
 /**
@@ -119,6 +135,8 @@ export function CaptureClient({
           p.projectId,
           {
             hours: p.existing ? minutesToHoursLabel(p.existing.minutes) : p.prefillMinutes !== null ? minutesToHoursLabel(p.prefillMinutes) : "",
+            hoursInputMode: "HOURS",
+            percent: "",
             nothingThisWeek: false,
             basis: p.existing?.basis ?? "ESTIMATED",
             notes: {},
@@ -200,7 +218,7 @@ export function CaptureClient({
     setState((prev) => {
       const next = { ...prev };
       for (const p of eligible) {
-        next[p.projectId] = { ...next[p.projectId], nothingThisWeek: false, hours: each };
+        next[p.projectId] = { ...next[p.projectId], nothingThisWeek: false, hours: each, hoursInputMode: "HOURS", percent: "" };
       }
       return next;
     });
@@ -350,6 +368,7 @@ export function CaptureClient({
       <div className="flex flex-col gap-[14px]">
         {projects.map((project, i) => {
           const form = state[project.projectId];
+          const hoursMode = form.hoursInputMode ?? "HOURS";
           const locked = project.existing?.locked ?? false;
           const primaryUncertainty = project.uncertainties[0];
 
@@ -382,7 +401,9 @@ export function CaptureClient({
                   <Toggle
                     label="Nothing this week"
                     checked={form.nothingThisWeek}
-                    onChange={(checked) => updateProject(project.projectId, { nothingThisWeek: checked, hours: checked ? "" : form.hours })}
+                    onChange={(checked) =>
+                      updateProject(project.projectId, { nothingThisWeek: checked, hours: checked ? "" : form.hours, percent: checked ? "" : form.percent })
+                    }
                   />
                 )}
               </div>
@@ -397,21 +418,58 @@ export function CaptureClient({
                     <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-5">
                       <span className="text-[13.5px] text-text-secondary sm:w-[110px] sm:shrink-0">Hours</span>
                       <div className="flex flex-wrap items-center gap-[10px]">
-                        <input
-                          type="number"
-                          min="0"
-                          step="0.25"
-                          value={form.hours}
-                          disabled={form.nothingThisWeek}
-                          onChange={(e) => updateProject(project.projectId, { hours: e.target.value })}
-                          className="w-[70px] box-border rounded-[10px] border border-black/[.11] bg-white px-3 py-[9px] text-[15px] font-[590] text-text outline-none disabled:opacity-50"
-                        />
+                        <div className="flex items-center gap-[6px]">
+                          <input
+                            type="number"
+                            min="0"
+                            step={hoursMode === "PERCENT" ? "1" : "0.25"}
+                            value={hoursMode === "PERCENT" ? form.percent : form.hours}
+                            disabled={form.nothingThisWeek}
+                            onChange={(e) =>
+                              hoursMode === "PERCENT"
+                                ? updateProject(project.projectId, { percent: e.target.value, hours: percentToHoursLabel(e.target.value) })
+                                : updateProject(project.projectId, { hours: e.target.value })
+                            }
+                            className="w-[70px] box-border rounded-[10px] border border-black/[.11] bg-white px-3 py-[9px] text-[15px] font-[590] text-text outline-none disabled:opacity-50"
+                          />
+                          <div className="flex rounded-full bg-control-track p-[2px]" title="Enter time as raw hours or as a % of a standard week">
+                            {(["HOURS", "PERCENT"] as const).map((mode) => (
+                              <button
+                                key={mode}
+                                type="button"
+                                disabled={form.nothingThisWeek}
+                                onClick={() =>
+                                  updateProject(
+                                    project.projectId,
+                                    mode === "PERCENT"
+                                      ? { hoursInputMode: "PERCENT", percent: hoursToPercentLabel(form.hours) }
+                                      : { hoursInputMode: "HOURS" }
+                                  )
+                                }
+                                className={`rounded-full px-[10px] py-[4px] text-[12px] font-[500] transition-all duration-150 disabled:opacity-40 ${
+                                  hoursMode === mode ? "bg-white text-text shadow-[0_1px_2px_rgba(0,0,0,0.08)]" : "text-text-tertiary hover:text-text-secondary"
+                                }`}
+                              >
+                                {mode === "HOURS" ? "hrs" : "%"}
+                              </button>
+                            ))}
+                          </div>
+                          {hoursMode === "PERCENT" && form.percent.trim() !== "" && (
+                            <span className="text-[12.5px] text-text-quaternary">= {form.hours}h</span>
+                          )}
+                        </div>
                         <div className="flex flex-wrap gap-[6px]">
                           {project.prefillMinutes !== null && (
                             <button
                               type="button"
                               disabled={form.nothingThisWeek}
-                              onClick={() => updateProject(project.projectId, { hours: minutesToHoursLabel(project.prefillMinutes!) })}
+                              onClick={() =>
+                                updateProject(project.projectId, {
+                                  hours: minutesToHoursLabel(project.prefillMinutes!),
+                                  hoursInputMode: "HOURS",
+                                  percent: "",
+                                })
+                              }
                               className="rounded-full bg-control-track px-[13px] py-[7px] text-[13px] font-[500] text-text-secondary transition-all duration-150 hover:text-text disabled:opacity-40"
                             >
                               Copy previous week
@@ -420,7 +478,9 @@ export function CaptureClient({
                           <button
                             type="button"
                             disabled={form.nothingThisWeek}
-                            onClick={() => updateProject(project.projectId, { hours: String(STANDARD_WEEK_HOURS) })}
+                            onClick={() =>
+                              updateProject(project.projectId, { hours: String(STANDARD_WEEK_HOURS), hoursInputMode: "HOURS", percent: "" })
+                            }
                             className={`rounded-full px-[13px] py-[7px] text-[13px] transition-all duration-150 disabled:opacity-40 ${
                               form.hours === String(STANDARD_WEEK_HOURS) ? "bg-accent font-[590] text-white" : "bg-control-track font-[500] text-text-secondary hover:text-text"
                             }`}
