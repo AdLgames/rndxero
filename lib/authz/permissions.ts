@@ -23,6 +23,7 @@ const ROLE_ACTIONS: Record<AuthzSubject["companyRole"] & string, ReadonlySet<Act
   OWNER: new Set<Action>([
     "billing:manage",
     "membership:manage",
+    "company:update",
     "project:create",
     "project:read",
     "project:update",

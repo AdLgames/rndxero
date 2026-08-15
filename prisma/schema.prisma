@@ -48,6 +48,12 @@ model User {
   /// repeated/concurrent requests (double-clicks, multiple tabs, retries)
   /// — see lib/auth/rate-limit.ts.
   lastMagicLinkSentAt DateTime?
+  /// GDPR erasure request marker (lib/gdpr) — set when a user asks to be
+  /// deleted. Their evidence contributions are never removed (retention
+  /// obligations + append-only integrity outlive the account), only their
+  /// identifying fields; this timestamp is what a periodic job checks to
+  /// find accounts still owed that anonymisation.
+  deletionRequestedAt DateTime?
 
   memberships              Membership[]
   projectMemberships       ProjectMember[]
@@ -62,13 +68,24 @@ model User {
   invitationsSentBy        Invitation[]                   @relation("InvitationInviter")
   suggestionsResolved      Suggestion[]
   aiProviderConfigsCreated AiProviderConfig[]
+  submissionComments       SubmissionComment[]
 }
 
 model Company {
-  id           String   @id @default(cuid())
-  name         String
-  xeroTenantId String?  @unique
-  createdAt    DateTime @default(now())
+  id                String   @id @default(cuid())
+  name              String
+  xeroTenantId      String?  @unique
+  /// Company UTR — one of the fields the UK Additional Information Form
+  /// requires. Optional because it's filled in once, typically at or
+  /// after signup, not required to start capturing evidence.
+  utr               String?
+  /// The senior officer responsible for the accuracy of the claim — an
+  /// AIF-required field. Free-text name/role rather than a User FK: this
+  /// person is very often not a product user at all (a CFO who never
+  /// logs in), the same reasoning ProjectCompetentProfessional uses.
+  seniorOfficerName String?
+  seniorOfficerRole String?
+  createdAt         DateTime @default(now())
 
   memberships       Membership[]
   invitations       Invitation[]
@@ -122,21 +139,46 @@ model Invitation {
 
 // --- Projects & uncertainties ---------------------------------------------
 
+// PLANNED and PAUSED added alongside the original three so a project can
+// be recorded before work starts and while temporarily stopped, without
+// forcing it into ACTIVE or the terminal ABANDONED/COMPLETED states.
 enum ProjectStatus {
+  PLANNED
   ACTIVE
+  PAUSED
   COMPLETED
   ABANDONED
 }
 
+// A human-set tag, never inferred or defaulted by anything but the human
+// setting it — UNDECIDED is the default specifically so a project is
+// never silently marked either way. This is a label the company and
+// their advisor apply; the app itself never sets or computes this value,
+// keeping it on the right side of CLAUDE.md's "does not decide what
+// qualifies as R&D" boundary.
+enum QualificationStatus {
+  UNDECIDED
+  QUALIFYING
+  NON_QUALIFYING
+}
+
 model Project {
-  id          String        @id @default(cuid())
-  companyId   String
-  name        String
-  description String?
-  startDate   DateTime
-  endDate     DateTime?
-  status      ProjectStatus @default(ACTIVE)
-  createdAt   DateTime      @default(now())
+  id                         String              @id @default(cuid())
+  companyId                  String
+  name                       String
+  description                String?
+  startDate                  DateTime
+  endDate                    DateTime?
+  status                     ProjectStatus       @default(ACTIVE)
+  /// The AIF's "field of science or technology" — distinct from the
+  /// general-purpose `description` above.
+  fieldOfScienceOrTechnology String?
+  /// The AIF's "advance sought" — what the project is trying to achieve,
+  /// as opposed to `description`'s free-form summary or an individual
+  /// Uncertainty's own baseline/description.
+  advanceSought              String?
+  qualificationStatus        QualificationStatus @default(UNDECIDED)
+  createdAt                  DateTime            @default(now())
 
   company                Company                        @relation(fields: [companyId], references: [id])
   members                ProjectMember[]
@@ -167,6 +209,10 @@ enum WorkerCostCategory {
   SUBCONTRACTOR_UNCONNECTED
   EPW
   CONSUMABLES
+  /// UK-specific: activities that support qualifying R&D without being
+  /// the R&D itself (e.g. clerical/admin work directly related to a
+  /// project) — a distinct HMRC category from CONSUMABLES.
+  QUALIFYING_INDIRECT
 }
 
 model ProjectMember {
@@ -252,10 +298,11 @@ model WeeklySubmission {
   isRetrospective Boolean
   lockedAt        DateTime?
 
-  company Company           @relation(fields: [companyId], references: [id])
-  project Project           @relation(fields: [projectId], references: [id])
-  user    User              @relation(fields: [userId], references: [id])
-  notes   UncertaintyNote[]
+  company  Company             @relation(fields: [companyId], references: [id])
+  project  Project             @relation(fields: [projectId], references: [id])
+  user     User                @relation(fields: [userId], references: [id])
+  notes    UncertaintyNote[]
+  comments SubmissionComment[]
 
   @@unique([projectId, userId, weekKey])
   @@index([companyId, weekKey])
@@ -375,22 +422,41 @@ model Rate {
   @@index([userId, effectiveFrom])
 }
 
-// Consumables and subcontractor costs only — labour cost is always
-// derived (hours × rate at that week), never stored here. Optional
-// traceability back to the Xero mirror or a manual import, same
+// Direct, non-labour costs only — labour cost is always derived (hours ×
+// rate at that week), never stored here.
+enum DirectCostCategory {
+  CONSUMABLES
+  SOFTWARE_LICENCE
+  CLOUD_COMPUTING
+  SUBCONTRACTOR
+  EPW
+  CLINICAL_TRIAL_VOLUNTEERS
+  OTHER
+}
+
+// Optional traceability back to the Xero mirror or a manual import, same
 // traceability requirement PLAN.md already established for costs.
 model DirectCost {
-  id                String   @id @default(cuid())
+  id                String             @id @default(cuid())
   projectId         String
   uncertaintyId     String?
   description       String
+  category          DirectCostCategory @default(OTHER)
   amountMinorUnits  Int
-  currency          String   @default("GBP")
+  currency          String             @default("GBP")
+  /// The worker/expenditure was overseas — changes which UK restriction
+  /// applies (overseas R&D expenditure is only qualifying in narrow
+  /// exceptions from Apr 2024).
+  isOverseas        Boolean            @default(false)
+  /// Subsidised or grant-funded expenditure is treated differently
+  /// depending on scheme — flagged here so the adviser doesn't have to
+  /// rediscover it from raw invoices.
+  isSubsidised      Boolean            @default(false)
   date              DateTime
   enteredById       String
   xeroJournalLineId String?
   manualCostLineId  String?
-  createdAt         DateTime @default(now())
+  createdAt         DateTime           @default(now())
 
   project         Project          @relation(fields: [projectId], references: [id])
   uncertainty     Uncertainty?     @relation(fields: [uncertaintyId], references: [id])
@@ -428,16 +494,41 @@ model AuditLog {
 }
 
 model AccountingPeriod {
-  id        String   @id @default(cuid())
-  companyId String
-  label     String
-  startDate DateTime
-  endDate   DateTime
-  createdAt DateTime @default(now())
+  id              String    @id @default(cuid())
+  companyId       String
+  label           String
+  startDate       DateTime
+  endDate         DateTime
+  /// When a first-time (or previously-lapsed) claimant told HMRC they
+  /// intend to claim for this period — the pre-notification deadline is
+  /// 6 months after `endDate`; miss it and the claim can't be made at
+  /// all. Null until someone records it as done.
+  claimNotifiedAt DateTime?
+  createdAt       DateTime  @default(now())
 
   company Company @relation(fields: [companyId], references: [id])
 
   @@unique([companyId, startDate, endDate])
+}
+
+// A lighter-weight discussion than Amendment: Amendment is an attributed
+// correction to the evidence record itself; a comment is finance/a lead
+// talking *about* a submission ("looks like this should be higher — can
+// you check?") without touching the record. Append-only by the same
+// convention as everything else evidence-adjacent (no PATCH/DELETE route
+// is exposed, and the DB trigger backs that up rather than trusting the
+// app layer alone).
+model SubmissionComment {
+  id           String   @id @default(cuid())
+  submissionId String
+  authorId     String
+  body         String
+  createdAt    DateTime @default(now())
+
+  submission WeeklySubmission @relation(fields: [submissionId], references: [id])
+  author     User             @relation(fields: [authorId], references: [id])
+
+  @@index([submissionId])
 }
 
 // --- Xero (read-only mirror) ----------------------------------------------

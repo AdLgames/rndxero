@@ -16,6 +16,7 @@ const CATEGORY_LABEL: Record<WorkerCostCategory, string> = {
   SUBCONTRACTOR_UNCONNECTED: "Subcontractor (unconnected)",
   EPW: "EPW",
   CONSUMABLES: "Cloud / software consumables",
+  QUALIFYING_INDIRECT: "Qualifying indirect activity",
 };
 
 export interface ProjectMemberRow {

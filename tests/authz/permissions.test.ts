@@ -36,6 +36,7 @@ describe("Owner", () => {
     const s = subject({ companyRole: "OWNER", projectRole: null });
     expect(can(s, "billing:manage")).toBe(true);
     expect(can(s, "membership:manage")).toBe(true);
+    expect(can(s, "company:update")).toBe(true);
     expect(can(s, "rate:write")).toBe(true);
     expect(can(s, "submission:lock")).toBe(true);
   });
@@ -72,11 +73,12 @@ describe("Finance", () => {
     expect(can(finance(), "submission:amend")).toBe(true);
   });
 
-  it("cannot create projects or manage billing/membership", () => {
+  it("cannot create projects or manage billing/membership/company details", () => {
     const s = finance();
     expect(can(s, "project:create")).toBe(false);
     expect(can(s, "billing:manage")).toBe(false);
     expect(can(s, "membership:manage")).toBe(false);
+    expect(can(s, "company:update")).toBe(false);
   });
 
   it("acts company-wide for cost/rate/lock actions without a ProjectMember row", () => {

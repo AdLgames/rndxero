@@ -9,6 +9,7 @@ import type { MembershipRole, MembershipStatus, ProjectRole } from "@/lib/genera
 export type Action =
   | "billing:manage"
   | "membership:manage"
+  | "company:update"
   | "project:create"
   | "project:read"
   | "project:update"

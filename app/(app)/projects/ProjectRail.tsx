@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import type { ProjectStatus } from "@/lib/generated/prisma/client";
 import { badgeAccent, badgeNeutral } from "@/app/components/ui";
 import { ArrowRightIcon } from "@/app/components/icons";
 
@@ -9,9 +10,22 @@ export interface RailProject {
   id: string;
   name: string;
   description: string | null;
-  archived: boolean;
+  status: ProjectStatus;
   ownerName: string | null;
   minutes: number;
+}
+
+const STATUS_LABEL: Record<ProjectStatus, string> = {
+  PLANNED: "Planned",
+  ACTIVE: "Active",
+  PAUSED: "Paused",
+  COMPLETED: "Completed",
+  ABANDONED: "Abandoned",
+};
+
+/** Only ACTIVE gets the accent treatment — everything else (including PLANNED, which isn't "done," just not yet started) reads as neutral rather than implying it's finished or discarded. */
+function statusBadgeClass(status: ProjectStatus): string {
+  return status === "ACTIVE" ? badgeAccent : badgeNeutral;
 }
 
 export interface RailGroup {
@@ -50,11 +64,11 @@ export function ProjectRail({ groups }: { groups: RailGroup[] }) {
                   className={`rounded-[12px] px-[14px] py-[11px] transition-colors duration-150 ${active ? "bg-accent-tint" : "hover:bg-control-track"}`}
                 >
                   <div className="flex items-center justify-between gap-2">
-                    <span className={`truncate text-[13.5px] font-[600] tracking-[-0.01em] ${project.archived ? "text-text-secondary" : "text-text"}`}>{project.name}</span>
+                    <span className={`truncate text-[13.5px] font-[600] tracking-[-0.01em] ${project.status === "ACTIVE" ? "text-text" : "text-text-secondary"}`}>{project.name}</span>
                     <span className={`shrink-0 text-[11px] ${active ? "text-accent" : "text-text-quaternary"}`}>{hoursLabel(project.minutes)}</span>
                   </div>
                   <div className="mt-[3px] flex items-center gap-[6px]">
-                    <span className={project.archived ? badgeNeutral : badgeAccent}>{project.archived ? "Archived" : "Active"}</span>
+                    <span className={statusBadgeClass(project.status)}>{STATUS_LABEL[project.status]}</span>
                     {project.ownerName && <span className="truncate text-[11.5px] text-text-quaternary">{project.ownerName}</span>}
                   </div>
                   {project.description && <p className="m-0 mt-[5px] line-clamp-2 text-[11.5px] leading-[1.4] text-text-tertiary">{project.description}</p>}

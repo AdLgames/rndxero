@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { getCurrentUser, SESSION_COOKIE_NAME } from "@/lib/auth/session";
 import { InviteForm } from "./InviteForm";
+import { CompanyAifDetails } from "./CompanyAifDetails";
 
 export default async function TeamPage() {
   const cookieStore = await cookies();
@@ -36,6 +37,12 @@ export default async function TeamPage() {
         {companiesWithMembers.map(({ company, members }) => (
           <section key={company.id}>
             {companiesWithMembers.length > 1 && <h3 className="m-0 mb-3 text-[16.5px] font-[600] tracking-[-0.02em] text-text">{company.name}</h3>}
+            <p className="m-0 mb-3 text-[12.5px] text-text-tertiary">Claim details — for the UK Additional Information Form</p>
+            <CompanyAifDetails
+              companyId={company.id}
+              data={{ utr: company.utr, seniorOfficerName: company.seniorOfficerName, seniorOfficerRole: company.seniorOfficerRole }}
+            />
+            <p className="m-0 mt-8 mb-3 text-[12.5px] text-text-tertiary">Team</p>
             <InviteForm companyId={company.id} seats={members.map((m) => ({ id: m.id, name: m.user.name, role: m.role }))} />
           </section>
         ))}
