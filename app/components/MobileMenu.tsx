@@ -51,12 +51,12 @@ export function MobileMenu({ email, initials }: { email: string; initials: strin
             <button type="button" aria-label="Close menu" onClick={() => setOpen(false)} className="absolute inset-0 bg-black/[.28] backdrop-blur-[2px]" />
             <div className="relative flex h-full w-full max-w-[320px] flex-col overflow-y-auto bg-white p-6 shadow-[-16px_0_40px_rgba(0,0,0,.12)]">
               <div className="mb-5 flex items-center justify-between">
-                <div className="flex min-w-0 items-center gap-[10px]">
+                <Link href="/account" onClick={() => setOpen(false)} className="flex min-w-0 items-center gap-[10px]">
                   <span className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-full bg-accent-tint text-[12px] font-[640] text-accent">
                     {initials}
                   </span>
                   <span className="truncate text-[13px] text-text-secondary">{email}</span>
-                </div>
+                </Link>
                 <button type="button" onClick={() => setOpen(false)} aria-label="Close menu" className="shrink-0 text-text-tertiary hover:text-text">
                   <XIcon />
                 </button>
