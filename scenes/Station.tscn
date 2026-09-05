@@ -6,12 +6,11 @@
 radius = 30.0
 
 [node name="Station" type="Node2D"]
-z_index = 10
 script = ExtResource("1_station")
 
 [node name="Sprite" type="Sprite2D" parent="."]
 texture_filter = 1
-position = Vector2(0, -16)
+position = Vector2(0, -22)
 
 [node name="QueueLabel" type="Label" parent="."]
 offset_left = -32.0

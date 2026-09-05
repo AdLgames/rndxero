@@ -21,12 +21,14 @@ var _mouse_world: Vector2 = Vector2.ZERO
 var _lane_scene: PackedScene = preload("res://scenes/Lane.tscn")
 var _lane_serial: int = 0
 var _lane_parent: Node = null
+var _ship_layer: Node = null
 
 
-func setup(map_gen: MapGen, station_list: Array, lane_parent: Node) -> void:
+func setup(map_gen: MapGen, station_list: Array, lane_parent: Node, ship_layer: Node) -> void:
 	map = map_gen
 	stations = station_list
 	_lane_parent = lane_parent
+	_ship_layer = ship_layer
 	for station in stations:
 		station.clicked.connect(_on_station_clicked)
 
@@ -100,7 +102,7 @@ func _try_build(a, b) -> void:
 
 	_lane_serial += 1
 	var lane = _lane_scene.instantiate()
-	lane.setup("L%d" % _lane_serial, a, b, tiles)
+	lane.setup("L%d" % _lane_serial, a, b, tiles, _ship_layer)
 	_lane_parent.add_child(lane)
 	Dispatcher.register_lane(lane)
 	Events.lane_built.emit(lane)

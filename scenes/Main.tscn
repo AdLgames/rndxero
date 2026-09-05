@@ -13,11 +13,13 @@ script = ExtResource("1_main")
 script = ExtResource("5_backdrop")
 
 [node name="Terrain" type="TileMapLayer" parent="."]
-z_index = -10
+z_index = -20
 
 [node name="Lanes" type="Node2D" parent="."]
+z_index = -5
 
-[node name="Stations" type="Node2D" parent="."]
+[node name="World" type="Node2D" parent="."]
+y_sort_enabled = true
 
 [node name="BuildTool" type="Node2D" parent="."]
 z_index = 30

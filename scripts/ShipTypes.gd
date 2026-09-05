@@ -9,6 +9,11 @@ extends RefCounted
 ## second against the 64x32 isometric grid.
 const SPEED_SCALE := 32.0
 
+## Ship art is isometric, so a heading cannot be produced by rotating the
+## sprite -- each one is drawn separately. tools/vox_to_sprite.py renders this
+## many headings, evenly spaced, into a horizontal strip.
+const SPRITE_FRAMES := 8
+
 const STATS := {
 	"consumer": {
 		"size": 1, "speed": 3.0, "pay": 5, "patience": 20.0,

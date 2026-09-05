@@ -11,18 +11,31 @@ palette texture that was not part of the export, so the OBJ alone renders
 untextured. The `.vox` carries both the voxel grid and its 256-entry palette,
 which is what `tools/vox_to_sprite.py` reads.
 
-Ships are top-down and rotated to the lane angle at runtime, so the renderer
-projects straight down the vertical axis, keeps the topmost voxel per column,
-shades it by height, and box-filters down to the spec's 16–32px band.
+The world is isometric, so ships are rendered **in the same 2:1 projection as
+the terrain**, once per heading, into a horizontal strip. They are never
+rotated at runtime — rotating an isometric sprite shears the projection and
+flattens the model. `Ship.face()` inverts the projection to recover the world
+heading and picks the matching frame.
 
 ```
-python3 tools/vox_to_sprite.py art/vox/MeteorSlicer.vox        assets/ships/consumer.png   --scale 2 --yaw 1 --max-size 22
-python3 tools/vox_to_sprite.py art/vox/UltravioletIntruder.vox assets/ships/commercial.png --scale 2 --yaw 1 --max-size 30
-python3 tools/vox_to_sprite.py art/vox/Warship.vox             assets/ships/heavy.png      --scale 2 --yaw 1 --max-size 38
+python3 tools/vox_to_sprite.py art/vox/MeteorSlicer.vox        assets/ships/consumer.png   --frames 8 --scale 3 --base-turns 1 --max-size 24
+python3 tools/vox_to_sprite.py art/vox/UltravioletIntruder.vox assets/ships/commercial.png --frames 8 --scale 3 --base-turns 1 --max-size 32
+python3 tools/vox_to_sprite.py art/vox/Warship.vox             assets/ships/heavy.png      --frames 8 --scale 3 --base-turns 1 --max-size 40
 ```
 
-`--yaw 1` is a single 90° grid turn, which puts each model's nose on +X — the
-heading `Ship.gd` rotates from. `--max-size` sets the long edge in pixels.
+- `--frames` must match `ShipTypes.SPRITE_FRAMES`. Raise both together for
+  smoother turning at the cost of sheet width.
+- `--base-turns` is 90° turns applied before the frame angles, to put a model's
+  nose on +X so that frame 0 faces the heading the game calls zero. One turn is
+  right for these three: rendered at `--base-turns 1`, the Warship's thrusters
+  sit at the rear of frame 0. `--base-turns 3` flies it backwards. The
+  Intruder is close to symmetric front-to-back, so its orientation is a
+  judgement call rather than something the model makes obvious.
+- `--max-size` sets the long edge of a single frame, in pixels.
+
+Each voxel is drawn as its top face plus the two side faces that turn toward
+the camera, far-to-near, with the top lit brightest — that shading is what
+gives the sprites their volume. Voxels enclosed on all six sides are skipped.
 
 Models are mapped to classes by size: MeteorSlicer is the smallest so it flies
 as Consumer, Warship the largest so it hauls as Heavy. Swapping any of them is a
@@ -36,7 +49,10 @@ python3 tools/gen_placeholder_art.py
 
 Writes the five 64×32 isometric terrain tiles (as one atlas strip, in the order
 `MapGen.Terrain` expects), three station sprites, the four-frame explosion strip,
-and the UI panel and icons. These stand in for the CC0 art in LANES_MVP.md
+and the UI panel and icons. Stations are drawn as isometric volumes — top face
+plus two shaded sides, same projection as the tiles — so they read as objects
+standing on the field rather than stickers laid over it. Ship sprites are *not*
+written here; see above. These stand in for the CC0 art in LANES_MVP.md
 section 9; replacing one means overwriting the file at the same size.
 
 Not yet sourced: the pixel font on the checklist. The game uses Godot's default

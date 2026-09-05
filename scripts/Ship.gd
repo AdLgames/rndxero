@@ -52,6 +52,24 @@ func _apply_sprite() -> void:
 	var tex := load(s["sprite"])
 	if tex != null:
 		_sprite.texture = tex
+		_sprite.hframes = ShipTypes.SPRITE_FRAMES
+
+
+## Point the hull along a screen-space heading. Isometric sprites must never be
+## rotated -- that shears the projection and flattens the model -- so instead
+## this picks the pre-rendered frame closest to the direction of travel.
+func face(direction: Vector2) -> void:
+	if direction == Vector2.ZERO or _sprite == null:
+		return
+	# Invert the 2:1 isometric projection to recover the world-space heading:
+	# screen (sx, sy) came from world (wx, wy) as sx = wx - wy, sy = (wx + wy)/2.
+	var wx := direction.x + 2.0 * direction.y
+	var wy := 2.0 * direction.y - direction.x
+	var step := TAU / ShipTypes.SPRITE_FRAMES
+	var index := int(round(atan2(wy, wx) / step)) % ShipTypes.SPRITE_FRAMES
+	if index < 0:
+		index += ShipTypes.SPRITE_FRAMES
+	_sprite.frame = index
 
 
 ## Pixels per second on the given lane, after tech and lane modifiers.

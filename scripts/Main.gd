@@ -12,7 +12,7 @@ var stations: Array = []
 @onready var _backdrop: Node2D = $Backdrop
 @onready var _terrain: TileMapLayer = $Terrain
 @onready var _lanes: Node2D = $Lanes
-@onready var _stations_root: Node2D = $Stations
+@onready var _world: Node2D = $World
 @onready var _build_tool: Node2D = $BuildTool
 @onready var _camera: Camera2D = $Camera
 @onready var _hud = $HUD
@@ -32,7 +32,7 @@ func _ready() -> void:
 
 	_build_map(config)
 	_place_stations(config)
-	_build_tool.setup(map, stations, _lanes)
+	_build_tool.setup(map, stations, _lanes, _world)
 	_build_tool.status_changed.connect(_hud.set_status)
 	Events.collision.connect(_on_collision)
 
@@ -74,7 +74,7 @@ func _place_stations(config: Dictionary) -> void:
 	for entry in config["stations"]:
 		var station = _station_scene.instantiate()
 		station.setup(entry)
-		_stations_root.add_child(station)
+		_world.add_child(station)
 		station.position = _terrain.map_to_local(station.tile_pos)
 		stations.append(station)
 		Dispatcher.register_station(station)

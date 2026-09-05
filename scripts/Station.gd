@@ -124,6 +124,9 @@ func _pick_class() -> String:
 
 ## Called by a Lane once a ship reaches this end and a dock is free.
 func accept_arrival(ship) -> void:
+	# The ship was parented to the world's y-sorted layer while in transit.
+	if ship.get_parent() != null:
+		ship.get_parent().remove_child(ship)
 	add_child(ship)
 	ship.visible = false
 	ship.position = Vector2.ZERO

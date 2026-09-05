@@ -1,9 +1,14 @@
 class_name Lane
 extends Node2D
 
-## A straight transit link between two stations. Holds a Path2D that ships
-## follow, tracks how much capacity is in use, and rolls the collision check.
-## Bidirectional in the MVP: traffic both ways shares one capacity pool.
+## A straight transit link between two stations. Holds a Path2D that ships are
+## sampled along, tracks how much capacity is in use, and rolls the collision
+## check. Bidirectional in the MVP: traffic both ways shares one capacity pool.
+##
+## Ships are parented to the world's y-sorted layer rather than to this node, so
+## that a ship crossing in front of a station draws over it and one crossing
+## behind draws under it. Parenting them under the lane would lock every ship to
+## the lane's own depth and break that.
 ##
 ## Station and Ship references are untyped on purpose; see the note in Ship.gd.
 
@@ -25,35 +30,38 @@ var speed_mult: float = 1.0
 var tile_length: float = 0.0
 
 var occupants: Array = []
-var _follow_of: Dictionary = {}
+var _ship_layer: Node = null
 var _collision_timer: float = 0.0
 var _length: float = 0.0
+var _heading: Vector2 = Vector2.RIGHT
 
 @onready var _line: Line2D = $Line
 @onready var _path: Path2D = $Path
 
 
-func setup(id: String, a, b, tiles: float) -> void:
+func setup(id: String, a, b, tiles: float, ship_layer: Node) -> void:
 	lane_id = id
 	station_a = a
 	station_b = b
 	tile_length = tiles
+	_ship_layer = ship_layer
 
 
 func _ready() -> void:
 	var a: Vector2 = station_a.global_position
 	var b: Vector2 = station_b.global_position
 	global_position = a
-	var delta := b - a
-	_length = delta.length()
+	var span := b - a
+	_length = span.length()
+	_heading = span.normalized()
 
 	_line.clear_points()
 	_line.add_point(Vector2.ZERO)
-	_line.add_point(delta)
+	_line.add_point(span)
 
 	var curve := Curve2D.new()
 	curve.add_point(Vector2.ZERO)
-	curve.add_point(delta)
+	curve.add_point(span)
 	_path.curve = curve
 	_refresh_tint()
 
@@ -89,29 +97,24 @@ func can_accept(ship) -> bool:
 
 
 func add_ship(ship, from_station) -> void:
-	var follow := PathFollow2D.new()
-	follow.loop = false
-	follow.rotates = false
-	_path.add_child(follow)
-
 	if ship.get_parent() != null:
 		ship.get_parent().remove_child(ship)
-	follow.add_child(ship)
+	_ship_layer.add_child(ship)
 
 	ship.current_lane = self
 	ship.current_station = null
 	ship.state = Ship.State.TRANSIT
 	ship.travelled = 0.0
 	ship.reversed = from_station == station_b
-	ship.position = Vector2.ZERO
+	ship.visible = true
+	ship.rotation = 0.0
 
-	var heading: Vector2 = station_b.global_position - station_a.global_position
+	var direction := _heading
 	if ship.reversed:
-		heading = -heading
-	ship.rotation = heading.angle()
+		direction = -direction
+	ship.face(direction)
 
 	occupants.append(ship)
-	_follow_of[ship] = follow
 	_sync(ship)
 	_refresh_tint()
 
@@ -140,10 +143,12 @@ func _process(delta: float) -> void:
 
 
 func _sync(ship) -> void:
-	var follow: PathFollow2D = _follow_of.get(ship)
-	if follow == null:
+	if _path.curve == null:
 		return
-	follow.progress = _length - ship.travelled if ship.reversed else ship.travelled
+	var distance := ship.travelled
+	if ship.reversed:
+		distance = _length - ship.travelled
+	ship.global_position = global_position + _path.curve.sample_baked(distance)
 
 
 ## A ship that reaches the far end but finds every dock busy stays on the lane,
@@ -158,12 +163,6 @@ func _try_arrive(ship) -> void:
 
 func detach(ship) -> void:
 	occupants.erase(ship)
-	var follow: PathFollow2D = _follow_of.get(ship)
-	_follow_of.erase(ship)
-	if follow != null:
-		if ship.get_parent() == follow:
-			follow.remove_child(ship)
-		follow.queue_free()
 	ship.current_lane = null
 
 

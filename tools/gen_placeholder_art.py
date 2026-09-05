@@ -4,6 +4,9 @@
 The asset checklist in LANES_MVP.md section 9 points at CC0 packs (kenney.nl and
 friends). Until those are dropped in, this script writes stand-ins at the right
 dimensions so the game renders and the sprite pipeline is exercised end to end.
+Ship sprites are NOT written here -- they are isometric directional sheets
+rendered from the voxel models by tools/vox_to_sprite.py.
+
 Everything here is plain stdlib -- no Pillow, no downloads.
 
     python3 tools/gen_placeholder_art.py
@@ -87,6 +90,83 @@ def ring(img, cx, cy, r_out, r_in, colour):
                 put(img, x, y, colour)
 
 
+# ------------------------------------------------------- isometric primitives
+# The world is a 2:1 isometric grid, so station art has to be drawn as volumes
+# in that same projection -- a flat front-on shape reads as a sticker on the
+# ground and breaks the illusion the tiles are working to create.
+
+
+def iso_point(x, y, z, ox, oy, unit, rise):
+    return (ox + (x - y) * unit, oy + (x + y) * unit * 0.5 - z * rise)
+
+
+def fill_convex(img, points, colour):
+    height = len(img)
+    width = len(img[0])
+    ys = [p[1] for p in points]
+    y0 = max(0, int(math.floor(min(ys))))
+    y1 = min(height - 1, int(math.ceil(max(ys))))
+    count = len(points)
+    for py in range(y0, y1 + 1):
+        centre = py + 0.5
+        crossings = []
+        for i in range(count):
+            ax, ay = points[i]
+            bx, by = points[(i + 1) % count]
+            if (ay <= centre < by) or (by <= centre < ay):
+                crossings.append(ax + (centre - ay) / (by - ay) * (bx - ax))
+        if len(crossings) < 2:
+            continue
+        left = max(0, int(math.floor(min(crossings) + 0.5)))
+        right = min(width - 1, int(math.ceil(max(crossings) - 0.5)))
+        for px in range(left, right + 1):
+            img[py][px] = colour
+
+
+def iso_box(img, ox, oy, x0, y0, z0, w, d, h, colour, unit=8.0, rise=8.0):
+    """A box in grid units, drawn as its top face plus the two lit side faces."""
+    def p(x, y, z):
+        return iso_point(x, y, z, ox, oy, unit, rise)
+
+    x1, y1, z1 = x0 + w, y0 + d, z0 + h
+    fill_convex(img, [p(x1, y0, z0), p(x1, y1, z0), p(x1, y1, z1), p(x1, y0, z1)], shade(colour, 0.78))
+    fill_convex(img, [p(x0, y1, z0), p(x1, y1, z0), p(x1, y1, z1), p(x0, y1, z1)], shade(colour, 0.58))
+    fill_convex(img, [p(x0, y0, z1), p(x1, y0, z1), p(x1, y1, z1), p(x0, y1, z1)], colour)
+
+
+def iso_cylinder(img, cx, cy, radius, height, colour):
+    """Upright cylinder: elliptical cap over a straight body, 2:1 like the tiles."""
+    ry = max(1.0, radius * 0.5)
+    side = shade(colour, 0.66)
+    for x in range(-radius, radius + 1):
+        t = 1.0 - (x / float(radius)) ** 2
+        if t < 0.0:
+            continue
+        dy = ry * math.sqrt(t)
+        for y in range(int(cy - dy), int(cy + dy + height) + 1):
+            put(img, cx + x, y, side)
+    for x in range(-radius, radius + 1):
+        t = 1.0 - (x / float(radius)) ** 2
+        if t < 0.0:
+            continue
+        dy = ry * math.sqrt(t)
+        for y in range(int(cy - dy), int(cy + dy) + 1):
+            put(img, cx + x, y, colour)
+
+
+def iso_dome(img, cx, cy, radius, colour):
+    """Squashed hemisphere, lit from the upper left."""
+    ry = max(1.0, radius * 0.62)
+    for y in range(-radius, radius + 1):
+        for x in range(-radius, radius + 1):
+            u = x / float(radius)
+            v = y / float(ry)
+            if u * u + v * v > 1.0:
+                continue
+            lit = 1.12 - 0.5 * (u * 0.6 + v * 0.8)
+            put(img, cx + x, cy + y, shade(colour, max(0.45, min(1.25, lit))))
+
+
 # ------------------------------------------------------------------- terrain
 def iso_rows(width=TILE_W, height=TILE_H):
     """Yield (y, x_start, x_end) spans covering an isometric diamond."""
@@ -140,59 +220,32 @@ def gen_tiles():
 
 # ------------------------------------------------------------------ stations
 def gen_stations():
-    # Habitat: ring station with a lit hub.
+    """64x64 sprites drawn in the same 2:1 projection as the terrain, with the
+    structure's footprint sitting near the bottom of the frame so Station.tscn
+    can anchor it on the tile."""
+    # Habitat: ring platform with a domed hub.
     img = blank(64, 64)
-    ring(img, 32, 34, 22, 15, (86, 150, 132, 255))
-    ring(img, 32, 34, 22, 20, (52, 96, 86, 255))
-    fill_disc(img, 32, 34, 9, (150, 210, 180, 255))
-    fill_disc(img, 32, 32, 6, (214, 245, 224, 255))
+    iso_cylinder(img, 32, 30, 22, 8, (74, 132, 116, 255))
+    iso_dome(img, 32, 26, 13, (150, 210, 180, 255))
+    iso_dome(img, 32, 23, 6, (214, 245, 224, 255))
     write_png(os.path.join(ASSETS, "stations", "habitat.png"), img)
 
-    # Depot: stacked cargo boxes.
+    # Depot: stacked cargo containers on a pad.
     img = blank(64, 64)
-    fill_rect(img, 12, 34, 52, 54, (168, 118, 48, 255))
-    fill_rect(img, 12, 34, 52, 38, (214, 158, 70, 255))
-    for bx in range(16, 50, 11):
-        fill_rect(img, bx, 22, bx + 9, 34, (196, 140, 60, 255))
-        fill_rect(img, bx, 22, bx + 9, 25, (232, 178, 88, 255))
-    fill_rect(img, 12, 52, 52, 55, (96, 66, 26, 255))
+    iso_box(img, 32, 46, 0, 0, 0, 3.2, 3.2, 0.3, (96, 76, 44, 255), unit=7.0, rise=7.0)
+    iso_box(img, 32, 46, 0.2, 0.2, 0.3, 1.4, 2.6, 1.2, (196, 140, 60, 255), unit=7.0, rise=7.0)
+    iso_box(img, 32, 46, 1.7, 0.3, 0.3, 1.3, 1.3, 1.0, (168, 118, 48, 255), unit=7.0, rise=7.0)
+    iso_box(img, 32, 46, 1.7, 1.7, 0.3, 1.3, 1.2, 1.6, (214, 158, 70, 255), unit=7.0, rise=7.0)
     write_png(os.path.join(ASSETS, "stations", "depot.png"), img)
 
-    # Refinery: tower flanked by tanks.
+    # Refinery: cracking tower between two holding tanks.
     img = blank(64, 64)
-    fill_rect(img, 26, 12, 38, 52, (150, 66, 58, 255))
-    fill_rect(img, 26, 12, 30, 52, (196, 96, 84, 255))
-    fill_disc(img, 16, 42, 10, (122, 54, 48, 255))
-    fill_disc(img, 48, 42, 10, (122, 54, 48, 255))
-    fill_disc(img, 14, 40, 4, (188, 92, 80, 255))
-    fill_disc(img, 46, 40, 4, (188, 92, 80, 255))
-    fill_rect(img, 28, 6, 36, 12, (238, 176, 96, 255))
+    iso_box(img, 32, 48, 0, 0, 0, 3.0, 3.0, 0.3, (78, 46, 42, 255), unit=7.0, rise=7.0)
+    iso_cylinder(img, 20, 36, 9, 10, (122, 54, 48, 255))
+    iso_cylinder(img, 45, 38, 8, 9, (122, 54, 48, 255))
+    iso_box(img, 32, 44, 1.0, 1.0, 0.3, 1.1, 1.1, 4.2, (150, 66, 58, 255), unit=7.0, rise=7.0)
+    iso_dome(img, 32, 12, 7, (238, 176, 96, 255))
     write_png(os.path.join(ASSETS, "stations", "refinery.png"), img)
-
-
-# --------------------------------------------------------------------- ships
-def gen_ship(path, w, h, hull, trim):
-    """Top-down hull pointing along +X; the game rotates it to the lane angle."""
-    img = blank(w, h)
-    nose = w - 1
-    for x in range(w):
-        t = x / float(w - 1)
-        half = max(1, int(round((h / 2.0) * (0.35 + 0.65 * math.sin(math.pi * min(1.0, t * 1.15))))))
-        if x > nose - 2:
-            half = 1
-        for y in range(h // 2 - half, h // 2 + half):
-            put(img, x, y, hull if x < w * 0.72 else trim)
-    fill_rect(img, max(0, w // 4), h // 2 - 1, max(1, w // 2), h // 2 + 1, trim)
-    for y in (0, h - 1):
-        for x in range(int(w * 0.15), int(w * 0.45)):
-            put(img, x, y, shade(hull, 0.7))
-    write_png(path, img)
-
-
-def gen_ships():
-    gen_ship(os.path.join(ASSETS, "ships", "consumer.png"), 14, 10, (96, 190, 214, 255), (206, 240, 250, 255))
-    gen_ship(os.path.join(ASSETS, "ships", "commercial.png"), 22, 14, (214, 180, 76, 255), (250, 232, 158, 255))
-    gen_ship(os.path.join(ASSETS, "ships", "heavy.png"), 30, 20, (198, 96, 72, 255), (244, 176, 128, 255))
 
 
 # ----------------------------------------------------------------------- fx
@@ -278,7 +331,6 @@ def gen_ui():
 if __name__ == "__main__":
     gen_tiles()
     gen_stations()
-    gen_ships()
     gen_explosion()
     gen_ui()
     print("placeholder art complete")
