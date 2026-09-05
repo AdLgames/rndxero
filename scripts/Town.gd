@@ -36,6 +36,12 @@ var _camera: Camera2D = null
 @onready var _backdrop: Node2D = $Backdrop
 @onready var _ground: Node2D = $Ground
 @onready var _plots_root: Node2D = $Plots
+@onready var _caravans: Node2D = $Caravans
+
+
+## Where CaravanQueue parents the wagons it spawns.
+func caravan_layer() -> Node2D:
+	return _caravans
 
 
 ## Total world width of the strip, used to clamp the camera.

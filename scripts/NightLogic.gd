@@ -17,6 +17,8 @@ static func run() -> Dictionary:
 		"food_consumed": 0,
 		"water_consumed": 0,
 		"shortfalls": [],
+		"angered": [],
+		"guests": Game.lodged_guests,
 	}
 
 	var food_gain := int(Game.total_effect("food_per_night"))
@@ -41,6 +43,13 @@ static func run() -> Dictionary:
 	_consume("food", food_cost, report)
 	_consume("water", water_cost, report)
 
+	# Section 3: anyone bedded down when the town runs short leaves angry.
+	if not report["shortfalls"].is_empty():
+		for faction in Game.lodged_factions:
+			Factions.adjust(faction, -1)
+		report["angered"] = Game.lodged_factions.duplicate()
+
+	Game.clear_lodgers()
 	Events.night_report.emit(report)
 	return report
 

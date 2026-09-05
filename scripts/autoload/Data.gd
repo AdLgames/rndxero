@@ -3,10 +3,10 @@ extends Node
 ## Loads the JSON content at startup. Everything the game shows or balances
 ## lives in data/, so content scales without touching code.
 ##
-## Only buildings.json exists at M2. The others join as their milestones land:
-## caravans and encounters at M3-M4, night_events and rumors at M5, prices at
-## M4. Missing files are reported once and left as empty collections rather
-## than crashing, so a half-built content set still runs.
+## buildings.json and caravans.json exist. The rest join as their milestones
+## land: encounters and prices at M4, night_events and rumors at M5. Missing
+## files are reported once and left as empty collections rather than crashing,
+## so a half-built content set still runs.
 
 const FILES := {
 	"buildings": "res://data/buildings.json",
@@ -18,10 +18,11 @@ const FILES := {
 }
 
 ## Files whose absence is expected at this milestone, so it is not worth a warning.
-const NOT_YET_WRITTEN := ["prices", "caravans", "encounters", "night_events", "rumors"]
+const NOT_YET_WRITTEN := ["prices", "encounters", "night_events", "rumors"]
 
 var buildings: Array = []
 var buildings_by_id: Dictionary = {}
+var caravans: Array = []
 var plot_count: int = 12
 var base_lodging: int = 2
 
@@ -35,6 +36,7 @@ func _ready() -> void:
 		if not doc.is_empty():
 			_documents[key] = doc
 	_index_buildings()
+	caravans = document("caravans").get("caravans", [])
 
 
 func document(key: String) -> Dictionary:
