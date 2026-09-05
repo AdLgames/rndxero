@@ -18,29 +18,37 @@ Open the project folder in Godot 4.3 or newer and press play.
 
 ## Status
 
-**M1 to M3 of the seven milestones in §12 are built.** That is: the road strip
+**M1 to M4 of the seven milestones in §12 are built.** That is: the road strip
 with parallax and twelve plots, camera scrolling and the HUD; all six buildings
-with their upgrades, costs and nightly effects; and the morning caravan queue
-with tolls, lodging and turning away.
+with their upgrades, costs and nightly effects; the morning caravan queue with
+tolls, lodging and turning away; and trading plus the encounter system with
+effects, requirements and flags.
 
 Not built yet, in the order the spec sequences them:
 
 | Milestone | What is missing |
 |---|---|
-| M4 | Trade and encounters: price table, TradePanel, Dialogue, effects, flags |
 | M5 | Nights: night events, rumours, the full report screen, game over handling |
 | M6 | The Column: the day 10 event, its five outcomes, epilogue, restart |
-| M7 | Content: 30 encounters, 10 night events, 10 rumours, phase transitions |
+| M7 | Content: fill to 30 encounters, 10 night events, 10 rumours, phase transitions |
 
-**Coin comes from tolls.** Until M3 there was no income at all, so a run
-flatlined after two or three buildings. Now `1 + floor(reputation / 3)` caravans
-arrive each morning (1–4), and each pays 0, 5, 10 or 20 to pass. Trade is the
-second income stream and lands at M4, so coin is still tight by design.
+**Both income streams are in.** Tolls of 0/5/10/20 per caravan, and the trade
+margin: you buy a caravan's cargo at the `buy` column of `data/prices.json` and
+sell it on to a later caravan that wants it at `sell`, lifted by the Guild's
+goodwill (+20% at +3) and whatever market you have built. Goods are a stock of
+their own, separate from the five resources, shown on the HUD's Stock line.
 
-Caravans carry an `encounter` id that nothing reads until M4, and their cargo
-and wants are shown on the card but not tradeable yet — the card says so.
+Without a Market you may trade only two items per caravan — that is this
+project's reading of §5's "requires a Market to trade more than 2 items", and
+it is what makes the Market worth its 30 coin.
+
+Nine encounters are written, one per caravan, including a two-step chain: take
+Merrit's lame horse in and a later Guild caravan offers you a choice that only
+appears because of it. Encounter effects are the flat dictionary §5 describes,
+so adding keys is one branch in `Game.apply_effects` and nothing in the data.
 Reputation reaching zero emits `Events.game_over`, which nothing listens to
-until M5.
+until M5, and an encounter's `event` effect queues a night event that M5 will
+drain.
 
 ### What the meters already do
 
@@ -55,6 +63,12 @@ outcomes are what they act on:
 - Lodging a caravan gains a faction point; a Great Inn makes it two.
 - Running short of food or water overnight costs a point of reputation per
   shortfall and a point with every faction bedded down at the time.
+- Doing business with a caravan gains a faction point, once per visit however
+  many units change hands.
+- The Guild at +3 pays 20% more for what you sell; a Market adds 10% and a
+  Bazaar 25%.
+- A Stable lets you take horses in from encounters; animals the town keeps then
+  drink every night alongside the guests'.
 
 ## Layout
 

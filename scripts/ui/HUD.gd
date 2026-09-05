@@ -32,6 +32,7 @@ var _faction_bars: Dictionary = {}
 @onready var _day_label: Label = $TopBar/Margin/Layout/Line1/Day
 @onready var _phase_label: Label = $TopBar/Margin/Layout/Line1/Phase
 @onready var _end_day: Button = $TopBar/Margin/Layout/Line1/EndDay
+@onready var _stock: Label = $TopBar/Margin/Layout/Stock
 @onready var _last_night: Label = $TopBar/Margin/Layout/LastNight
 @onready var _toasts: VBoxContainer = $Toasts
 
@@ -47,8 +48,10 @@ func _ready() -> void:
 	Events.phase_changed.connect(_on_phase_changed)
 	Events.night_report.connect(_on_night_report)
 	Events.toast.connect(_on_toast)
+	Events.goods_changed.connect(_on_goods_changed)
 
 	_last_night.text = ""
+	_on_goods_changed(Game.goods)
 
 
 func _build_resource_row() -> void:
@@ -138,6 +141,17 @@ func _on_night_report(report: Dictionary) -> void:
 	if not shortfalls.is_empty():
 		parts.append("short of " + ", ".join(shortfalls))
 	_last_night.text = "Night %d: %s" % [int(report["day"]), "; ".join(parts)]
+
+
+## Goods are not one of the five resources, so they get their own line rather
+## than an icon slot the spec does not have.
+func _on_goods_changed(goods: Dictionary) -> void:
+	var parts: Array = []
+	for good in Data.goods_order:
+		var quantity := int(goods.get(good, 0))
+		if quantity > 0:
+			parts.append("%d %s" % [quantity, good])
+	_stock.text = "Stock: " + (", ".join(parts) if not parts.is_empty() else "empty")
 
 
 func _on_toast(text: String, kind: String) -> void:

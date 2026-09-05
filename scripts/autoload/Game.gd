@@ -41,6 +41,17 @@ var lodged_guests: int = 0
 var lodged_animals: int = 0
 var lodged_factions: Array = []
 
+## Tradeable goods, separate from the five resources: bought from caravan cargo
+## and sold on to caravans that want them. Their only use in the MVP is that
+## margin, which is the merchant half of the loop.
+var goods: Dictionary = {}
+
+## Animals the town itself keeps, from encounters. They drink every night.
+var town_animals: int = 0
+
+## Night events queued by an encounter's `event` effect. M5 drains this.
+var queued_events: Array = []
+
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
@@ -52,12 +63,18 @@ func reset() -> void:
 	water = START["water"]
 	reputation = START["reputation"]
 	day = 1
+	town_animals = 0
+	queued_events = []
+	goods = {}
+	for good in Data.goods_order:
+		goods[good] = 0
 	clear_lodgers()
 	plots = []
 	plots.resize(Data.plot_count)
 	Flags.clear()
 	Factions.reset()
 	broadcast_resources()
+	Events.goods_changed.emit(goods)
 
 
 func start() -> void:
@@ -155,6 +172,99 @@ func total_effect(key: String) -> float:
 	for effects in placed_effects():
 		total += float(effects.get(key, 0))
 	return total
+
+
+# --- goods -------------------------------------------------------------------
+
+func goods_count(good: String) -> int:
+	return int(goods.get(good, 0))
+
+
+func add_goods(good: String, amount: int) -> void:
+	goods[good] = maxi(0, goods_count(good) + amount)
+	Events.goods_changed.emit(goods)
+
+
+## Does any plot hold this building, at either tier?
+func has_building(building_id: String) -> bool:
+	for plot in plots:
+		if plot == null:
+			continue
+		if plot["base_id"] == building_id:
+			return true
+		if BuildLogic.current_definition(plot).get("id", "") == building_id:
+			return true
+	return false
+
+
+# --- encounter effects -------------------------------------------------------
+
+## Section 5: a flat dictionary, so a new key costs one branch here and nothing
+## in the data. Unknown keys warn rather than fail, so a typo in an encounter
+## does not take the run down.
+func apply_effects(effects: Dictionary) -> void:
+	for key in effects:
+		var value = effects[key]
+		if key in ["coin", "food", "water", "reputation"]:
+			add(key, int(value))
+		elif Factions.IDS.has(key):
+			Factions.adjust(key, int(value))
+		elif Data.goods_order.has(key):
+			add_goods(key, int(value))
+		elif key == "flag":
+			Flags.set_flag(str(value))
+		elif key == "building":
+			BuildLogic.grant(str(value))
+		elif key == "event":
+			queued_events.append(str(value))
+		elif key == "animals_owned":
+			town_animals = maxi(0, town_animals + int(value))
+		else:
+			push_warning("Game: unknown effect key %s" % key)
+
+
+## Section 5: `requires` gates a choice on a building, a flag, or a minimum of
+## some resource or good.
+func meets_requirements(requirements: Dictionary) -> bool:
+	for key in requirements:
+		var value = requirements[key]
+		if key == "building":
+			if not has_building(str(value)):
+				return false
+		elif key == "flag":
+			if not Flags.has(str(value)):
+				return false
+		elif Data.goods_order.has(key):
+			if goods_count(key) < int(value):
+				return false
+		else:
+			if get_resource(key) < int(value):
+				return false
+	return true
+
+
+## Why a requirement fails, for the dialogue to show. Empty when it is met.
+func requirement_reason(requirements: Dictionary) -> String:
+	for key in requirements:
+		var value = requirements[key]
+		if key == "building":
+			if not has_building(str(value)):
+				return "Needs a %s" % str(value).capitalize()
+		elif key == "flag":
+			continue
+		elif Data.goods_order.has(key):
+			if goods_count(key) < int(value):
+				return "Needs %d %s" % [int(value), key]
+		elif get_resource(key) < int(value):
+			return "Needs %d %s" % [int(value), key]
+	return ""
+
+
+## True when a choice is gated on a flag the player has not set. Those are
+## hidden rather than shown locked: a choice that refers to something that
+## never happened reads as nonsense.
+func hidden_by_flag(requirements: Dictionary) -> bool:
+	return requirements.has("flag") and not Flags.has(str(requirements["flag"]))
 
 
 func broadcast_resources() -> void:

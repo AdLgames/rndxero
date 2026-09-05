@@ -4,6 +4,7 @@ extends CanvasLayer
 ## four actions from section 5; the rules behind them live in CaravanQueue.
 
 signal resolved(action, toll)
+signal trade_requested(data)
 
 const TOLL_LABEL := "%d coin"
 
@@ -23,6 +24,7 @@ var _queue = null
 @onready var _pass: Button = $Panel/Margin/Layout/Actions/Pass
 @onready var _turn_away: Button = $Panel/Margin/Layout/Actions/TurnAway
 @onready var _warning: Label = $Panel/Margin/Layout/Warning
+@onready var _trade: Button = $Panel/Margin/Layout/Trade
 
 
 func setup(queue) -> void:
@@ -31,10 +33,12 @@ func setup(queue) -> void:
 
 func _ready() -> void:
 	_build_toll_buttons()
+	_trade.pressed.connect(_on_trade_pressed)
 	_lodge.pressed.connect(_on_action.bind("lodge"))
 	_pass.pressed.connect(_on_action.bind("pass"))
 	_turn_away.pressed.connect(_on_action.bind("turn_away"))
 	Events.resource_changed.connect(func(_n, _v): _refresh_actions())
+	Events.goods_changed.connect(func(_g): refresh())
 	close()
 
 
@@ -51,7 +55,7 @@ func show_caravan(data: Dictionary) -> void:
 	_faction.text = Factions.display_name(str(data.get("faction", "")))
 	_party.text = "%d travellers, %d animals — %d beds free" % [
 		int(data.get("size", 1)), int(data.get("animals", 0)), Game.beds_free()]
-	_goods.text = _describe_goods(data)
+	_goods.text = _describe_goods()
 	_select_toll(0)
 
 
@@ -60,24 +64,41 @@ func close() -> void:
 	_panel.hide()
 
 
-## Trading opens at M4; until then the manifest is shown but not actionable,
-## which is also how the player learns what a caravan is carrying.
-func _describe_goods(data: Dictionary) -> String:
+## Read from the live trade session rather than the caravan definition, so a
+## manifest visibly empties as the player buys from it.
+func _describe_goods() -> String:
+	if _data.is_empty():
+		return ""
+	var cargo: Dictionary = _data.get("cargo", {})
+	var wants: Dictionary = _data.get("wants", {})
+	if _queue != null:
+		var state: Dictionary = _queue.trade_state()
+		cargo = state.get("cargo", cargo)
+		wants = state.get("wants", wants)
 	var lines: Array = []
-	var cargo: Dictionary = data.get("cargo", {})
-	var wants: Dictionary = data.get("wants", {})
 	lines.append("Carrying: " + _list(cargo))
 	lines.append("Looking for: " + _list(wants))
-	lines.append("Trading opens at M4.")
 	return "\n".join(lines)
 
 
+## Re-read everything that the trade panel can have changed.
+func refresh() -> void:
+	if _data.is_empty():
+		return
+	_party.text = "%d travellers, %d animals — %d beds free" % [
+		int(_data.get("size", 1)), int(_data.get("animals", 0)), Game.beds_free()]
+	_goods.text = _describe_goods()
+	_refresh_actions()
+
+
 func _list(goods: Dictionary) -> String:
-	if goods.is_empty():
-		return "nothing"
 	var parts: Array = []
 	for good in goods:
-		parts.append("%d %s" % [int(goods[good]), good])
+		var quantity := int(goods[good])
+		if quantity > 0:
+			parts.append("%d %s" % [quantity, good])
+	if parts.is_empty():
+		return "nothing"
 	return ", ".join(parts)
 
 
@@ -107,12 +128,18 @@ func _refresh_actions() -> void:
 	_lodge.disabled = not can_lodge
 	_lodge.text = "Lodge for the night" if can_lodge else "No beds free"
 
+	_trade.disabled = _queue.trade_units_left() == 0
 	if _queue.refuses(_data, _toll):
 		_warning.text = "At %d coin they will refuse and leave." % _toll
 	elif _toll >= CaravanQueue.HIGH_TOLL:
 		_warning.text = "A %d coin toll will cost you standing." % _toll
 	else:
 		_warning.text = ""
+
+
+func _on_trade_pressed() -> void:
+	if not _data.is_empty():
+		trade_requested.emit(_data)
 
 
 func _on_action(action: String) -> void:

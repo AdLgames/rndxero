@@ -1,4 +1,4 @@
-[gd_scene load_steps=8 format=3]
+[gd_scene load_steps=10 format=3]
 
 [ext_resource type="Script" path="res://scripts/Main.gd" id="1_main"]
 [ext_resource type="PackedScene" path="res://scenes/Town.tscn" id="2_town"]
@@ -7,6 +7,8 @@
 [ext_resource type="PackedScene" path="res://scenes/ui/BuildMenu.tscn" id="5_menu"]
 [ext_resource type="Script" path="res://scripts/CaravanQueue.gd" id="6_queue"]
 [ext_resource type="PackedScene" path="res://scenes/ui/CaravanCard.tscn" id="7_card"]
+[ext_resource type="PackedScene" path="res://scenes/ui/TradePanel.tscn" id="8_trade"]
+[ext_resource type="PackedScene" path="res://scenes/ui/Dialogue.tscn" id="9_dialogue"]
 
 [node name="Main" type="Node2D"]
 script = ExtResource("1_main")
@@ -22,5 +24,9 @@ script = ExtResource("6_queue")
 [node name="HUD" parent="." instance=ExtResource("4_hud")]
 
 [node name="CaravanCard" parent="." instance=ExtResource("7_card")]
+
+[node name="TradePanel" parent="." instance=ExtResource("8_trade")]
+
+[node name="Dialogue" parent="." instance=ExtResource("9_dialogue")]
 
 [node name="BuildMenu" parent="." instance=ExtResource("5_menu")]

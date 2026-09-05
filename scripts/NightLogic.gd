@@ -32,7 +32,7 @@ static func run() -> Dictionary:
 
 	# Section 3: 2 food for the town plus 1 per lodged guest; water is 1 per
 	# guest and 1 per animal, and a Stable halves the animals' draw.
-	var animals := Game.lodged_animals
+	var animals := Game.lodged_animals + Game.town_animals
 	if Game.has_effect("halve_animal_water"):
 		animals = int(ceil(animals / 2.0))
 	var food_cost := NightLogic._food_upkeep()

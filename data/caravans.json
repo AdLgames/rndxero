@@ -9,8 +9,13 @@
       "portrait": "res://assets/portraits/leader_00.png",
       "size": 3,
       "animals": 2,
-      "cargo": { "salt": 10, "cloth": 4 },
-      "wants": { "grain": 6 },
+      "cargo": {
+        "salt": 10,
+        "cloth": 4
+      },
+      "wants": {
+        "grain": 6
+      },
       "encounter": "guild_salt_01_sick_horse",
       "min_day": 1,
       "max_day": 10,
@@ -24,11 +29,17 @@
       "portrait": "res://assets/portraits/leader_01.png",
       "size": 2,
       "animals": 1,
-      "cargo": { "cloth": 8, "wine": 3 },
-      "wants": { "salt": 4 },
+      "cargo": {
+        "cloth": 8,
+        "wine": 3
+      },
+      "wants": {
+        "salt": 4
+      },
       "min_day": 2,
       "max_day": 10,
-      "weight": 1.0
+      "weight": 1.0,
+      "encounter": "guild_cloth_01_short_bolts"
     },
     {
       "id": "guild_iron_01",
@@ -38,11 +49,17 @@
       "portrait": "res://assets/portraits/leader_02.png",
       "size": 4,
       "animals": 3,
-      "cargo": { "iron": 9 },
-      "wants": { "grain": 8, "wine": 2 },
+      "cargo": {
+        "iron": 9
+      },
+      "wants": {
+        "grain": 8,
+        "wine": 2
+      },
       "min_day": 4,
       "max_day": 10,
-      "weight": 0.9
+      "weight": 0.9,
+      "encounter": "guild_iron_01_toll_road"
     },
     {
       "id": "crown_tax_01",
@@ -53,7 +70,9 @@
       "size": 2,
       "animals": 2,
       "cargo": {},
-      "wants": { "grain": 4 },
+      "wants": {
+        "grain": 4
+      },
       "encounter": "crown_tax_01_ledger",
       "min_day": 2,
       "max_day": 10,
@@ -68,11 +87,17 @@
       "portrait": "res://assets/portraits/leader_04.png",
       "size": 4,
       "animals": 4,
-      "cargo": { "iron": 3 },
-      "wants": { "grain": 6, "wine": 3 },
+      "cargo": {
+        "iron": 3
+      },
+      "wants": {
+        "grain": 6,
+        "wine": 3
+      },
       "min_day": 3,
       "max_day": 10,
-      "weight": 1.0
+      "weight": 1.0,
+      "encounter": "crown_patrol_01_billeting"
     },
     {
       "id": "crown_courier_01",
@@ -83,11 +108,14 @@
       "size": 1,
       "animals": 1,
       "cargo": {},
-      "wants": { "grain": 2 },
+      "wants": {
+        "grain": 2
+      },
       "min_day": 1,
       "max_day": 8,
       "weight": 1.1,
-      "repeatable": true
+      "repeatable": true,
+      "encounter": "crown_courier_01_urgent"
     },
     {
       "id": "freeroad_drifters_01",
@@ -97,7 +125,9 @@
       "portrait": "res://assets/portraits/leader_06.png",
       "size": 3,
       "animals": 0,
-      "cargo": { "grain": 3 },
+      "cargo": {
+        "grain": 3
+      },
       "wants": {},
       "encounter": "freeroad_drifters_01_shelter",
       "min_day": 1,
@@ -112,12 +142,18 @@
       "portrait": "res://assets/portraits/leader_07.png",
       "size": 1,
       "animals": 1,
-      "cargo": { "iron": 4, "cloth": 2 },
-      "wants": { "wine": 2 },
+      "cargo": {
+        "iron": 4,
+        "cloth": 2
+      },
+      "wants": {
+        "wine": 2
+      },
       "min_day": 1,
       "max_day": 10,
       "weight": 1.0,
-      "repeatable": true
+      "repeatable": true,
+      "encounter": "freeroad_tinker_01_offer"
     },
     {
       "id": "freeroad_refugees_01",
@@ -128,10 +164,13 @@
       "size": 5,
       "animals": 1,
       "cargo": {},
-      "wants": { "grain": 5 },
+      "wants": {
+        "grain": 5
+      },
       "min_day": 6,
       "max_day": 10,
-      "weight": 1.4
+      "weight": 1.4,
+      "encounter": "freeroad_refugees_01_ahead"
     }
   ]
 }

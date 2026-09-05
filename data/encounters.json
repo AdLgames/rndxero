@@ -1,0 +1,85 @@
+{
+  "_comment": "A starter set of nine. M7 fills this to thirty. `requires` gates a choice on a building, a flag, or a resource minimum; `effects` keys are resources, factions, goods, `flag`, `building` and `event`.",
+  "encounters": [
+    {
+      "id": "guild_salt_01_sick_horse",
+      "text": "One of Merrit's horses is lame. She asks to leave it in your stable for a week, and says she is good for it.",
+      "choices": [
+        { "text": "Take the horse in", "effects": { "water": -3, "guild": 1, "flag": "merrit_horse", "animals_owned": 1 } },
+        { "text": "Refuse", "effects": { "guild": -1 } },
+        { "text": "Buy the horse outright for 10 coin", "effects": { "coin": -10, "animals_owned": 1, "guild": 1 }, "requires": { "building": "stable", "coin": 10 } }
+      ]
+    },
+    {
+      "id": "guild_cloth_01_short_bolts",
+      "text": "Sabel Ost counts her bolts twice and comes up short. She is certain your gate hands took them, and she is wrong.",
+      "choices": [
+        { "text": "Pay for the missing cloth to end it", "effects": { "coin": -8, "guild": 1 }, "requires": { "coin": 8 } },
+        { "text": "Stand your ground", "effects": { "guild": -1, "reputation": 1 } },
+        { "text": "\"Ask Merrit about us. We kept her horse.\"", "effects": { "guild": 2, "flag": "sabel_owes" }, "requires": { "flag": "merrit_horse" } }
+      ]
+    },
+    {
+      "id": "guild_iron_01_toll_road",
+      "text": "Dresk Hallow proposes a standing arrangement: a flat sum now, and his consortium passes free for the rest of the season.",
+      "choices": [
+        { "text": "Take the 30 coin", "effects": { "coin": 30, "guild": -1, "flag": "iron_pact" } },
+        { "text": "Decline; the road is the road", "effects": { "guild": 1 } }
+      ]
+    },
+    {
+      "id": "crown_tax_01_ledger",
+      "text": "Assessor Pell wants to see what the crossing has taken this season. Your ledger is honest, which is not the same as flattering.",
+      "choices": [
+        { "text": "Show the ledger", "effects": { "crown": 2, "coin": -10 } },
+        { "text": "Show a version of it", "effects": { "crown": -1, "flag": "false_ledger" } },
+        { "text": "Refuse him the books", "effects": { "crown": -2, "freeroad": 1 } }
+      ]
+    },
+    {
+      "id": "crown_patrol_01_billeting",
+      "text": "Serjeant Aud does not ask. Her four are billeted here tonight, and she expects them fed.",
+      "choices": [
+        { "text": "Feed and bed them", "effects": { "food": -4, "crown": 2 }, "requires": { "food": 4 } },
+        { "text": "Give them the palisade and nothing else", "effects": { "crown": 1 }, "requires": { "building": "palisade" } },
+        { "text": "Send her on", "effects": { "crown": -2, "freeroad": 1 } }
+      ]
+    },
+    {
+      "id": "crown_courier_01_urgent",
+      "text": "Rider Ilsa needs a fresh mount and will not say what the letter is. Her horse is finished.",
+      "choices": [
+        { "text": "Give her one of ours", "effects": { "animals_owned": -1, "crown": 2 }, "requires": { "building": "stable" } },
+        { "text": "Sell her water and send her on", "effects": { "water": -2, "coin": 6, "crown": 1 }, "requires": { "water": 2 } },
+        { "text": "Nothing to spare", "effects": { "crown": -1 } }
+      ]
+    },
+    {
+      "id": "freeroad_drifters_01_shelter",
+      "text": "Old Cass asks for the lee of a wall and no questions. The Ninefold have been on the road a long time.",
+      "choices": [
+        { "text": "Give them the yard", "effects": { "freeroad": 2, "water": -2, "flag": "cass_sheltered" } },
+        { "text": "Sell them water and move them along", "effects": { "coin": 4, "water": -2, "freeroad": -1 }, "requires": { "water": 2 } },
+        { "text": "Not tonight", "effects": { "freeroad": -2 } }
+      ]
+    },
+    {
+      "id": "freeroad_tinker_01_offer",
+      "text": "Hob Ashway lays out a roll of tools. He would rather trade than be paid, and he is watching how you answer.",
+      "choices": [
+        { "text": "Trade fairly", "effects": { "iron": 2, "coin": -6, "freeroad": 1 }, "requires": { "coin": 6 } },
+        { "text": "Drive him down", "effects": { "iron": 2, "coin": -2, "freeroad": -1 }, "requires": { "coin": 2 } },
+        { "text": "Wave him through", "effects": { "freeroad": 1 } }
+      ]
+    },
+    {
+      "id": "freeroad_refugees_01_ahead",
+      "text": "Wenna Fold says there are more behind her. A great many more, and they are walking day and night.",
+      "choices": [
+        { "text": "Ask what they are running from", "effects": { "freeroad": 1, "flag": "warned_of_column" } },
+        { "text": "Warn the Crown", "effects": { "crown": 2, "freeroad": -2, "flag": "crown_warned" } },
+        { "text": "Say nothing and start stocking food", "effects": { "flag": "warned_of_column" } }
+      ]
+    }
+  ]
+}
