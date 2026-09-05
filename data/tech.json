@@ -1,0 +1,85 @@
+{
+  "_comment": "Adding a node is data-only as long as it uses an existing effect type. TechManager.apply_effect() folds each effect into a modifier field; see scripts/autoload/TechManager.gd for the supported types.",
+  "nodes": [
+    {
+      "id": "wide_lanes",
+      "name": "Wide Lanes",
+      "cost": 60,
+      "prereqs": [],
+      "desc": "All lane capacity +2",
+      "effect": { "type": "lane_capacity", "value": 2 }
+    },
+    {
+      "id": "thrust_1",
+      "name": "Ion Thrusters",
+      "cost": 80,
+      "prereqs": [],
+      "desc": "All ship speed +20%",
+      "effect": { "type": "ship_speed_mult", "value": 1.2 }
+    },
+    {
+      "id": "docks_1",
+      "name": "Extra Docking Bay",
+      "cost": 80,
+      "prereqs": [],
+      "desc": "Station dock capacity +2",
+      "effect": { "type": "dock_capacity", "value": 2 }
+    },
+    {
+      "id": "signals",
+      "name": "Lane Signals",
+      "cost": 120,
+      "prereqs": ["wide_lanes"],
+      "desc": "Ships wait at lane entry instead of entering over capacity",
+      "effect": { "type": "flag", "flag": "signals" }
+    },
+    {
+      "id": "separation",
+      "name": "Separation Protocol",
+      "cost": 150,
+      "prereqs": ["signals"],
+      "desc": "Collision chance halved",
+      "effect": { "type": "collision_mult", "value": 0.5 }
+    },
+    {
+      "id": "patience_1",
+      "name": "Comfort Standards",
+      "cost": 100,
+      "prereqs": ["docks_1"],
+      "desc": "Consumer patience +15s",
+      "effect": { "type": "patience", "ship_class": "consumer", "value": 15.0 }
+    },
+    {
+      "id": "hauler_tugs",
+      "name": "Tug Escorts",
+      "cost": 200,
+      "prereqs": ["separation"],
+      "desc": "Heavy ships no longer trigger collisions",
+      "effect": { "type": "flag", "flag": "hauler_tugs" }
+    },
+    {
+      "id": "express",
+      "name": "Express Priority",
+      "cost": 180,
+      "prereqs": ["signals"],
+      "desc": "Consumer ships jump lane queues",
+      "effect": { "type": "flag", "flag": "express" }
+    },
+    {
+      "id": "routing_1",
+      "name": "Smart Dispatch",
+      "cost": 220,
+      "prereqs": ["signals", "thrust_1"],
+      "desc": "Ships route by least-loaded path instead of shortest",
+      "effect": { "type": "flag", "flag": "load_routing" }
+    },
+    {
+      "id": "wide_lanes_2",
+      "name": "Superhighways",
+      "cost": 300,
+      "prereqs": ["wide_lanes", "routing_1"],
+      "desc": "All lane capacity +4",
+      "effect": { "type": "lane_capacity", "value": 4 }
+    }
+  ]
+}
