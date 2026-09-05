@@ -14,6 +14,7 @@ const FILES := {
 	"encounters": "res://data/encounters.json",
 	"night_events": "res://data/night_events.json",
 	"rumors": "res://data/rumors.json",
+	"ending": "res://data/ending.json",
 }
 
 ## Files whose absence is expected at this milestone, so it is not worth a warning.
@@ -95,6 +96,10 @@ func definition(id: String) -> Dictionary:
 
 func encounter(id: String) -> Dictionary:
 	return encounters_by_id.get(id, {})
+
+
+func ending() -> Dictionary:
+	return document("ending")
 
 
 func night_event(id: String) -> Dictionary:

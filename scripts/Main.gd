@@ -12,6 +12,11 @@ extends Node2D
 @onready var _dialogue = $Dialogue
 @onready var _report = $NightReport
 @onready var _game_over = $GameOver
+@onready var _ending = $Ending
+
+## The epilogue panel occupies the lower half of the screen, so the camera
+## rises to keep the town in the gap above it.
+const ENDING_CAMERA_Y := 60.0
 
 var _over_reason: String = ""
 
@@ -134,11 +139,16 @@ func _on_phase_changed(phase: int) -> void:
 			_trade.close()
 			_dialogue.close()
 			_camera.release_focus()
+			_camera.reset_camera_y()
 		Game.Phase.NIGHT:
 			pass
 		Game.Phase.ENDING:
-			# The Column and its five outcomes are M6.
-			Events.toast.emit("The season is over. The Column arrives at M6.", "info")
+			_close_all()
+			# Lift the view so the strip stays visible above the epilogue panel,
+			# which is what section 9 means by a scene of the town.
+			_camera.release_focus()
+			_camera.set_camera_y(ENDING_CAMERA_Y)
+			_ending.show_column()
 
 
 func _unhandled_input(event: InputEvent) -> void:

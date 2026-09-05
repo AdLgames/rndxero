@@ -18,18 +18,17 @@ Open the project folder in Godot 4.3 or newer and press play.
 
 ## Status
 
-**M1 to M5 of the seven milestones in §12 are built.** That is: the road strip
+**M1 to M6 of the seven milestones in §12 are built.** That is: the road strip
 with parallax and twelve plots, camera scrolling and the HUD; all six buildings
 with their upgrades, costs and nightly effects; the morning caravan queue with
 tolls, lodging and turning away; trading plus the encounter system with
-effects, requirements and flags; and the night — events, rumours, the report
-screen and losing.
+effects, requirements and flags; the night — events, rumours, the report screen
+and losing; and the Column that ends the season.
 
-Not built yet, in the order the spec sequences them:
+Not built yet:
 
 | Milestone | What is missing |
 |---|---|
-| M6 | The Column: the day 10 event, its five outcomes, epilogue |
 | M7 | Content: fill to 30 encounters; phase tint transitions |
 
 ### The pressure
@@ -50,7 +49,19 @@ Tomorrow's event is rolled tonight rather than tomorrow. That is deliberate: a
 Free Road at +3 or better passes on a warning about it, and a warning has to be
 about something already decided or it is not a warning.
 
-The Column itself lands at M6. Until then the season simply stops on day 10.
+### The Column
+
+On the night of day 10 the column arrives with a Crown patrol behind it, and
+the run resolves into one of six endings. Shelter them and the outcome turns on
+whether the Free Road trusts you *and* whether the stores actually cover twelve
+people — that second condition is what the whole season of building has been
+for. Turn them away, hand them over, or, if you have a Gatehouse up and the
+Crown already alienated, shut the gate on both.
+
+§9 specifies five outcomes but offers "hand them to the Crown" unconditionally
+while naming a result only for Crown ≥ +2. Handing the column over from a worse
+standing resolves to a sixth, colder outcome rather than dead-ending. All six
+are reachable; nothing falls through.
 
 **Both income streams are in.** Tolls of 0/5/10/20 per caravan, and the trade
 margin: you buy a caravan's cargo at the `buy` column of `data/prices.json` and

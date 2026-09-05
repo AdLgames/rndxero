@@ -106,10 +106,13 @@ func get_resource(name: String) -> int:
 
 
 func add(name: String, amount: int) -> void:
+	# Stores floor at zero. Encounter and ending effects are written as flat
+	# costs without knowing what the town has, so a levy larger than the purse
+	# empties it rather than going negative.
 	match name:
-		"coin": coin += amount
-		"food": food += amount
-		"water": water += amount
+		"coin": coin = maxi(0, coin + amount)
+		"food": food = maxi(0, food + amount)
+		"water": water = maxi(0, water + amount)
 		"reputation": reputation = clampi(reputation + amount, 0, MAX_REPUTATION)
 		_:
 			push_warning("Game: unknown resource %s" % name)
