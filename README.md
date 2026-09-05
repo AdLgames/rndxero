@@ -18,18 +18,23 @@ Open the project folder in Godot 4.3 or newer and press play.
 
 ## Status
 
-**M1 to M6 of the seven milestones in §12 are built.** That is: the road strip
+**All seven milestones in §12 are built.** That is: the road strip
 with parallax and twelve plots, camera scrolling and the HUD; all six buildings
 with their upgrades, costs and nightly effects; the morning caravan queue with
 tolls, lodging and turning away; trading plus the encounter system with
 effects, requirements and flags; the night — events, rumours, the report screen
-and losing; and the Column that ends the season.
+and losing; the Column that ends the season; and the content fill.
 
-Not built yet:
+Thirty encounters, ten per faction, five of them chained through flags — take
+Merrit's lame horse in and a later Guild caravan opens a line that only exists
+because you did; show the Assessor a doctored ledger and a clerk comes back for
+it days later. Ten night events, ten rumours. The world tints between phases:
+warm at the gate in the morning, plain in the afternoon, blue at night.
 
-| Milestone | What is missing |
-|---|---|
-| M7 | Content: fill to 30 encounters; phase tint transitions |
+Encounters are not tied to a caravan one-to-one. An entry naming a `caravan`
+belongs to it alone and is drawn first so its story gets told; everything else
+is a faction pool any caravan of that faction can pull from. Adding an
+encounter is one object in `data/encounters.json` and nothing else.
 
 ### The pressure
 

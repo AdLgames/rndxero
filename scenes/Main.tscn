@@ -1,4 +1,4 @@
-[gd_scene load_steps=13 format=3]
+[gd_scene load_steps=14 format=3]
 
 [ext_resource type="Script" path="res://scripts/Main.gd" id="1_main"]
 [ext_resource type="PackedScene" path="res://scenes/Town.tscn" id="2_town"]
@@ -12,9 +12,13 @@
 [ext_resource type="PackedScene" path="res://scenes/ui/NightReport.tscn" id="10_report"]
 [ext_resource type="PackedScene" path="res://scenes/ui/GameOver.tscn" id="11_over"]
 [ext_resource type="PackedScene" path="res://scenes/ui/Ending.tscn" id="12_ending"]
+[ext_resource type="Script" path="res://scripts/PhaseTint.gd" id="13_tint"]
 
 [node name="Main" type="Node2D"]
 script = ExtResource("1_main")
+
+[node name="PhaseTint" type="CanvasModulate" parent="."]
+script = ExtResource("13_tint")
 
 [node name="Town" parent="." instance=ExtResource("2_town")]
 

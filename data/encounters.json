@@ -1,8 +1,10 @@
 {
-  "_comment": "A starter set of nine. M7 fills this to thirty. `requires` gates a choice on a building, a flag, or a resource minimum; `effects` keys are resources, factions, goods, `flag`, `building` and `event`.",
+  "_comment": "Thirty encounters, ten per faction. An entry with `caravan` belongs to that caravan alone; otherwise it is drawn by any caravan of its `faction`. Entry-level `requires` gates the whole encounter (used for flag chains); choice-level `requires` gates one option. `effects` keys are resources, factions, goods, `flag`, `building`, `event`, `animals_owned` and `coin_percent`.",
   "encounters": [
     {
       "id": "guild_salt_01_sick_horse",
+      "faction": "guild",
+      "caravan": "guild_salt_01",
       "text": "One of Merrit's horses is lame. She asks to leave it in your stable for a week, and says she is good for it.",
       "choices": [
         { "text": "Take the horse in", "effects": { "water": -3, "guild": 1, "flag": "merrit_horse", "animals_owned": 1 } },
@@ -12,6 +14,8 @@
     },
     {
       "id": "guild_cloth_01_short_bolts",
+      "faction": "guild",
+      "caravan": "guild_cloth_01",
       "text": "Sabel Ost counts her bolts twice and comes up short. She is certain your gate hands took them, and she is wrong.",
       "choices": [
         { "text": "Pay for the missing cloth to end it", "effects": { "coin": -8, "guild": 1 }, "requires": { "coin": 8 } },
@@ -21,6 +25,8 @@
     },
     {
       "id": "guild_iron_01_toll_road",
+      "faction": "guild",
+      "caravan": "guild_iron_01",
       "text": "Dresk Hallow proposes a standing arrangement: a flat sum now, and his consortium passes free for the rest of the season.",
       "choices": [
         { "text": "Take the 30 coin", "effects": { "coin": 30, "guild": -1, "flag": "iron_pact" } },
@@ -28,7 +34,84 @@
       ]
     },
     {
+      "id": "guild_weights",
+      "faction": "guild",
+      "min_day": 2,
+      "text": "A Guild inspector wants to test your scale against hers. Yours is a little generous, which has been costing you and pleasing everyone else.",
+      "choices": [
+        { "text": "Let her recalibrate it", "effects": { "guild": 2, "reputation": -1 } },
+        { "text": "The scale stays as it is", "effects": { "guild": -1, "reputation": 1 } }
+      ]
+    },
+    {
+      "id": "guild_apprentice",
+      "faction": "guild",
+      "min_day": 3,
+      "text": "A boy on his third season asks whether the crossing needs anyone. He is not running from anything; he is just tired of the road.",
+      "choices": [
+        { "text": "Find him work", "effects": { "food": -2, "reputation": 1, "flag": "apprentice_stayed" } },
+        { "text": "Send him on with his train", "effects": { "guild": 1 } }
+      ]
+    },
+    {
+      "id": "guild_spoiled_cargo",
+      "faction": "guild",
+      "min_day": 3,
+      "text": "Half a wagon of grain has gone over. They want to tip it somewhere that is not their problem, and your ford is right there.",
+      "choices": [
+        { "text": "Not in the water", "effects": { "guild": -1, "reputation": 1 } },
+        { "text": "Take it for the animals, cheap", "effects": { "coin": -3, "grain": 3, "guild": 1 }, "requires": { "coin": 3 } },
+        { "text": "Let them tip it and say nothing", "effects": { "guild": 2, "event": "spoiled_grain" } }
+      ]
+    },
+    {
+      "id": "guild_credit",
+      "faction": "guild",
+      "min_day": 4,
+      "text": "The factor is short and asks to settle at the end of the season. Everyone at this table knows the season ends in a way nobody can see past.",
+      "choices": [
+        { "text": "Extend the credit", "effects": { "coin": -12, "guild": 2, "flag": "guild_owes" }, "requires": { "coin": 12 } },
+        { "text": "Coin now or no passage", "effects": { "guild": -1, "coin": 5 } },
+        { "text": "\"Dresk's consortium settled in advance. You can too.\"", "effects": { "coin": 15, "guild": -1 }, "requires": { "flag": "iron_pact" } }
+      ]
+    },
+    {
+      "id": "guild_rival",
+      "faction": "guild",
+      "min_day": 4,
+      "text": "A Guild factor would like an assurance that a particular competitor finds the gate closed. He does not say which, yet, and is waiting to see whether he needs to.",
+      "choices": [
+        { "text": "The gate is open to anyone who pays", "effects": { "guild": -1, "freeroad": 1, "reputation": 1 } },
+        { "text": "Hear the name", "effects": { "coin": 20, "guild": 1, "reputation": -2, "flag": "took_the_name" } }
+      ]
+    },
+    {
+      "id": "guild_bulk",
+      "faction": "guild",
+      "min_day": 3,
+      "text": "They are running light and would rather sell grain at a loss than haul it over the pass again.",
+      "choices": [
+        { "text": "Buy the lot", "effects": { "coin": -10, "grain": 6, "guild": 1 }, "requires": { "coin": 10 } },
+        { "text": "Buy what you can carry", "effects": { "coin": -4, "grain": 2 }, "requires": { "coin": 4 } },
+        { "text": "Pass", "effects": {} }
+      ]
+    },
+    {
+      "id": "guild_late",
+      "faction": "guild",
+      "min_day": 5,
+      "text": "They reach the ford well after dark and want the gate opened. The road behind them is not what it was a week ago.",
+      "choices": [
+        { "text": "Open it", "effects": { "guild": 2, "water": -2, "crown": -1 } },
+        { "text": "They can wait until light", "effects": { "guild": -1 } },
+        { "text": "Open it; the wall can take the risk", "effects": { "guild": 2, "reputation": 1 }, "requires": { "building": "palisade" } }
+      ]
+    },
+
+    {
       "id": "crown_tax_01_ledger",
+      "faction": "crown",
+      "caravan": "crown_tax_01",
       "text": "Assessor Pell wants to see what the crossing has taken this season. Your ledger is honest, which is not the same as flattering.",
       "choices": [
         { "text": "Show the ledger", "effects": { "crown": 2, "coin": -10 } },
@@ -38,6 +121,8 @@
     },
     {
       "id": "crown_patrol_01_billeting",
+      "faction": "crown",
+      "caravan": "crown_patrol_01",
       "text": "Serjeant Aud does not ask. Her four are billeted here tonight, and she expects them fed.",
       "choices": [
         { "text": "Feed and bed them", "effects": { "food": -4, "crown": 2 }, "requires": { "food": 4 } },
@@ -47,6 +132,8 @@
     },
     {
       "id": "crown_courier_01_urgent",
+      "faction": "crown",
+      "caravan": "crown_courier_01",
       "text": "Rider Ilsa needs a fresh mount and will not say what the letter is. Her horse is finished.",
       "choices": [
         { "text": "Give her one of ours", "effects": { "animals_owned": -1, "crown": 2 }, "requires": { "building": "stable" } },
@@ -55,7 +142,87 @@
       ]
     },
     {
+      "id": "crown_ledger_followup",
+      "faction": "crown",
+      "min_day": 4,
+      "requires": { "flag": "false_ledger" },
+      "text": "A clerk has been over the figures you gave Pell and found them tidy. Too tidy. He has not filed anything yet.",
+      "choices": [
+        { "text": "Correct the record and pay the difference", "effects": { "coin": -18, "crown": 2, "flag": "ledger_cleared" }, "requires": { "coin": 18 } },
+        { "text": "Make it worth his while to lose the page", "effects": { "coin": -8, "crown": -1, "freeroad": 1 }, "requires": { "coin": 8 } },
+        { "text": "Let him file it", "effects": { "crown": -3, "event": "tax_raid" } }
+      ]
+    },
+    {
+      "id": "crown_conscript",
+      "faction": "crown",
+      "min_day": 5,
+      "text": "The muster is short and the crossing is on the list. They want one able body, and they are not fussy about which.",
+      "choices": [
+        { "text": "Send one of your own", "effects": { "crown": 2, "reputation": -2 } },
+        { "text": "Pay the exemption", "effects": { "coin": -20, "crown": 1 }, "requires": { "coin": 20 } },
+        { "text": "The crossing sends nobody", "effects": { "crown": -2, "freeroad": 2 } }
+      ]
+    },
+    {
+      "id": "crown_bridge_levy",
+      "faction": "crown",
+      "min_day": 3,
+      "text": "A levy is being collected for a bridge upriver. There has been a levy for that bridge every season for eleven years.",
+      "choices": [
+        { "text": "Pay it", "effects": { "coin": -12, "crown": 2 }, "requires": { "coin": 12 } },
+        { "text": "Ask to see the bridge", "effects": { "crown": -1, "reputation": 1 } },
+        { "text": "Pay half and smile", "effects": { "coin": -6, "crown": 1 }, "requires": { "coin": 6 } }
+      ]
+    },
+    {
+      "id": "crown_deserter",
+      "faction": "crown",
+      "min_day": 5,
+      "text": "One of the patrol comes back alone after dark, without his coat, and asks how far the plains are.",
+      "choices": [
+        { "text": "Point him down the road", "effects": { "freeroad": 2, "crown": -2, "flag": "hid_deserter" } },
+        { "text": "Hold him for the Serjeant", "effects": { "crown": 2, "freeroad": -2 } },
+        { "text": "Feed him and let him decide", "effects": { "food": -2, "reputation": 1 }, "requires": { "food": 2 } }
+      ]
+    },
+    {
+      "id": "crown_writ",
+      "faction": "crown",
+      "min_day": 6,
+      "text": "A writ authorises a search of the crossing for anyone travelling without papers. The Serjeant would rather you simply told her.",
+      "choices": [
+        { "text": "Open every building to her", "effects": { "crown": 2, "freeroad": -2 } },
+        { "text": "Refuse the search", "effects": { "crown": -2, "freeroad": 2 } },
+        { "text": "\"Nobody here but carters.\" (Cass and the Ninefold are in the yard)", "effects": { "crown": -1, "freeroad": 3, "flag": "lied_to_crown" }, "requires": { "flag": "cass_sheltered" } }
+      ]
+    },
+    {
+      "id": "crown_road_repair",
+      "faction": "crown",
+      "min_day": 3,
+      "text": "The road east of the ford is washing out. The Crown will pay for the work if the crossing does it.",
+      "choices": [
+        { "text": "Take the contract", "effects": { "coin": 18, "food": -3, "crown": 1 }, "requires": { "food": 3 } },
+        { "text": "Too much to do here", "effects": { "crown": -1 } }
+      ]
+    },
+    {
+      "id": "crown_muster",
+      "faction": "crown",
+      "min_day": 8,
+      "text": "The patrol is riding east, not west, and the Serjeant will not say why. She asks what stores the crossing is holding, in a tone that is almost concern.",
+      "choices": [
+        { "text": "Tell her honestly", "effects": { "crown": 2, "flag": "warned_of_column" } },
+        { "text": "Understate it", "effects": { "crown": -1, "flag": "understated_stores" } },
+        { "text": "Ask her what is coming", "effects": { "crown": 1, "flag": "warned_of_column", "reputation": -1 } }
+      ]
+    },
+
+    {
       "id": "freeroad_drifters_01_shelter",
+      "faction": "freeroad",
+      "caravan": "freeroad_drifters_01",
       "text": "Old Cass asks for the lee of a wall and no questions. The Ninefold have been on the road a long time.",
       "choices": [
         { "text": "Give them the yard", "effects": { "freeroad": 2, "water": -2, "flag": "cass_sheltered" } },
@@ -65,6 +232,8 @@
     },
     {
       "id": "freeroad_tinker_01_offer",
+      "faction": "freeroad",
+      "caravan": "freeroad_tinker_01",
       "text": "Hob Ashway lays out a roll of tools. He would rather trade than be paid, and he is watching how you answer.",
       "choices": [
         { "text": "Trade fairly", "effects": { "iron": 2, "coin": -6, "freeroad": 1 }, "requires": { "coin": 6 } },
@@ -74,11 +243,92 @@
     },
     {
       "id": "freeroad_refugees_01_ahead",
+      "faction": "freeroad",
+      "caravan": "freeroad_refugees_01",
       "text": "Wenna Fold says there are more behind her. A great many more, and they are walking day and night.",
       "choices": [
         { "text": "Ask what they are running from", "effects": { "freeroad": 1, "flag": "warned_of_column" } },
         { "text": "Warn the Crown", "effects": { "crown": 2, "freeroad": -2, "flag": "crown_warned" } },
         { "text": "Say nothing and start stocking food", "effects": { "flag": "warned_of_column" } }
+      ]
+    },
+    {
+      "id": "freeroad_healer",
+      "faction": "freeroad",
+      "min_day": 3,
+      "text": "A woman travelling alone says she sets bones and asks for a bed rather than coin. She has the hands for it.",
+      "choices": [
+        { "text": "Give her a bed", "effects": { "food": -1, "water": -1, "freeroad": 2, "reputation": 1, "flag": "healer_stayed" } },
+        { "text": "Coin instead; the beds are for paying guests", "effects": { "coin": -5, "freeroad": 1 }, "requires": { "coin": 5 } },
+        { "text": "Send her on", "effects": { "freeroad": -1 } }
+      ]
+    },
+    {
+      "id": "freeroad_smuggler",
+      "faction": "freeroad",
+      "min_day": 4,
+      "text": "Two crates, one night, no questions, and he will not say what is in them. He will say what he is paying.",
+      "choices": [
+        { "text": "Take the coin and the crates", "effects": { "coin": 25, "crown": -2, "freeroad": 2, "flag": "held_crates" } },
+        { "text": "Refuse", "effects": { "freeroad": -1, "crown": 1 } },
+        { "text": "Look inside first", "effects": { "coin": 12, "freeroad": -2, "reputation": 1 } }
+      ]
+    },
+    {
+      "id": "freeroad_child",
+      "faction": "freeroad",
+      "min_day": 6,
+      "text": "A child is sitting by the ford at first light with a name and no people attached to it. The cart she came on left before dawn.",
+      "choices": [
+        { "text": "Keep her at the crossing", "effects": { "food": -2, "reputation": 2, "freeroad": 2, "flag": "kept_the_child" } },
+        { "text": "Send word down the road", "effects": { "freeroad": 1, "reputation": 1 } },
+        { "text": "Hand her to the next Crown patrol", "effects": { "crown": 1, "freeroad": -3, "reputation": -1 } }
+      ]
+    },
+    {
+      "id": "freeroad_debt",
+      "faction": "freeroad",
+      "min_day": 5,
+      "requires": { "flag": "cass_sheltered" },
+      "text": "One of the Ninefold is back, alone, with a purse he should not have and a debt he says the crossing is owed.",
+      "choices": [
+        { "text": "Take it", "effects": { "coin": 22, "freeroad": 1, "reputation": -1 } },
+        { "text": "Refuse it; Cass owes nothing", "effects": { "freeroad": 3, "reputation": 1 } },
+        { "text": "Ask where it came from", "effects": { "freeroad": -1, "reputation": 2 } }
+      ]
+    },
+    {
+      "id": "freeroad_water",
+      "faction": "freeroad",
+      "min_day": 2,
+      "text": "A dozen on foot want to draw from the well. They are not offering to pay, and they are not asking either.",
+      "choices": [
+        { "text": "Let them drink", "effects": { "water": -4, "freeroad": 2 } },
+        { "text": "Let them drink; there is plenty", "effects": { "water": -4, "freeroad": 2, "reputation": 1 }, "requires": { "building": "well", "water": 8 } },
+        { "text": "The well is the town's", "effects": { "freeroad": -2 } }
+      ]
+    },
+    {
+      "id": "freeroad_warning",
+      "faction": "freeroad",
+      "min_day": 7,
+      "requires": { "flag": "warned_of_column" },
+      "text": "A drifter who owes you nothing stops long enough to say it plainly: whatever is behind the column is not a rumour, and the ford is the only crossing for two days in either direction.",
+      "choices": [
+        { "text": "Buy what grain he has", "effects": { "coin": -8, "grain": 4, "freeroad": 1 }, "requires": { "coin": 8 } },
+        { "text": "Thank him and start counting the stores", "effects": { "freeroad": 1, "flag": "counted_stores" } },
+        { "text": "You have heard it already", "effects": {} }
+      ]
+    },
+    {
+      "id": "freeroad_burial",
+      "faction": "freeroad",
+      "min_day": 5,
+      "text": "Someone died on the road a mile east and the people carrying him cannot carry him further. They ask for ground.",
+      "choices": [
+        { "text": "Give them ground", "effects": { "freeroad": 3, "reputation": 1 } },
+        { "text": "Give them ground and a stone", "effects": { "coin": -5, "freeroad": 3, "reputation": 2 }, "requires": { "coin": 5 } },
+        { "text": "Not here", "effects": { "freeroad": -2, "reputation": -1 } }
       ]
     }
   ]

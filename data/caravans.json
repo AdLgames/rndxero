@@ -1,5 +1,5 @@
 {
-  "_comment": "Three caravan types per faction. `encounter` names an entry in encounters.json, which arrives at M4; the field is carried now and ignored until then. `repeatable` caravans can return on a later day; the rest are seen once per run.",
+  "_comment": "Three caravan types per faction. Encounters are not named here: entries in encounters.json name a caravan or just a faction, so the encounter pool grows without touching this file. `repeatable` caravans can return on a later day.",
   "caravans": [
     {
       "id": "guild_salt_01",
@@ -16,7 +16,6 @@
       "wants": {
         "grain": 6
       },
-      "encounter": "guild_salt_01_sick_horse",
       "min_day": 1,
       "max_day": 10,
       "weight": 1.2
@@ -38,8 +37,7 @@
       },
       "min_day": 2,
       "max_day": 10,
-      "weight": 1.0,
-      "encounter": "guild_cloth_01_short_bolts"
+      "weight": 1.0
     },
     {
       "id": "guild_iron_01",
@@ -58,8 +56,7 @@
       },
       "min_day": 4,
       "max_day": 10,
-      "weight": 0.9,
-      "encounter": "guild_iron_01_toll_road"
+      "weight": 0.9
     },
     {
       "id": "crown_tax_01",
@@ -73,7 +70,6 @@
       "wants": {
         "grain": 4
       },
-      "encounter": "crown_tax_01_ledger",
       "min_day": 2,
       "max_day": 10,
       "weight": 1.0,
@@ -96,8 +92,7 @@
       },
       "min_day": 3,
       "max_day": 10,
-      "weight": 1.0,
-      "encounter": "crown_patrol_01_billeting"
+      "weight": 1.0
     },
     {
       "id": "crown_courier_01",
@@ -114,8 +109,7 @@
       "min_day": 1,
       "max_day": 8,
       "weight": 1.1,
-      "repeatable": true,
-      "encounter": "crown_courier_01_urgent"
+      "repeatable": true
     },
     {
       "id": "freeroad_drifters_01",
@@ -129,7 +123,6 @@
         "grain": 3
       },
       "wants": {},
-      "encounter": "freeroad_drifters_01_shelter",
       "min_day": 1,
       "max_day": 10,
       "weight": 1.1
@@ -152,8 +145,7 @@
       "min_day": 1,
       "max_day": 10,
       "weight": 1.0,
-      "repeatable": true,
-      "encounter": "freeroad_tinker_01_offer"
+      "repeatable": true
     },
     {
       "id": "freeroad_refugees_01",
@@ -169,8 +161,7 @@
       },
       "min_day": 6,
       "max_day": 10,
-      "weight": 1.4,
-      "encounter": "freeroad_refugees_01_ahead"
+      "weight": 1.4
     }
   ]
 }

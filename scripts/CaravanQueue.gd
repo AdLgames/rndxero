@@ -26,6 +26,7 @@ const HIGH_TOLL := 20
 const TRADE_LIMIT := 2
 
 var _seen: Dictionary = {}
+var _seen_encounters: Dictionary = {}
 var _pending: Array = []
 var _current: Node2D = null
 var _current_data: Dictionary = {}
@@ -39,6 +40,7 @@ func setup(road: Node) -> void:
 
 func reset() -> void:
 	_seen.clear()
+	_seen_encounters.clear()
 	_pending.clear()
 	if is_instance_valid(_current):
 		_current.queue_free()
@@ -272,13 +274,46 @@ func resolve(action: String, toll: int) -> void:
 		encounter_ready.emit(encounter)
 
 
+## Draw one encounter for this visit. A caravan's own written-for-it entries
+## take precedence over the faction's general pool, so its story gets told
+## rather than being lost among thirty alternatives.
 func _encounter_for(data: Dictionary, outcome: String) -> Dictionary:
 	if outcome == "turn_away" or outcome == "refused":
 		return {}
-	var id := str(data.get("encounter", ""))
-	if id == "":
+
+	var pool := Data.encounters_for(
+		str(data.get("faction", "")), str(data.get("id", "")), Game.day, _seen_encounters)
+	if pool.is_empty():
 		return {}
-	return Data.encounter(id)
+
+	var own: Array = []
+	for entry in pool:
+		if entry.has("caravan"):
+			own.append(entry)
+	if not own.is_empty():
+		pool = own
+
+	var chosen := _pick_weighted(pool)
+	if chosen.is_empty():
+		return {}
+	_seen_encounters[chosen["id"]] = true
+	return chosen
+
+
+## Weighted draw that leaves the pool alone, unlike the caravan roll which has
+## to remove what it picks.
+func _pick_weighted(pool: Array) -> Dictionary:
+	var total := 0.0
+	for entry in pool:
+		total += float(entry.get("weight", 1.0))
+	if total <= 0.0:
+		return {}
+	var roll := randf() * total
+	for entry in pool:
+		roll -= float(entry.get("weight", 1.0))
+		if roll <= 0.0:
+			return entry
+	return pool[pool.size() - 1]
 
 
 ## Called once the dialogue closes, to release the queue.

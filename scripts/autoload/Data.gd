@@ -23,6 +23,7 @@ const NOT_YET_WRITTEN := []
 var buildings: Array = []
 var buildings_by_id: Dictionary = {}
 var caravans: Array = []
+var encounters: Array = []
 var encounters_by_id: Dictionary = {}
 var goods_order: Array = []
 var prices: Dictionary = {}
@@ -42,7 +43,8 @@ func _ready() -> void:
 			_documents[key] = doc
 	_index_buildings()
 	caravans = document("caravans").get("caravans", [])
-	for entry in document("encounters").get("encounters", []):
+	encounters = document("encounters").get("encounters", [])
+	for entry in encounters:
 		encounters_by_id[entry["id"]] = entry
 	var price_doc := document("prices")
 	goods_order = price_doc.get("order", [])
@@ -94,12 +96,30 @@ func definition(id: String) -> Dictionary:
 	return buildings_by_id.get(id, {})
 
 
-func encounter(id: String) -> Dictionary:
-	return encounters_by_id.get(id, {})
-
-
 func ending() -> Dictionary:
 	return document("ending")
+
+
+## Encounters a caravan could draw right now: the ones written for it by name,
+## plus the general pool for its faction. Filtered by date range, by whether it
+## has already been seen this run, and by any entry-level requirement -- which
+## is how a chain waits for its flag.
+func encounters_for(faction: String, caravan_id: String, day: int, seen: Dictionary) -> Array:
+	var pool: Array = []
+	for entry in encounters:
+		if entry.has("caravan"):
+			if str(entry["caravan"]) != caravan_id:
+				continue
+		elif str(entry.get("faction", "")) != faction:
+			continue
+		if day < int(entry.get("min_day", 1)) or day > int(entry.get("max_day", 99)):
+			continue
+		if seen.has(entry["id"]) and not entry.get("repeatable", false):
+			continue
+		if not Game.meets_requirements(entry.get("requires", {})):
+			continue
+		pool.append(entry)
+	return pool
 
 
 func night_event(id: String) -> Dictionary:
