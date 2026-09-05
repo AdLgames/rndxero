@@ -1,0 +1,103 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/HUD.gd" id="1_hud"]
+[ext_resource type="PackedScene" path="res://scenes/ui/TechPanel.tscn" id="2_techpanel"]
+
+[node name="HUD" type="CanvasLayer"]
+script = ExtResource("1_hud")
+
+[node name="TopBar" type="PanelContainer" parent="."]
+anchor_right = 1.0
+offset_bottom = 44.0
+grow_horizontal = 2
+
+[node name="Bar" type="HBoxContainer" parent="TopBar"]
+theme_override_constants/separation = 12
+
+[node name="Credits" type="Label" parent="TopBar/Bar"]
+custom_minimum_size = Vector2(110, 0)
+text = "100 cr"
+
+[node name="RepLabel" type="Label" parent="TopBar/Bar"]
+text = "Rep"
+
+[node name="RepBar" type="ProgressBar" parent="TopBar/Bar"]
+custom_minimum_size = Vector2(120, 0)
+max_value = 20.0
+value = 10.0
+show_percentage = false
+
+[node name="DayLabel" type="Label" parent="TopBar/Bar"]
+custom_minimum_size = Vector2(70, 0)
+text = "Day 1"
+
+[node name="DayBar" type="ProgressBar" parent="TopBar/Bar"]
+custom_minimum_size = Vector2(100, 0)
+show_percentage = false
+
+[node name="PauseBtn" type="Button" parent="TopBar/Bar"]
+text = "II"
+
+[node name="Speed1Btn" type="Button" parent="TopBar/Bar"]
+text = "1x"
+
+[node name="Speed2Btn" type="Button" parent="TopBar/Bar"]
+text = "2x"
+
+[node name="Status" type="Label" parent="TopBar/Bar"]
+size_flags_horizontal = 3
+text = ""
+
+[node name="TechButton" type="Button" parent="."]
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -148.0
+offset_top = -56.0
+offset_right = -16.0
+offset_bottom = -16.0
+grow_horizontal = 0
+grow_vertical = 0
+text = "Technology"
+
+[node name="Toasts" type="VBoxContainer" parent="."]
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_left = 16.0
+offset_top = -240.0
+offset_right = 420.0
+offset_bottom = -16.0
+grow_vertical = 0
+alignment = 2
+mouse_filter = 2
+
+[node name="TechPanel" parent="." instance=ExtResource("2_techpanel")]
+visible = false
+
+[node name="GameOver" type="PanelContainer" parent="."]
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -220.0
+offset_top = -110.0
+offset_right = 220.0
+offset_bottom = 110.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Layout" type="VBoxContainer" parent="GameOver"]
+theme_override_constants/separation = 14
+alignment = 1
+
+[node name="Title" type="Label" parent="GameOver/Layout"]
+horizontal_alignment = 1
+text = "Authority revoked"
+
+[node name="Detail" type="Label" parent="GameOver/Layout"]
+horizontal_alignment = 1
+text = ""
+
+[node name="Restart" type="Button" parent="GameOver/Layout"]
+text = "Run it again"

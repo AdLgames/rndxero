@@ -1,0 +1,32 @@
+{
+  "_comment": "tile_pos is a map coordinate on the 24x24 isometric grid. spawn_table weights are relative, not percentages.",
+  "map_size": { "w": 24, "h": 24 },
+  "map_seed": 20240905,
+  "stations": [
+    {
+      "id": "habitat",
+      "name": "Habitat",
+      "sprite": "res://assets/stations/habitat.png",
+      "tile_pos": { "x": 5, "y": 14 },
+      "spawn_interval": 6.0,
+      "spawn_table": { "consumer": 7, "commercial": 2, "heavy": 1 }
+    },
+    {
+      "id": "depot",
+      "name": "Depot",
+      "sprite": "res://assets/stations/depot.png",
+      "tile_pos": { "x": 11, "y": 5 },
+      "spawn_interval": 7.0,
+      "spawn_table": { "consumer": 2, "commercial": 7, "heavy": 1 }
+    },
+    {
+      "id": "refinery",
+      "name": "Refinery",
+      "sprite": "res://assets/stations/refinery.png",
+      "tile_pos": { "x": 18, "y": 16 },
+      "spawn_interval": 9.0,
+      "spawn_table": { "consumer": 1, "commercial": 2, "heavy": 7 }
+    }
+  ],
+  "_los_note": "MapGen clears the Habitat-Depot and Depot-Refinery corridors and drops a rock cluster across Habitat-Refinery, so the direct third lane is blocked until post-MVP debris clearing exists."
+}

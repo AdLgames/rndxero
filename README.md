@@ -1,40 +1,57 @@
-# Giantfall
+# LANES
 
-Post-apocalyptic village builder / wave defense. Godot 4, octagon-grid map,
-neighbor settlements with specialties, periodic Giant bosses.
+Space traffic management. You run the transit authority for a small asteroid
+field: build lanes between stations, keep the traffic moving, and spend what you
+earn before the queues eat your reputation.
 
-See [GAME_DESIGN.md](GAME_DESIGN.md) for the full design document.
+Godot 4.3+, GDScript. Full design in [LANES_MVP.md](LANES_MVP.md).
 
 ## Running
 
-Open the project folder in Godot 4 and press play. `scenes/main.tscn` is the
-main scene.
+Open the project folder in Godot 4.3 or newer and press play.
+`scenes/TitleScreen.tscn` is the main scene.
 
-- **WASD** pan, **Q/E** rotate the view in 90° steps, **mouse wheel** zoom
-- Hovering highlights the octagon under the cursor; clicking prints its
-  coordinates and grass variant
+- **Click a station, then another** to lay a lane. Right click cancels.
+- **WASD / arrows** pan, **middle-drag** pans, **wheel** zooms.
+- **II / 1x / 2x** in the top bar control speed; **Technology** opens the tech tree.
 
-## Where things are
+You start with 100 credits and 10 reputation. A lane costs 30 credits plus 5 per
+tile, so you can afford exactly one to begin with. Reputation falls when ships
+give up waiting or wreck, and the run ends at zero.
+
+## Layout
 
 ```
-scenes/main.tscn        entry scene
-scripts/grid/           octagon + gap-square coordinate math, tile catalog
-scripts/render/         MultiMesh tile rendering, palette, mesh factory
-scripts/camera/         orthographic camera rig
-art/blender/            tile-authoring scripts (see art/README.md)
-assets/tiles/           exported glTF tiles, generated from art/ (untracked art output)
+data/            tech.json and stations.json -- tuning lives here, not in code
+scenes/          Main, Station, Lane, Ship, Explosion, TitleScreen, ui/
+scripts/
+  autoload/      Events (signal bus), Game (run state), TechManager, Dispatcher
+  ui/            HUD, TechPanel, Toast, TitleScreen
+  *.gd           Station, Lane, Ship, BuildTool, MapGen, Backdrop, CameraRig
+art/vox/         MagicaVoxel sources for the ship sprites
+tools/           asset generators (see art notes below)
+assets/          generated and imported art
 ```
 
-## Status
+State lives in the four autoloads, so reloading `Main.tscn` restarts a run.
 
-Roadmap step 1 of [GAME_DESIGN.md §11](GAME_DESIGN.md) — grid, MultiMesh render
-and click-to-tile picking. Every tile is grass; world generation, fog, buildings
-and waves are still to come.
+## Milestones
 
-Tile art is authored in Blender and exported to `assets/tiles/`. Until that
-export exists the game draws a procedural stand-in with the same geometry and
-palette, and the HUD tells you which you are looking at. See
-[art/README.md](art/README.md).
+All six from LANES_MVP.md section 8 are implemented: map and stations, the build
+tool and lanes, ship spawning and delivery, capacity/queues/patience/collisions
+and game over, the ten-node tech tree, and the polish pass (lane tinting, toasts,
+explosions, speed control, title screen).
 
-> This repository previously held an unrelated project (ClaimTrail); that
-> history is preserved in git.
+## Art
+
+Ship sprites are rendered from the MagicaVoxel models in `art/vox/` by
+`tools/vox_to_sprite.py`. Everything else -- terrain tiles, station sprites, the
+explosion strip, UI panel and icons -- is a placeholder written by
+`tools/gen_placeholder_art.py`, sized to the spec's checklist and meant to be
+replaced with the CC0 art in section 9. The planets in `assets/planets/` are
+backdrop only; nothing in the simulation touches them.
+
+See [art/README.md](art/README.md) for how to regenerate any of it.
+
+> This repository previously held two unrelated projects (ClaimTrail, then
+> Giantfall); both remain in git history.
