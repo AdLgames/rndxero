@@ -2,19 +2,24 @@ extends Node
 
 ## Signal bus. Everything that wants to know about a game event connects here
 ## rather than reaching across the scene tree for the node that raised it.
+##
+## Signals for milestones not yet built (caravans, encounters, endings) are
+## declared here so the contract is visible in one place, but nothing emits
+## them yet.
 
-signal ship_spawned(ship)
-signal ship_delivered(ship)
-signal ship_abandoned(ship)
-signal collision(a, b, lane)
-
-signal day_passed(day)
-signal tech_unlocked(id)
-
-signal credits_changed(credits)
-signal rep_changed(rep)
-signal speed_changed(speed)
-
-signal lane_built(lane)
-signal game_over(day)
+signal phase_changed(phase)
+signal day_started(day)
+signal resource_changed(name, value)
+signal faction_changed(name, value)
+signal building_placed(id, plot)
+signal building_upgraded(id, plot)
+signal night_report(report)
 signal toast(text, kind)
+signal game_over(reason)
+
+# --- M3 onward, not yet emitted ---
+signal caravan_arrived(data)
+signal caravan_resolved(data, outcome)
+signal night_event(id)
+signal rumor(text)
+signal ending(id)
