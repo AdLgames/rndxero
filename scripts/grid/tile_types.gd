@@ -6,7 +6,7 @@ enum Terrain { WATER, GRASS, HILL, MOUNTAIN, FOREST, MARSH }
 
 ## Grass ground variants built by art/blender/grass_tiles.py (art spec 2.1).
 ## Order and names match the VARIANTS list in that script.
-const GRASS_VARIANTS: Array[String] = [
+const GRASS_VARIANTS := [
 	"Tile_Grass_00_Plain",
 	"Tile_Grass_01_Tyre",
 	"Tile_Grass_02_Bricks",
@@ -15,13 +15,13 @@ const GRASS_VARIANTS: Array[String] = [
 ]
 
 ## Plain dominates; the dressed variants are scenery accents, not a checkerboard.
-const GRASS_WEIGHTS: PackedFloat32Array = PackedFloat32Array([0.62, 0.09, 0.10, 0.09, 0.10])
+const GRASS_WEIGHTS := [0.62, 0.09, 0.10, 0.09, 0.10]
 
 const GRASS_ASSET_DIR := "res://assets/tiles/grass/"
 
 
 static func grass_asset_path(variant: int) -> String:
-	return GRASS_ASSET_DIR + GRASS_VARIANTS[variant] + ".glb"
+	return GRASS_ASSET_DIR + str(GRASS_VARIANTS[variant]) + ".glb"
 
 
 ## Deterministic variant choice, so a tile looks the same every time the map is
@@ -31,7 +31,7 @@ static func pick_grass_variant(tile: Vector2i, seed_value: int) -> int:
 	var r := float(h % 100000) / 100000.0
 	var acc := 0.0
 	for i in GRASS_WEIGHTS.size():
-		acc += GRASS_WEIGHTS[i]
+		acc += float(GRASS_WEIGHTS[i])
 		if r < acc:
 			return i
 	return 0
