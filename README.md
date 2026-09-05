@@ -18,25 +18,43 @@ Open the project folder in Godot 4.3 or newer and press play.
 
 ## Status
 
-**M1 and M2 of the seven milestones in §12 are built.** That is: the road strip
-with parallax and twelve plots, camera scrolling, the HUD skeleton, and all six
-buildings with their upgrades, costs, and nightly effects on resources.
+**M1 to M3 of the seven milestones in §12 are built.** That is: the road strip
+with parallax and twelve plots, camera scrolling and the HUD; all six buildings
+with their upgrades, costs and nightly effects; and the morning caravan queue
+with tolls, lodging and turning away.
 
 Not built yet, in the order the spec sequences them:
 
 | Milestone | What is missing |
 |---|---|
-| M3 | Caravans: JSON loading, the morning queue, walk-in animation, CaravanCard, toll and lodging |
 | M4 | Trade and encounters: price table, TradePanel, Dialogue, effects, flags |
 | M5 | Nights: night events, rumours, the full report screen, game over handling |
 | M6 | The Column: the day 10 event, its five outcomes, epilogue, restart |
 | M7 | Content: 30 encounters, 10 night events, 10 rumours, phase transitions |
 
-Because caravans do not arrive yet, MORNING is entered and passed straight
-through, and the nightly formula runs with an empty inn — 2 food for the town,
-no guests, no animals. The rules from §3 are implemented in full; they simply
-have nothing to feed yet. Reputation reaching zero emits `Events.game_over`,
-which nothing listens to until M5.
+**Coin comes from tolls.** Until M3 there was no income at all, so a run
+flatlined after two or three buildings. Now `1 + floor(reputation / 3)` caravans
+arrive each morning (1–4), and each pays 0, 5, 10 or 20 to pass. Trade is the
+second income stream and lands at M4, so coin is still tight by design.
+
+Caravans carry an `encounter` id that nothing reads until M4, and their cargo
+and wants are shown on the card but not tradeable yet — the card says so.
+Reputation reaching zero emits `Events.game_over`, which nothing listens to
+until M5.
+
+### What the meters already do
+
+Several faction and building rules are live now because M3's caravan count and
+outcomes are what they act on:
+
+- Reputation sets how many caravans arrive; a Guild boycott at -3 removes one,
+  a Bazaar adds one.
+- A 20-coin toll costs the caravan's faction a point, and a faction already
+  below zero will refuse it and leave with nothing paid — unless you have built
+  the Gatehouse, which makes refusals impossible.
+- Lodging a caravan gains a faction point; a Great Inn makes it two.
+- Running short of food or water overnight costs a point of reputation per
+  shortfall and a point with every faction bedded down at the time.
 
 ## Layout
 

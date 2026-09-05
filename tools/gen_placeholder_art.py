@@ -24,6 +24,16 @@ ASSETS = os.path.join(ROOT, "assets")
 # A trimmed Endesga-32-flavoured palette (spec section 13: pick one and stick
 # to it). Every sprite in the game draws from these entries only.
 PAL = {
+    "skin_a": (216, 172, 134, 255),
+    "skin_b": (176, 130, 96, 255),
+    "skin_c": (124, 88, 64, 255),
+    "hair_a": (62, 48, 40, 255),
+    "hair_b": (128, 92, 48, 255),
+    "hair_c": (188, 176, 160, 255),
+    "canvas": (206, 198, 176, 255),
+    "canvas_dark": (168, 158, 138, 255),
+    "horse": (110, 82, 60, 255),
+    "horse_dark": (78, 56, 40, 255),
     "sky_high": (60, 92, 138, 255),
     "sky_low": (140, 168, 190, 255),
     "hill_far": (86, 102, 120, 255),
@@ -363,8 +373,114 @@ def gen_ui():
     write_png(os.path.join(ASSETS, "ui", "crest_freeroad.png"), crest(PAL["freeroad"], road_mark))
 
 
+
+
+# ------------------------------------------------------------- caravans
+def gen_caravans():
+    """One wagon per faction, plus the draught horse and the walking figure the
+    checklist asks for. Wagons differ by canopy colour so a caravan's faction
+    reads from the road before the card opens."""
+    tints = {
+        "guild": PAL["guild"],
+        "crown": PAL["crown"],
+        "freeroad": PAL["freeroad"],
+    }
+    for faction, tint in tints.items():
+        w, h = 64, 44
+        img = blank(w, h)
+        # Bed and canopy.
+        rect(img, 8, h - 20, 56, h - 10, PAL["wood"])
+        rect(img, 8, h - 12, 56, h - 10, PAL["wood_dark"])
+        for i in range(6):
+            x0 = 10 + i * 8
+            band = PAL["canvas"] if i % 2 == 0 else PAL["canvas_dark"]
+            rect(img, x0, h - 34, x0 + 8, h - 20, band)
+        # Faction pennant over the driver's bench.
+        rect(img, 12, h - 42, 14, h - 32, PAL["wood_dark"])
+        rect(img, 14, h - 42, 26, h - 36, tint)
+        # Wheels.
+        for cx in (18, 46):
+            disc(img, cx, h - 8, 7, PAL["wood_dark"])
+            disc(img, cx, h - 8, 4, PAL["wood"])
+            disc(img, cx, h - 8, 1, PAL["wood_dark"])
+        write_png(os.path.join(ASSETS, "caravans", "wagon_%s.png" % faction), img)
+
+    # Draught horse, side on and facing right.
+    w, h = 40, 32
+    img = blank(w, h)
+    rect(img, 8, 10, 30, 22, PAL["horse"])
+    rect(img, 26, 4, 34, 14, PAL["horse"])
+    rect(img, 30, 8, 36, 12, PAL["horse"])
+    rect(img, 24, 2, 30, 8, PAL["horse_dark"])
+    for x in (10, 16, 22, 27):
+        rect(img, x, 22, x + 3, 31, PAL["horse_dark"])
+    rect(img, 4, 12, 9, 15, PAL["horse_dark"])
+    write_png(os.path.join(ASSETS, "caravans", "horse.png"), img)
+
+    # Walking figure.
+    w, h = 16, 28
+    img = blank(w, h)
+    disc(img, 8, 5, 4, PAL["skin_a"])
+    rect(img, 4, 1, 12, 4, PAL["hair_a"])
+    rect(img, 5, 9, 11, 20, PAL["cloth"])
+    rect(img, 3, 10, 5, 18, PAL["cloth"])
+    rect(img, 11, 10, 13, 18, PAL["cloth"])
+    rect(img, 5, 20, 7, 27, PAL["wood_dark"])
+    rect(img, 9, 20, 11, 27, PAL["wood_dark"])
+    write_png(os.path.join(ASSETS, "caravans", "figure.png"), img)
+
+
+# ------------------------------------------------------------- portraits
+def gen_portraits():
+    """Twelve 48x48 heads. Deterministic per index so a leader always looks the
+    same, and varied enough that two caravans are told apart at a glance."""
+    skins = [PAL["skin_a"], PAL["skin_b"], PAL["skin_c"]]
+    hairs = [PAL["hair_a"], PAL["hair_b"], PAL["hair_c"]]
+    garments = [PAL["guild"], PAL["crown"], PAL["freeroad"], PAL["cloth"], PAL["water"], PAL["grass"]]
+
+    for i in range(12):
+        size = 48
+        img = blank(size, size)
+        skin = skins[i % 3]
+        hair = hairs[(i // 3) % 3]
+        garment = garments[i % 6]
+
+        rect(img, 0, 0, size, size, PAL["panel"])
+        # Shoulders.
+        for y in range(34, size):
+            half = 10 + (y - 34)
+            rect(img, 24 - half, y, 24 + half, y + 1, garment)
+        # Head and jaw.
+        disc(img, 24, 24, 12, skin)
+        rect(img, 14, 24, 34, 34, skin)
+        # Hair: a different silhouette per row of the set.
+        style = (i // 3) % 4
+        if style == 0:
+            disc(img, 24, 20, 12, hair)
+            rect(img, 12, 20, 36, 26, PAL["clear"])
+            disc(img, 24, 24, 11, skin)
+            rect(img, 12, 12, 36, 18, hair)
+        elif style == 1:
+            rect(img, 12, 12, 36, 20, hair)
+            rect(img, 12, 20, 16, 34, hair)
+            rect(img, 32, 20, 36, 34, hair)
+        elif style == 2:
+            rect(img, 13, 13, 35, 19, hair)
+            rect(img, 18, 32, 30, 38, hair)
+        else:
+            rect(img, 14, 11, 34, 17, hair)
+        # Eyes and mouth.
+        rect(img, 19, 24, 22, 26, PAL["ink"])
+        rect(img, 27, 24, 30, 26, PAL["ink"])
+        rect(img, 21, 30, 28, 31, PAL["dirt_dark"])
+        outline(img, 0, 0, size, size, PAL["panel_edge"])
+        write_png(os.path.join(ASSETS, "portraits", "leader_%02d.png" % i), img)
+
+
 if __name__ == "__main__":
     gen_road()
     gen_buildings()
+    gen_caravans()
+    gen_portraits()
     gen_ui()
     print("placeholder art complete")

@@ -35,11 +35,11 @@ var phase: int = Phase.BUILD
 ## The base id is kept even after upgrading so the next tier is still findable.
 var plots: Array = []
 
-## Guests and animals bedded down for the night. Caravans set these from M3;
-## until then the nightly formula runs with an empty inn, which is correct
-## rather than stubbed.
+## Who is bedded down tonight. Cleared once the night resolves, because
+## caravans move on in the morning.
 var lodged_guests: int = 0
 var lodged_animals: int = 0
+var lodged_factions: Array = []
 
 
 func _ready() -> void:
@@ -52,8 +52,7 @@ func reset() -> void:
 	water = START["water"]
 	reputation = START["reputation"]
 	day = 1
-	lodged_guests = 0
-	lodged_animals = 0
+	clear_lodgers()
 	plots = []
 	plots.resize(Data.plot_count)
 	Flags.clear()
@@ -101,6 +100,25 @@ func try_spend(amount: int) -> bool:
 		return false
 	add("coin", -amount)
 	return true
+
+
+## Beds still free tonight.
+func beds_free() -> int:
+	return lodging_capacity() - lodged_guests
+
+
+func lodge(faction: String, guests: int, animals: int) -> void:
+	lodged_guests += guests
+	lodged_animals += animals
+	if not lodged_factions.has(faction):
+		lodged_factions.append(faction)
+	Events.resource_changed.emit("lodging", lodging_capacity())
+
+
+func clear_lodgers() -> void:
+	lodged_guests = 0
+	lodged_animals = 0
+	lodged_factions = []
 
 
 ## Lodging is a capacity, not a stock: the beds the town currently has.

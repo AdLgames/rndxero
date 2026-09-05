@@ -1,0 +1,79 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/CaravanCard.gd" id="1_card"]
+
+[node name="CaravanCard" type="CanvasLayer"]
+script = ExtResource("1_card")
+
+[node name="Panel" type="PanelContainer" parent="."]
+anchor_top = 0.0
+anchor_bottom = 1.0
+offset_left = 16.0
+offset_top = 104.0
+offset_right = 396.0
+offset_bottom = -16.0
+grow_vertical = 2
+
+[node name="Margin" type="MarginContainer" parent="Panel"]
+theme_override_constants/margin_left = 14
+theme_override_constants/margin_top = 12
+theme_override_constants/margin_right = 14
+theme_override_constants/margin_bottom = 14
+
+[node name="Layout" type="VBoxContainer" parent="Panel/Margin"]
+theme_override_constants/separation = 10
+
+[node name="Header" type="HBoxContainer" parent="Panel/Margin/Layout"]
+theme_override_constants/separation = 12
+
+[node name="Portrait" type="TextureRect" parent="Panel/Margin/Layout/Header"]
+custom_minimum_size = Vector2(64, 64)
+texture_filter = 1
+stretch_mode = 5
+
+[node name="Titles" type="VBoxContainer" parent="Panel/Margin/Layout/Header"]
+size_flags_horizontal = 3
+
+[node name="CaravanName" type="Label" parent="Panel/Margin/Layout/Header/Titles"]
+autowrap_mode = 3
+text = "Caravan"
+
+[node name="Leader" type="Label" parent="Panel/Margin/Layout/Header/Titles"]
+text = "Leader"
+
+[node name="Faction" type="Label" parent="Panel/Margin/Layout/Header/Titles"]
+text = "Faction"
+
+[node name="Party" type="Label" parent="Panel/Margin/Layout"]
+autowrap_mode = 3
+text = ""
+
+[node name="Goods" type="Label" parent="Panel/Margin/Layout"]
+autowrap_mode = 3
+text = ""
+
+[node name="TollLabel" type="Label" parent="Panel/Margin/Layout"]
+text = "Toll"
+
+[node name="Tolls" type="HBoxContainer" parent="Panel/Margin/Layout"]
+theme_override_constants/separation = 6
+
+[node name="Warning" type="Label" parent="Panel/Margin/Layout"]
+autowrap_mode = 3
+theme_override_font_sizes/font_size = 12
+text = ""
+
+[node name="Spacer" type="Control" parent="Panel/Margin/Layout"]
+size_flags_vertical = 3
+
+[node name="Actions" type="VBoxContainer" parent="Panel/Margin/Layout"]
+theme_override_constants/separation = 6
+
+[node name="Lodge" type="Button" parent="Panel/Margin/Layout/Actions"]
+text = "Lodge for the night"
+
+[node name="Pass" type="Button" parent="Panel/Margin/Layout/Actions"]
+text = "Send them on"
+
+[node name="TurnAway" type="Button" parent="Panel/Margin/Layout/Actions"]
+text = "Turn away"

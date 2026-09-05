@@ -10,3 +10,5 @@ script = ExtResource("1_town")
 [node name="Ground" type="Node2D" parent="."]
 
 [node name="Plots" type="Node2D" parent="."]
+
+[node name="Caravans" type="Node2D" parent="."]
