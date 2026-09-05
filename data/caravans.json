@@ -1,5 +1,5 @@
 {
-  "_comment": "Three caravan types per faction. `encounter` names an entry in encounters.json, which arrives at M4; the field is carried now and ignored until then. `repeatable` caravans can return on a later day; the rest are seen once per run.",
+  "_comment": "Three caravan types per faction. Encounters are not named here: entries in encounters.json name a caravan or just a faction, so the encounter pool grows without touching this file. `repeatable` caravans can return on a later day.",
   "caravans": [
     {
       "id": "guild_salt_01",
@@ -9,9 +9,13 @@
       "portrait": "res://assets/portraits/leader_00.png",
       "size": 3,
       "animals": 2,
-      "cargo": { "salt": 10, "cloth": 4 },
-      "wants": { "grain": 6 },
-      "encounter": "guild_salt_01_sick_horse",
+      "cargo": {
+        "salt": 10,
+        "cloth": 4
+      },
+      "wants": {
+        "grain": 6
+      },
       "min_day": 1,
       "max_day": 10,
       "weight": 1.2
@@ -24,8 +28,13 @@
       "portrait": "res://assets/portraits/leader_01.png",
       "size": 2,
       "animals": 1,
-      "cargo": { "cloth": 8, "wine": 3 },
-      "wants": { "salt": 4 },
+      "cargo": {
+        "cloth": 8,
+        "wine": 3
+      },
+      "wants": {
+        "salt": 4
+      },
       "min_day": 2,
       "max_day": 10,
       "weight": 1.0
@@ -38,8 +47,13 @@
       "portrait": "res://assets/portraits/leader_02.png",
       "size": 4,
       "animals": 3,
-      "cargo": { "iron": 9 },
-      "wants": { "grain": 8, "wine": 2 },
+      "cargo": {
+        "iron": 9
+      },
+      "wants": {
+        "grain": 8,
+        "wine": 2
+      },
       "min_day": 4,
       "max_day": 10,
       "weight": 0.9
@@ -53,8 +67,9 @@
       "size": 2,
       "animals": 2,
       "cargo": {},
-      "wants": { "grain": 4 },
-      "encounter": "crown_tax_01_ledger",
+      "wants": {
+        "grain": 4
+      },
       "min_day": 2,
       "max_day": 10,
       "weight": 1.0,
@@ -68,8 +83,13 @@
       "portrait": "res://assets/portraits/leader_04.png",
       "size": 4,
       "animals": 4,
-      "cargo": { "iron": 3 },
-      "wants": { "grain": 6, "wine": 3 },
+      "cargo": {
+        "iron": 3
+      },
+      "wants": {
+        "grain": 6,
+        "wine": 3
+      },
       "min_day": 3,
       "max_day": 10,
       "weight": 1.0
@@ -83,7 +103,9 @@
       "size": 1,
       "animals": 1,
       "cargo": {},
-      "wants": { "grain": 2 },
+      "wants": {
+        "grain": 2
+      },
       "min_day": 1,
       "max_day": 8,
       "weight": 1.1,
@@ -97,9 +119,10 @@
       "portrait": "res://assets/portraits/leader_06.png",
       "size": 3,
       "animals": 0,
-      "cargo": { "grain": 3 },
+      "cargo": {
+        "grain": 3
+      },
       "wants": {},
-      "encounter": "freeroad_drifters_01_shelter",
       "min_day": 1,
       "max_day": 10,
       "weight": 1.1
@@ -112,8 +135,13 @@
       "portrait": "res://assets/portraits/leader_07.png",
       "size": 1,
       "animals": 1,
-      "cargo": { "iron": 4, "cloth": 2 },
-      "wants": { "wine": 2 },
+      "cargo": {
+        "iron": 4,
+        "cloth": 2
+      },
+      "wants": {
+        "wine": 2
+      },
       "min_day": 1,
       "max_day": 10,
       "weight": 1.0,
@@ -128,7 +156,9 @@
       "size": 5,
       "animals": 1,
       "cargo": {},
-      "wants": { "grain": 5 },
+      "wants": {
+        "grain": 5
+      },
       "min_day": 6,
       "max_day": 10,
       "weight": 1.4

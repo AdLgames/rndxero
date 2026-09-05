@@ -18,29 +18,73 @@ Open the project folder in Godot 4.3 or newer and press play.
 
 ## Status
 
-**M1 to M3 of the seven milestones in §12 are built.** That is: the road strip
+**All seven milestones in §12 are built.** That is: the road strip
 with parallax and twelve plots, camera scrolling and the HUD; all six buildings
-with their upgrades, costs and nightly effects; and the morning caravan queue
-with tolls, lodging and turning away.
+with their upgrades, costs and nightly effects; the morning caravan queue with
+tolls, lodging and turning away; trading plus the encounter system with
+effects, requirements and flags; the night — events, rumours, the report screen
+and losing; the Column that ends the season; and the content fill.
 
-Not built yet, in the order the spec sequences them:
+Thirty encounters, ten per faction, five of them chained through flags — take
+Merrit's lame horse in and a later Guild caravan opens a line that only exists
+because you did; show the Assessor a doctored ledger and a clerk comes back for
+it days later. Ten night events, ten rumours. The world tints between phases:
+warm at the gate in the morning, plain in the afternoon, blue at night.
 
-| Milestone | What is missing |
-|---|---|
-| M4 | Trade and encounters: price table, TradePanel, Dialogue, effects, flags |
-| M5 | Nights: night events, rumours, the full report screen, game over handling |
-| M6 | The Column: the day 10 event, its five outcomes, epilogue, restart |
-| M7 | Content: 30 encounters, 10 night events, 10 rumours, phase transitions |
+Encounters are not tied to a caravan one-to-one. An entry naming a `caravan`
+belongs to it alone and is drawn first so its story gets told; everything else
+is a faction pool any caravan of that faction can pull from. Adding an
+encounter is one object in `data/encounters.json` and nothing else.
 
-**Coin comes from tolls.** Until M3 there was no income at all, so a run
-flatlined after two or three buildings. Now `1 + floor(reputation / 3)` caravans
-arrive each morning (1–4), and each pays 0, 5, 10 or 20 to pass. Trade is the
-second income stream and lands at M4, so coin is still tight by design.
+### The pressure
 
-Caravans carry an `encounter` id that nothing reads until M4, and their cargo
-and wants are shown on the card but not tradeable yet — the card says so.
+A run can now be lost, which is what makes building necessary rather than
+optional. Reputation starts at 5 and falls a point for every resource the town
+runs short of overnight, plus a point with every faction bedded down at the
+time. At zero the crossing empties and the run ends.
+
+Nights escalate. Roughly one in three carries an event, drawn by day and by
+faction standing, so §4's punishments arrive as things that happen rather than
+as numbers: the Free Road robs a town that has soured on it, unless a Palisade
+is up; the Crown takes a third of the coin box from a town it distrusts. The
+rumour ticker turns over the same ten days — plains prices, then smoke over the
+eastern passes, then *they are coming down the road, all of them*.
+
+Tomorrow's event is rolled tonight rather than tomorrow. That is deliberate: a
+Free Road at +3 or better passes on a warning about it, and a warning has to be
+about something already decided or it is not a warning.
+
+### The Column
+
+On the night of day 10 the column arrives with a Crown patrol behind it, and
+the run resolves into one of six endings. Shelter them and the outcome turns on
+whether the Free Road trusts you *and* whether the stores actually cover twelve
+people — that second condition is what the whole season of building has been
+for. Turn them away, hand them over, or, if you have a Gatehouse up and the
+Crown already alienated, shut the gate on both.
+
+§9 specifies five outcomes but offers "hand them to the Crown" unconditionally
+while naming a result only for Crown ≥ +2. Handing the column over from a worse
+standing resolves to a sixth, colder outcome rather than dead-ending. All six
+are reachable; nothing falls through.
+
+**Both income streams are in.** Tolls of 0/5/10/20 per caravan, and the trade
+margin: you buy a caravan's cargo at the `buy` column of `data/prices.json` and
+sell it on to a later caravan that wants it at `sell`, lifted by the Guild's
+goodwill (+20% at +3) and whatever market you have built. Goods are a stock of
+their own, separate from the five resources, shown on the HUD's Stock line.
+
+Without a Market you may trade only two items per caravan — that is this
+project's reading of §5's "requires a Market to trade more than 2 items", and
+it is what makes the Market worth its 30 coin.
+
+Nine encounters are written, one per caravan, including a two-step chain: take
+Merrit's lame horse in and a later Guild caravan offers you a choice that only
+appears because of it. Encounter effects are the flat dictionary §5 describes,
+so adding keys is one branch in `Game.apply_effects` and nothing in the data.
 Reputation reaching zero emits `Events.game_over`, which nothing listens to
-until M5.
+until M5, and an encounter's `event` effect queues a night event that M5 will
+drain.
 
 ### What the meters already do
 
@@ -55,6 +99,35 @@ outcomes are what they act on:
 - Lodging a caravan gains a faction point; a Great Inn makes it two.
 - Running short of food or water overnight costs a point of reputation per
   shortfall and a point with every faction bedded down at the time.
+- Doing business with a caravan gains a faction point, once per visit however
+  many units change hands.
+- The Guild at +3 pays 20% more for what you sell; a Market adds 10% and a
+  Bazaar 25%.
+- A Stable lets you take horses in from encounters; animals the town keeps then
+  drink every night alongside the guests'.
+- A Palisade blocks the Free Road's theft outright. The Crown's raid has no
+  building that stops it — only standing.
+- The Crown at +3 sends a stipend; the Free Road at +3 warns you what tomorrow
+  night holds.
+
+## Where this is heading
+
+Notes on direction, recorded so they are not lost. None of this is built.
+
+- **Art.** The placeholders are flat shapes from one palette (§13). The target
+  is a Stardew-style pixel look. The seam is clean: every sprite is a file in
+  `assets/` at a fixed size, and `tools/gen_placeholder_art.py` is the only
+  thing that writes them, so replacing art means dropping in files and
+  retiring that script. Nothing in the game reads it at runtime.
+- **Tech trees, going deep.** Not in the MVP spec at all. `data/buildings.json`
+  already carries prereq-free upgrades one tier deep; a real tree needs a
+  `prereqs` array and a node graph rather than a per-building `upgrade` field.
+  Worth designing as its own data file before it grows.
+- **Map size.** `plot_count` in `data/buildings.json` is the single knob — the
+  strip width, the ground run, the parallax span and the camera clamp are all
+  derived from it, so raising it widens the town with no code change. It starts
+  at 8. Growing it *during a run* (buying land as the town spreads) would be a
+  new mechanic rather than a tuning change.
 
 ## Layout
 

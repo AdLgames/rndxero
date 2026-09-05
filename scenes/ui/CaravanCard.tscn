@@ -52,6 +52,9 @@ text = ""
 autowrap_mode = 3
 text = ""
 
+[node name="Trade" type="Button" parent="Panel/Margin/Layout"]
+text = "Trade"
+
 [node name="TollLabel" type="Label" parent="Panel/Margin/Layout"]
 text = "Toll"
 

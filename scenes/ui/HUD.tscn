@@ -40,6 +40,10 @@ text = "End Day"
 [node name="Factions" type="HBoxContainer" parent="TopBar/Margin/Layout"]
 theme_override_constants/separation = 20
 
+[node name="Stock" type="Label" parent="TopBar/Margin/Layout"]
+theme_override_font_sizes/font_size = 12
+text = ""
+
 [node name="LastNight" type="Label" parent="TopBar/Margin/Layout"]
 theme_override_font_sizes/font_size = 12
 text = ""

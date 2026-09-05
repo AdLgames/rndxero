@@ -1,0 +1,36 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/Dialogue.gd" id="1_dialogue"]
+
+[node name="Dialogue" type="CanvasLayer"]
+layer = 2
+script = ExtResource("1_dialogue")
+
+[node name="Panel" type="PanelContainer" parent="."]
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -360.0
+offset_top = -330.0
+offset_right = 360.0
+offset_bottom = -24.0
+grow_horizontal = 2
+grow_vertical = 0
+
+[node name="Margin" type="MarginContainer" parent="Panel"]
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 14
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 16
+
+[node name="Layout" type="VBoxContainer" parent="Panel/Margin"]
+theme_override_constants/separation = 12
+
+[node name="Text" type="Label" parent="Panel/Margin/Layout"]
+custom_minimum_size = Vector2(0, 72)
+autowrap_mode = 3
+text = ""
+
+[node name="Choices" type="VBoxContainer" parent="Panel/Margin/Layout"]
+theme_override_constants/separation = 6

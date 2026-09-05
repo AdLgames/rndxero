@@ -1,0 +1,48 @@
+{
+  "_comment": "Section 9. `requires` on a choice gates it the same way encounters do, plus `crown_below` for the fourth option the Gatehouse unlocks. Outcomes are resolved by scripts/EndingLogic.gd from the choice, the faction standing and the stores.",
+  "column_size": 12,
+  "prompt": "They come down the east road after dark and they do not stop coming: carts, handcarts, people carrying people. Wenna Fold is somewhere among them. Behind them, close enough that you can see the torches, rides a Crown patrol that has been following them for two days.\n\nThere are about twelve who cannot go further tonight.",
+  "choices": [
+    { "id": "shelter", "text": "Shelter them" },
+    { "id": "turn_away", "text": "Turn them away" },
+    { "id": "hand_over", "text": "Hand them to the Crown" },
+    {
+      "id": "close_gate",
+      "text": "Close the gate to both",
+      "requires_gatehouse": true,
+      "crown_below": 0
+    }
+  ],
+  "outcomes": {
+    "crossing_holds": {
+      "title": "The Crossing Holds",
+      "text": "You open the yard and the stores and it is enough — barely, and only because you built for it. The patrol finds a gate it cannot argue with and a crossing that has fed twelve people it was not obliged to feed.\n\nBy spring there are houses past the last plot and a second well going in. The Crown remembers this. So does everyone else.",
+      "effects": { "food": -12, "water": -12, "crown": -3, "freeroad": 2, "reputation": 3 }
+    },
+    "long_night": {
+      "title": "The Long Night",
+      "text": "You open the gate to twelve people and find you have supper for four. What follows is not a siege or a massacre; it is arithmetic, worked out slowly, in the cold, in front of you.\n\nHalf of them are still here in the morning. The other half are not. The road hears about Ashford Crossing either way.",
+      "effects": { "food": -8, "water": -8, "reputation": -5, "freeroad": -2 }
+    },
+    "road_moves_on": {
+      "title": "The Road Moves On",
+      "text": "You keep the gate shut and the column goes around, the way water goes around a stone. It takes most of the night to pass.\n\nNothing happens to Ashford Crossing. Nothing at all. The Guild still comes, the tolls are still paid, and nobody on the east road will meet your eye again.",
+      "effects": { "freeroad": -3, "reputation": -1 }
+    },
+    "loyal_subjects": {
+      "title": "Loyal Subjects",
+      "text": "You send word to the patrol and hold the column at the ford until it arrives. The Serjeant is grateful in the particular way of someone who was going to get what she wanted regardless, and the purse is heavier than you expected.\n\nThe crossing is safe. It is also, from that night, a place people go around.",
+      "effects": { "coin": 40, "crown": 2, "freeroad": -4, "reputation": -2 }
+    },
+    "loyal_subjects_cold": {
+      "title": "A Debt Not Owed",
+      "text": "You send word to the patrol, and the patrol takes the column, and then takes a look at your books while it is here. Gratitude was never on the table; you had nothing they wanted except compliance, and they had that already.\n\nThe crossing is safe. Nobody thanks you for it.",
+      "effects": { "coin": 10, "freeroad": -4, "reputation": -2 }
+    },
+    "free_town": {
+      "title": "The Free Town",
+      "text": "You close the gatehouse to the column and to the patrol behind it, and you stand on the wall while both of them work out that you mean it. The Serjeant argues for an hour. The wall does not.\n\nBy morning the road has gone around you in both directions. Ashford Crossing answers to nobody now, which is a fine thing to say and a hard thing to eat.",
+      "effects": { "crown": -2, "freeroad": 2, "guild": -1, "reputation": 1 }
+    }
+  }
+}

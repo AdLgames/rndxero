@@ -14,11 +14,12 @@ var _max_x: float = 0.0
 var _dragging := false
 var _focus_x: float = 0.0
 var _focusing := false
+var _camera_y: float = CAMERA_Y
 
 
 func _ready() -> void:
 	zoom = Vector2(FIXED_ZOOM, FIXED_ZOOM)
-	position.y = CAMERA_Y
+	position.y = _camera_y
 	make_current()
 
 
@@ -44,6 +45,17 @@ func release_focus() -> void:
 	_focusing = false
 
 
+## Raise or restore the view. The ending panel takes the lower half of the
+## screen, so the strip has to sit higher to stay visible behind it.
+func set_camera_y(y: float) -> void:
+	_camera_y = y
+	position.y = y
+
+
+func reset_camera_y() -> void:
+	set_camera_y(CAMERA_Y)
+
+
 func _process(delta: float) -> void:
 	var move := Input.get_axis("pan_left", "pan_right")
 	if move != 0.0:
@@ -55,7 +67,7 @@ func _process(delta: float) -> void:
 		if absf(position.x - _focus_x) < 0.5:
 			position.x = _focus_x
 			_focusing = false
-	position.y = CAMERA_Y
+	position.y = _camera_y
 
 
 func _unhandled_input(event: InputEvent) -> void:

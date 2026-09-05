@@ -86,6 +86,25 @@ static func upgrade(index: int) -> bool:
 	return true
 
 
+## Put a building up for free on the first empty plot. Used by an encounter's
+## `building` effect, which is a gift rather than a purchase.
+static func grant(building_id: String) -> bool:
+	var definition: Dictionary = Data.definition(building_id)
+	if definition.is_empty():
+		push_warning("BuildLogic: cannot grant unknown building %s" % building_id)
+		return false
+	for i in Game.plots.size():
+		if Game.plots[i] != null:
+			continue
+		Game.plots[i] = {"base_id": building_id, "upgraded": false}
+		_apply_on_build(definition)
+		Events.building_placed.emit(building_id, i)
+		Events.toast.emit("%s built at no cost" % definition["name"], "good")
+		return true
+	Events.toast.emit("No empty plot for the %s" % definition["name"], "bad")
+	return false
+
+
 ## One-off faction shifts a building grants when it goes up, e.g. the Palisade
 ## pleasing the Crown. Distinct from `effects`, which are ongoing.
 static func _apply_on_build(definition: Dictionary) -> void:
