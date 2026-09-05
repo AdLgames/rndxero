@@ -145,7 +145,7 @@ func _process(delta: float) -> void:
 func _sync(ship) -> void:
 	if _path.curve == null:
 		return
-	var distance := ship.travelled
+	var distance: float = ship.travelled
 	if ship.reversed:
 		distance = _length - ship.travelled
 	ship.global_position = global_position + _path.curve.sample_baked(distance)

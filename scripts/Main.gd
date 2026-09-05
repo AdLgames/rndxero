@@ -99,7 +99,7 @@ func _scatter_planets(seed_value: int) -> void:
 
 
 func _on_collision(a, b, _lane) -> void:
-	var where := a.global_position
+	var where: Vector2 = a.global_position
 	if is_instance_valid(b):
 		where = (a.global_position + b.global_position) * 0.5
 	var fx := _explosion_scene.instantiate()
