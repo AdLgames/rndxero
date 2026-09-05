@@ -1,115 +1,176 @@
 extends Node
 
-## Run state: money, standing, the day clock and the speed control.
-## Reset() puts everything back so the title screen can start a fresh run
-## without reloading the whole project.
+## Run state: the five resources, the day counter, the plots along the road,
+## and the phase machine. Reset() puts everything back so a run can restart
+## without reloading the project.
+##
+## Plots live here rather than in the Town scene because they are run state,
+## not presentation -- nightly yields and the build menu both read them, and
+## Town.tscn renders whatever it finds.
 
-const START_CREDITS := 100
-const START_REP := 10
-const MAX_REP := 20
-const DAY_LENGTH := 90.0
+enum Phase { MORNING, BUILD, NIGHT, ENDING }
 
-## Section 4: lane cost is a flat fee plus a per-tile run.
-const LANE_BASE_COST := 30
-const LANE_COST_PER_TILE := 5
+const SEASON_LENGTH := 10
 
-## Section 4: demand ramps every day until spawn intervals bottom out.
-const DEMAND_DECAY := 0.95
-const MIN_SPAWN_INTERVAL := 1.5
+const START := {
+	"coin": 50,
+	"food": 20,
+	"water": 20,
+	"reputation": 5,
+}
+const MAX_REPUTATION := 10
 
-var credits: int = START_CREDITS
-var reputation: int = START_REP
+## Section 3: 2 food a night keeps the town itself fed, before any guests.
+const BASE_FOOD_UPKEEP := 2
+
+var coin: int = START["coin"]
+var food: int = START["food"]
+var water: int = START["water"]
+var reputation: int = START["reputation"]
+
 var day: int = 1
-var day_time: float = 0.0
-var speed: float = 1.0
-var running: bool = false
-var collisions_today: int = 0
+var phase: int = Phase.BUILD
+
+## One entry per plot: either null, or {"base_id": String, "upgraded": bool}.
+## The base id is kept even after upgrading so the next tier is still findable.
+var plots: Array = []
+
+## Guests and animals bedded down for the night. Caravans set these from M3;
+## until then the nightly formula runs with an empty inn, which is correct
+## rather than stubbed.
+var lodged_guests: int = 0
+var lodged_animals: int = 0
 
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 
 
-func _process(delta: float) -> void:
-	if not running:
-		return
-	# delta is already scaled by Engine.time_scale, so the day clock follows the
-	# speed buttons for free.
-	day_time += delta
-	if day_time >= DAY_LENGTH:
-		day_time -= DAY_LENGTH
-		_advance_day()
-
-
 func reset() -> void:
-	credits = START_CREDITS
-	reputation = START_REP
+	coin = START["coin"]
+	food = START["food"]
+	water = START["water"]
+	reputation = START["reputation"]
 	day = 1
-	day_time = 0.0
-	collisions_today = 0
-	running = false
-	set_speed(1.0)
-	Events.credits_changed.emit(credits)
-	Events.rep_changed.emit(reputation)
+	lodged_guests = 0
+	lodged_animals = 0
+	plots = []
+	plots.resize(Data.plot_count)
+	Flags.clear()
+	Factions.reset()
+	broadcast_resources()
 
 
 func start() -> void:
-	running = true
+	reset()
+	Events.day_started.emit(day)
+	set_phase(Phase.MORNING)
 
 
-func stop() -> void:
-	running = false
+# --- resources --------------------------------------------------------------
+
+func get_resource(name: String) -> int:
+	match name:
+		"coin": return coin
+		"food": return food
+		"water": return water
+		"reputation": return reputation
+		"lodging": return lodging_capacity()
+	return 0
 
 
-# --- economy ----------------------------------------------------------------
+func add(name: String, amount: int) -> void:
+	match name:
+		"coin": coin += amount
+		"food": food += amount
+		"water": water += amount
+		"reputation": reputation = clampi(reputation + amount, 0, MAX_REPUTATION)
+		_:
+			push_warning("Game: unknown resource %s" % name)
+			return
+	Events.resource_changed.emit(name, get_resource(name))
+	if name == "reputation" and reputation <= 0:
+		# Handled from M5; the signal is emitted now so the rule lives in one place.
+		Events.game_over.emit("Ashford's name is worth nothing on the road.")
 
-func add_credits(amount: int) -> void:
-	credits += amount
-	Events.credits_changed.emit(credits)
 
-
-## Returns false and changes nothing when the player cannot afford it, so
-## callers can use this as the purchase gate.
+## Returns false and changes nothing when the town cannot afford it, so callers
+## can use this as the purchase gate.
 func try_spend(amount: int) -> bool:
-	if amount > credits:
+	if amount > coin:
 		return false
-	credits -= amount
-	Events.credits_changed.emit(credits)
+	add("coin", -amount)
 	return true
 
 
-func add_rep(amount: int) -> void:
-	reputation = clampi(reputation + amount, 0, MAX_REP)
-	Events.rep_changed.emit(reputation)
-	if reputation <= 0 and running:
-		running = false
-		set_speed(0.0)
-		Events.game_over.emit(day)
+## Lodging is a capacity, not a stock: the beds the town currently has.
+func lodging_capacity() -> int:
+	var total := Data.base_lodging
+	for effects in placed_effects():
+		total += int(effects.get("lodging", 0))
+	return total
 
 
-func lane_cost(tile_length: float) -> int:
-	return LANE_BASE_COST + int(round(tile_length)) * LANE_COST_PER_TILE
+## Effect dictionaries for everything currently standing, in plot order.
+func placed_effects() -> Array:
+	var out: Array = []
+	for plot in plots:
+		if plot == null:
+			continue
+		var definition := BuildLogic.current_definition(plot)
+		if definition.has("effects"):
+			out.append(definition["effects"])
+	return out
 
 
-# --- clock ------------------------------------------------------------------
+## True when any standing building carries this effect flag.
+func has_effect(key: String) -> bool:
+	for effects in placed_effects():
+		if effects.get(key, false):
+			return true
+	return false
 
-func day_fraction() -> float:
-	return day_time / DAY_LENGTH
+
+## Summed numeric effect across everything standing.
+func total_effect(key: String) -> float:
+	var total := 0.0
+	for effects in placed_effects():
+		total += float(effects.get(key, 0))
+	return total
 
 
-func _advance_day() -> void:
-	# A clean day is what earns standing back; a day with any wreck earns none.
-	if collisions_today == 0:
-		add_rep(1)
-		Events.toast.emit("Day %d clean: +1 reputation" % day, "good")
-	collisions_today = 0
+func broadcast_resources() -> void:
+	for name in ["coin", "food", "water", "reputation", "lodging"]:
+		Events.resource_changed.emit(name, get_resource(name))
+
+
+# --- phases -----------------------------------------------------------------
+
+func set_phase(next: int) -> void:
+	phase = next
+	Events.phase_changed.emit(phase)
+
+
+## MORNING -> BUILD -> NIGHT -> next day, or the ending once the season is out.
+func advance_phase() -> void:
+	match phase:
+		Phase.MORNING:
+			set_phase(Phase.BUILD)
+		Phase.BUILD:
+			set_phase(Phase.NIGHT)
+			NightLogic.run()
+			_finish_night()
+		Phase.NIGHT:
+			_finish_night()
+		Phase.ENDING:
+			pass
+
+
+func _finish_night() -> void:
+	if day >= SEASON_LENGTH:
+		# The Column and its outcomes are M6; for now the season simply stops.
+		set_phase(Phase.ENDING)
+		return
 	day += 1
-	Events.day_passed.emit(day)
-
-
-# --- speed ------------------------------------------------------------------
-
-func set_speed(value: float) -> void:
-	speed = value
-	Engine.time_scale = value
-	Events.speed_changed.emit(value)
+	Events.day_started.emit(day)
+	set_phase(Phase.MORNING)

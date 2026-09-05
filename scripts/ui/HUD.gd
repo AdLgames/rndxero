@@ -1,83 +1,150 @@
 extends CanvasLayer
 
-## Top bar, tech panel toggle, toasts and the game-over card.
+## Resource bar, faction crests, the day counter and the End Day button.
+## Rows are built from Factions.IDS and the resource list rather than laid out
+## in the scene, so nothing here needs touching when content changes.
 
 const TOAST_SCENE := preload("res://scenes/ui/Toast.tscn")
-const MAX_TOASTS := 5
+const MAX_TOASTS := 4
 
-@onready var _credits: Label = $TopBar/Bar/Credits
-@onready var _rep_bar: ProgressBar = $TopBar/Bar/RepBar
-@onready var _day: Label = $TopBar/Bar/DayLabel
-@onready var _day_bar: ProgressBar = $TopBar/Bar/DayBar
-@onready var _status: Label = $TopBar/Bar/Status
+const RESOURCES := [
+	{"key": "coin", "label": "Coin", "icon": "res://assets/ui/icon_coin.png"},
+	{"key": "food", "label": "Food", "icon": "res://assets/ui/icon_food.png"},
+	{"key": "water", "label": "Water", "icon": "res://assets/ui/icon_water.png"},
+	{"key": "lodging", "label": "Lodging", "icon": "res://assets/ui/icon_lodging.png"},
+	{"key": "reputation", "label": "Reputation", "icon": "res://assets/ui/icon_reputation.png"},
+]
+
+const PHASE_NAMES := {
+	0: "Morning",
+	1: "Afternoon",
+	2: "Night",
+	3: "Season's end",
+}
+
+signal end_day_pressed
+
+var _resource_labels: Dictionary = {}
+var _faction_bars: Dictionary = {}
+
+@onready var _resources_row: HBoxContainer = $TopBar/Margin/Layout/Line1/Resources
+@onready var _factions_row: HBoxContainer = $TopBar/Margin/Layout/Factions
+@onready var _day_label: Label = $TopBar/Margin/Layout/Line1/Day
+@onready var _phase_label: Label = $TopBar/Margin/Layout/Line1/Phase
+@onready var _end_day: Button = $TopBar/Margin/Layout/Line1/EndDay
+@onready var _last_night: Label = $TopBar/Margin/Layout/LastNight
 @onready var _toasts: VBoxContainer = $Toasts
-@onready var _tech_panel := $TechPanel
-@onready var _game_over: PanelContainer = $GameOver
 
 
 func _ready() -> void:
-	_rep_bar.max_value = Game.MAX_REP
-	_tech_panel.hide()
-	_game_over.hide()
+	_build_resource_row()
+	_build_faction_row()
+	_end_day.pressed.connect(func(): end_day_pressed.emit())
 
-	$TopBar/Bar/PauseBtn.pressed.connect(func(): Game.set_speed(0.0))
-	$TopBar/Bar/Speed1Btn.pressed.connect(func(): Game.set_speed(1.0))
-	$TopBar/Bar/Speed2Btn.pressed.connect(func(): Game.set_speed(2.0))
-	$TechButton.pressed.connect(_toggle_tech)
-	$GameOver/Layout/Restart.pressed.connect(_restart)
-
-	Events.credits_changed.connect(_on_credits)
-	Events.rep_changed.connect(_on_rep)
-	Events.day_passed.connect(_on_day)
+	Events.resource_changed.connect(_on_resource_changed)
+	Events.faction_changed.connect(_on_faction_changed)
+	Events.day_started.connect(_on_day_started)
+	Events.phase_changed.connect(_on_phase_changed)
+	Events.night_report.connect(_on_night_report)
 	Events.toast.connect(_on_toast)
-	Events.game_over.connect(_on_game_over)
 
-	_on_credits(Game.credits)
-	_on_rep(Game.reputation)
-	_on_day(Game.day)
+	_last_night.text = ""
 
 
-func _process(_delta: float) -> void:
-	_day_bar.value = Game.day_fraction() * 100.0
+func _build_resource_row() -> void:
+	for entry in RESOURCES:
+		var group := HBoxContainer.new()
+		group.add_theme_constant_override("separation", 4)
+		group.tooltip_text = entry["label"]
+
+		var icon := TextureRect.new()
+		icon.texture = load(entry["icon"])
+		icon.custom_minimum_size = Vector2(24, 24)
+		icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		icon.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		group.add_child(icon)
+
+		var value := Label.new()
+		value.custom_minimum_size = Vector2(42, 0)
+		value.text = "0"
+		group.add_child(value)
+
+		_resources_row.add_child(group)
+		_resource_labels[entry["key"]] = value
 
 
-func set_status(text: String) -> void:
-	_status.text = text
+func _build_faction_row() -> void:
+	for id in Factions.IDS:
+		var group := HBoxContainer.new()
+		group.add_theme_constant_override("separation", 5)
+
+		var crest := TextureRect.new()
+		crest.texture = load(Factions.CRESTS[id])
+		crest.custom_minimum_size = Vector2(22, 22)
+		crest.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		crest.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		group.add_child(crest)
+
+		var name_label := Label.new()
+		name_label.text = Factions.display_name(id)
+		name_label.custom_minimum_size = Vector2(78, 0)
+		group.add_child(name_label)
+
+		# The meter runs -5..+5, so it is shown shifted into 0..10.
+		var bar := ProgressBar.new()
+		bar.min_value = 0
+		bar.max_value = Factions.MAX - Factions.MIN
+		bar.value = -Factions.MIN
+		bar.custom_minimum_size = Vector2(110, 16)
+		bar.show_percentage = false
+		group.add_child(bar)
+
+		var value := Label.new()
+		value.custom_minimum_size = Vector2(28, 0)
+		value.text = "0"
+		group.add_child(value)
+
+		_factions_row.add_child(group)
+		_faction_bars[id] = {"bar": bar, "value": value}
 
 
-func _on_credits(credits: int) -> void:
-	_credits.text = "%d cr" % credits
+func _on_resource_changed(name: String, value: int) -> void:
+	if _resource_labels.has(name):
+		_resource_labels[name].text = str(value)
 
 
-func _on_rep(rep: int) -> void:
-	_rep_bar.value = rep
-	_rep_bar.tooltip_text = "Reputation %d / %d" % [rep, Game.MAX_REP]
+func _on_faction_changed(id: String, value: int) -> void:
+	if not _faction_bars.has(id):
+		return
+	_faction_bars[id]["bar"].value = value - Factions.MIN
+	_faction_bars[id]["value"].text = "%+d" % value
 
 
-func _on_day(day: int) -> void:
-	_day.text = "Day %d" % day
+func _on_day_started(day: int) -> void:
+	_day_label.text = "Day %d / %d" % [day, Game.SEASON_LENGTH]
 
 
-func _toggle_tech() -> void:
-	_tech_panel.visible = not _tech_panel.visible
+func _on_phase_changed(phase: int) -> void:
+	_phase_label.text = PHASE_NAMES.get(phase, "")
+	_end_day.disabled = phase != Game.Phase.BUILD
+
+
+func _on_night_report(report: Dictionary) -> void:
+	var parts: Array = []
+	if int(report["food_produced"]) > 0 or int(report["water_produced"]) > 0:
+		parts.append("produced %d food, %d water" % [int(report["food_produced"]), int(report["water_produced"])])
+	parts.append("ate %d food, drank %d water" % [int(report["food_consumed"]), int(report["water_consumed"])])
+	var shortfalls: Array = report["shortfalls"]
+	if not shortfalls.is_empty():
+		parts.append("short of " + ", ".join(shortfalls))
+	_last_night.text = "Night %d: %s" % [int(report["day"]), "; ".join(parts)]
 
 
 func _on_toast(text: String, kind: String) -> void:
 	var toast := TOAST_SCENE.instantiate()
 	_toasts.add_child(toast)
 	toast.setup(text, kind)
-	# Oldest first in the container, so trim from the top.
 	while _toasts.get_child_count() > MAX_TOASTS:
 		var oldest := _toasts.get_child(0)
 		_toasts.remove_child(oldest)
 		oldest.queue_free()
-
-
-func _on_game_over(day: int) -> void:
-	$GameOver/Layout/Detail.text = "Reputation hit zero on day %d.\nYou moved cargo for %d days." % [day, day]
-	_game_over.show()
-
-
-func _restart() -> void:
-	Engine.time_scale = 1.0
-	get_tree().reload_current_scene()

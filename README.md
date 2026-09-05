@@ -1,64 +1,79 @@
-# LANES
+# Ashford Crossing
 
-Space traffic management. You run the transit authority for a small asteroid
-field: build lanes between stations, keep the traffic moving, and spend what you
-earn before the queues eat your reputation.
+A ford town on the only road between the highlands and the plains. Caravans
+arrive each morning with goods and problems; you set tolls, trade, build, and
+decide who gets to stay. After ten days something comes down the road.
 
-Godot 4.3+, GDScript. Full design in [LANES_MVP.md](LANES_MVP.md).
+Godot 4.3+, GDScript. Full design in [ASHFORD_MVP.md](ASHFORD_MVP.md).
 
 ## Running
 
 Open the project folder in Godot 4.3 or newer and press play.
-`scenes/TitleScreen.tscn` is the main scene.
+`scenes/Main.tscn` is the main scene.
 
-- **Click a station, then another** to lay a lane. Right click cancels.
-- **WASD / arrows** pan, **middle-drag** pans, **wheel** zooms.
-- **II / 1x / 2x** in the top bar control speed; **Technology** opens the tech tree.
+- **Click a plot** to open the build menu; build, or upgrade what's there.
+- **A/D or arrows** scroll along the road; **right- or middle-drag** also pans.
+- **End Day** runs the night: buildings produce, the town eats, shortfalls cost
+  reputation. **Esc** closes the build menu.
 
-You start with 100 credits and 10 reputation. A lane costs 30 credits plus 5 per
-tile, so you can afford exactly one to begin with. Reputation falls when ships
-give up waiting or wreck, and the run ends at zero.
+## Status
+
+**M1 and M2 of the seven milestones in §12 are built.** That is: the road strip
+with parallax and twelve plots, camera scrolling, the HUD skeleton, and all six
+buildings with their upgrades, costs, and nightly effects on resources.
+
+Not built yet, in the order the spec sequences them:
+
+| Milestone | What is missing |
+|---|---|
+| M3 | Caravans: JSON loading, the morning queue, walk-in animation, CaravanCard, toll and lodging |
+| M4 | Trade and encounters: price table, TradePanel, Dialogue, effects, flags |
+| M5 | Nights: night events, rumours, the full report screen, game over handling |
+| M6 | The Column: the day 10 event, its five outcomes, epilogue, restart |
+| M7 | Content: 30 encounters, 10 night events, 10 rumours, phase transitions |
+
+Because caravans do not arrive yet, MORNING is entered and passed straight
+through, and the nightly formula runs with an empty inn — 2 food for the town,
+no guests, no animals. The rules from §3 are implemented in full; they simply
+have nothing to feed yet. Reputation reaching zero emits `Events.game_over`,
+which nothing listens to until M5.
 
 ## Layout
 
 ```
-data/            tech.json and stations.json -- tuning lives here, not in code
-scenes/          Main, Station, Lane, Ship, Explosion, TitleScreen, ui/
+data/            buildings.json -- tuning and content live here, not in code
+scenes/          Main, Town, Plot, Building, ui/
 scripts/
-  autoload/      Events (signal bus), Game (run state), TechManager, Dispatcher
-  ui/            HUD, TechPanel, Toast, TitleScreen
-  *.gd           Station, Lane, Ship, BuildTool, MapGen, Backdrop, CameraRig
-art/vox/         MagicaVoxel sources for the ship sprites
-tools/           asset generators (see art notes below)
-assets/          generated and imported art
+  autoload/      Events (signal bus), Data (JSON), Flags, Factions, Game
+  ui/            HUD, BuildMenu, Toast
+  *.gd           Town, Plot, Building, BuildLogic, NightLogic, CameraRig, Main
+tools/           placeholder art generator
+assets/          generated art
 ```
 
-State lives in the four autoloads, so reloading `Main.tscn` restarts a run.
-
-Everything that stands on the field — stations and ships alike — is parented to
-a single y-sorted `World` node, so a ship crossing in front of a station draws
-over it and one crossing behind draws under it. Lane lines and the tilemap sit
-below on fixed z-indices, since they are painted on the ground.
-
-## Milestones
-
-All six from LANES_MVP.md section 8 are implemented: map and stations, the build
-tool and lanes, ship spawning and delivery, capacity/queues/patience/collisions
-and game over, the ten-node tech tree, and the polish pass (lane tinting, toasts,
-explosions, speed control, title screen).
+`Game.plots` is the single source of truth for what stands where; `Town.tscn`
+renders whatever it finds there, and `BuildLogic` is the only thing that writes
+to it.
 
 ## Art
 
-Ship sprites are isometric directional sheets rendered from the MagicaVoxel
-models in `art/vox/` by `tools/vox_to_sprite.py` — eight headings each, drawn in
-the same 2:1 projection as the terrain and picked by direction of travel rather
-than rotated. Everything else -- terrain tiles, station sprites, the
-explosion strip, UI panel and icons -- is a placeholder written by
-`tools/gen_placeholder_art.py`, sized to the spec's checklist and meant to be
-replaced with the CC0 art in section 9. The planets in `assets/planets/` are
-backdrop only; nothing in the simulation touches them.
+Everything is a placeholder, per §13: flat coloured side-view shapes from one
+fixed palette, written by `tools/gen_placeholder_art.py`. Building names are
+drawn by a `Label` node rather than baked into the PNGs, so they stay legible at
+any zoom. Re-run the script any time; it writes straight into `assets/`.
 
-See [art/README.md](art/README.md) for how to regenerate any of it.
+Not yet sourced: the pixel font on the checklist. The game uses Godot's default.
 
-> This repository previously held two unrelated projects (ClaimTrail, then
-> Giantfall); both remain in git history.
+## Two deviations from the spec, and why
+
+- **Parallax is done in world space** in `Town.gd`, not with
+  `ParallaxBackground`. That node is a `CanvasLayer`, so its contents sit in
+  screen coordinates and have to be positioned against the viewport height and
+  camera zoom; a window resize pulls the horizon off the ground line. Three
+  sprites offset against the camera each frame stay welded to the world.
+- **`NightLogic.gd` exists at M2**, though §12 places it at M5. The buildings
+  M2 adds are only meaningful against the consumption rules, so those are here
+  in full; night events and rumours are still M5's.
+
+> This repository previously held three unrelated projects (ClaimTrail,
+> Giantfall and LANES); all remain in git history.
