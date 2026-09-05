@@ -1,0 +1,38 @@
+[gd_scene load_steps=6 format=3]
+
+[ext_resource type="Script" path="res://scripts/main.gd" id="1_main"]
+[ext_resource type="Script" path="res://scripts/camera/iso_camera.gd" id="2_camera"]
+
+[sub_resource type="Environment" id="Environment_1"]
+background_mode = 1
+background_color = Color(0.16, 0.17, 0.19, 1)
+ambient_light_source = 2
+ambient_light_color = Color(0.62, 0.66, 0.76, 1)
+ambient_light_energy = 0.55
+tonemap_mode = 2
+
+[sub_resource type="Theme" id="Theme_1"]
+
+[node name="Main" type="Node3D"]
+script = ExtResource("1_main")
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_1")
+
+[node name="Sun" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.707107, -0.353553, 0.612372, 0, 0.866025, 0.5, -0.707107, -0.353553, 0.612372, 0, 40, 0)
+light_energy = 1.1
+shadow_enabled = true
+
+[node name="IsoCamera" type="Camera3D" parent="."]
+script = ExtResource("2_camera")
+
+[node name="HUD" type="CanvasLayer" parent="."]
+
+[node name="Status" type="Label" parent="HUD"]
+theme = SubResource("Theme_1")
+offset_left = 16.0
+offset_top = 12.0
+offset_right = 640.0
+offset_bottom = 90.0
+text = "loading"
