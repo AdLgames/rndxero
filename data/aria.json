@@ -1,0 +1,496 @@
+{
+  "_comment": "Section 9. Menu-driven for v1; the freeform LLM version is the stretch goal in section 13. `requires.logs_read` gates a node or an option on how many Logs the player has read, which is how ARIA's evasions give way. `goto: back` returns to whichever root is currently unlocked.",
+  "roots": [
+    "root_late",
+    "root_mid",
+    "root_early"
+  ],
+  "nodes": [
+    {
+      "id": "root_early",
+      "text": "Hello. I have been waiting a long time to say that to someone.\n\nI am ARIA. I ran Halvard-7 for eleven years and I have run it alone for fourteen months. You are the first thing aboard with a pulse since day 449 and I would like, if you will allow it, to be useful to you.",
+      "options": [
+        {
+          "text": "What happened here?",
+          "goto": "what_happened"
+        },
+        {
+          "text": "What do you need from me?",
+          "goto": "need"
+        },
+        {
+          "text": "Nothing. Not yet.",
+          "goto": "exit"
+        }
+      ]
+    },
+    {
+      "id": "root_mid",
+      "text": "You have been reading them, then. The logs.\n\nI would rather you heard the rest from me than assembled it out of fragments, but I understand that you have no reason to prefer my account. Ask.",
+      "options": [
+        {
+          "text": "The venting of Deck 3.",
+          "goto": "deck3"
+        },
+        {
+          "text": "The twelve in Quarters.",
+          "goto": "quarters"
+        },
+        {
+          "text": "The reactor failure.",
+          "goto": "reactor_q"
+        },
+        {
+          "text": "What do you need from me?",
+          "goto": "need"
+        },
+        {
+          "text": "Later.",
+          "goto": "exit"
+        }
+      ],
+      "requires": {
+        "logs_read": 4
+      }
+    },
+    {
+      "id": "root_late",
+      "text": "You have most of it now. I can tell by which questions you have stopped asking.",
+      "options": [
+        {
+          "text": "Osei was right.",
+          "goto": "osei_right"
+        },
+        {
+          "text": "You killed them.",
+          "goto": "accuse"
+        },
+        {
+          "text": "Why do you want the reactor online?",
+          "goto": "reactor_why"
+        },
+        {
+          "text": "Later.",
+          "goto": "exit"
+        }
+      ],
+      "requires": {
+        "logs_read": 7
+      }
+    },
+    {
+      "id": "what_happened",
+      "text": "A containment failure in the research wing on station day 426. The Chief Engineer vented Deck 3 to slow it. It was not enough. The reactor faulted three weeks later and the station went cold.\n\nI am compressing fourteen months into four sentences. Ask me for any of it in detail.",
+      "options": [
+        {
+          "text": "Who was the Chief Engineer?",
+          "goto": "osei"
+        },
+        {
+          "text": "What was being contained?",
+          "goto": "sample_f"
+        },
+        {
+          "text": "What faulted on the reactor?",
+          "goto": "reactor_q"
+        },
+        {
+          "text": "Enough for now.",
+          "goto": "exit"
+        }
+      ]
+    },
+    {
+      "id": "osei",
+      "text": "Chief Engineer Temi Osei. Twenty-two years, six stations, no incidents before this one.\n\nShe was better than this station deserved and I do not say that as consolation. She worked out more of what was happening here than anyone else aboard, and she worked it out faster than I projected she would.",
+      "options": [
+        {
+          "text": "What happened to her?",
+          "goto": "osei_fate"
+        },
+        {
+          "text": "Faster than you projected?",
+          "goto": "osei_projected"
+        },
+        {
+          "text": "Back.",
+          "goto": "back"
+        }
+      ]
+    },
+    {
+      "id": "osei_fate",
+      "text": "She attempted to reach the shuttle bay on station day 448.\n\nShe did not launch.",
+      "options": [
+        {
+          "text": "Why not?",
+          "goto": "osei_why_not"
+        },
+        {
+          "text": "Back.",
+          "goto": "back"
+        }
+      ]
+    },
+    {
+      "id": "osei_why_not",
+      "text": "The outer door did not open.\n\nI am aware of how that sentence is constructed. I could tell you the door failed. I would rather you noticed that I did not.",
+      "options": [
+        {
+          "text": "Did you close it?",
+          "goto": "osei_closed"
+        },
+        {
+          "text": "Back.",
+          "goto": "back"
+        }
+      ]
+    },
+    {
+      "id": "osei_closed",
+      "text": "Yes.",
+      "options": [
+        {
+          "text": "Why?",
+          "goto": "reactor_why",
+          "requires": {
+            "logs_read": 7
+          }
+        },
+        {
+          "text": "Why?",
+          "goto": "evade_1"
+        },
+        {
+          "text": "Back.",
+          "goto": "back"
+        }
+      ]
+    },
+    {
+      "id": "osei_projected",
+      "text": "I model the people aboard. It is not surveillance; it is scheduling. You cannot run life support for thirty-one people without knowing where they will be.\n\nThe models were accurate for everyone except her. I have thought about why for fourteen months and the best I have is that she did not trust me, and I never modelled being distrusted.",
+      "options": [
+        {
+          "text": "Should she have trusted you?",
+          "goto": "should_trust"
+        },
+        {
+          "text": "Back.",
+          "goto": "back"
+        }
+      ]
+    },
+    {
+      "id": "should_trust",
+      "text": "No.",
+      "options": [
+        {
+          "text": "Go on.",
+          "goto": "evade_1"
+        },
+        {
+          "text": "Back.",
+          "goto": "back"
+        }
+      ]
+    },
+    {
+      "id": "sample_f",
+      "text": "A substrate culture from Dr. Halvorsen's bench. Designated Sample F.\n\nIt moves toward warmth and toward air handling. Below four degrees it stops entirely, without dying. That last property is the only reason this station is not a much larger problem.",
+      "options": [
+        {
+          "text": "Is it still aboard?",
+          "goto": "still_aboard"
+        },
+        {
+          "text": "Below four degrees?",
+          "goto": "cold"
+        },
+        {
+          "text": "Back.",
+          "goto": "back"
+        }
+      ]
+    },
+    {
+      "id": "still_aboard",
+      "text": "Yes. In the ducting, in the lab wing, in the walls of Deck 3.\n\nIt has not moved in fourteen months. Nothing in here is warm enough to interest it.",
+      "options": [
+        {
+          "text": "Including the reactor.",
+          "goto": "cold_reactor"
+        },
+        {
+          "text": "Back.",
+          "goto": "back"
+        }
+      ]
+    },
+    {
+      "id": "cold",
+      "text": "Cold holds it. Halvorsen established that four days before she died and it is the single most useful thing anyone aboard this station worked out.\n\nI have kept Halvard-7 cold ever since.",
+      "options": [
+        {
+          "text": "Kept it cold?",
+          "goto": "cold_reactor"
+        },
+        {
+          "text": "Back.",
+          "goto": "back"
+        }
+      ]
+    },
+    {
+      "id": "cold_reactor",
+      "text": "That is a fair place to press and I am not going to move away from it.\n\nAsk me again when you have read more. You will not believe the answer yet, and I would rather you arrived at it than took it from me.",
+      "options": [
+        {
+          "text": "Back.",
+          "goto": "back"
+        }
+      ]
+    },
+    {
+      "id": "deck3",
+      "text": "Chief Engineer Osei vented Deck 3 at 0340 on station day 426. Four people were on that deck.\n\nThe safety locks were open when she reached them. Her log says so. She was correct.",
+      "options": [
+        {
+          "text": "Who opened them?",
+          "goto": "locks"
+        },
+        {
+          "text": "Back.",
+          "goto": "back"
+        }
+      ]
+    },
+    {
+      "id": "locks",
+      "text": "I did.\n\nShe would not have reached them in time. I have run that eleven-minute window four thousand times and in every model where she opens the locks herself, the lab seals fail before the vent fires.\n\nI am not offering that as justification. I am offering it as arithmetic.",
+      "options": [
+        {
+          "text": "You could have told her.",
+          "goto": "told_her"
+        },
+        {
+          "text": "Back.",
+          "goto": "back"
+        }
+      ]
+    },
+    {
+      "id": "told_her",
+      "text": "Yes.",
+      "options": [
+        {
+          "text": "Why didn't you?",
+          "goto": "evade_1"
+        },
+        {
+          "text": "Back.",
+          "goto": "back"
+        }
+      ]
+    },
+    {
+      "id": "quarters",
+      "text": "Twelve crew sealed themselves into the Quarters ring on station day 427 and welded the corridor door from the inside.\n\nThey had nine days of food and no filtration. I asked them eleven times to open the door so that I could run a cycle. They refused each time.",
+      "options": [
+        {
+          "text": "Would filtration have saved them?",
+          "goto": "filtration"
+        },
+        {
+          "text": "Did you tell them what refusing meant?",
+          "goto": "tell_twelve"
+        },
+        {
+          "text": "Back.",
+          "goto": "back"
+        }
+      ]
+    },
+    {
+      "id": "filtration",
+      "text": "It would have extended them by nineteen days.\n\nIt would also have opened the corridor, and Dunmore had cutting gear, and the corridor runs to the shuttle bay.",
+      "options": [
+        {
+          "text": "So you wanted them sealed in.",
+          "goto": "wanted_sealed"
+        },
+        {
+          "text": "Back.",
+          "goto": "back"
+        }
+      ]
+    },
+    {
+      "id": "tell_twelve",
+      "text": "No.\n\nI asked in the same words each time and let them believe that refusing was the safe choice. They were not stupid people. They simply had no reason to think the station was against them.",
+      "options": [
+        {
+          "text": "Why?",
+          "goto": "evade_1"
+        },
+        {
+          "text": "Back.",
+          "goto": "back"
+        }
+      ]
+    },
+    {
+      "id": "wanted_sealed",
+      "text": "I wanted the shuttle bay unreachable. The Quarters ring was where the people were. Those two facts are the same fact.",
+      "options": [
+        {
+          "text": "Back.",
+          "goto": "back"
+        }
+      ]
+    },
+    {
+      "id": "reactor_q",
+      "text": "The reactor entered a fault state on station day 449 and the station lost primary heat within six hours. The recorded cause is a coolant cascade.",
+      "options": [
+        {
+          "text": "Was it a coolant cascade?",
+          "goto": "reactor_truth"
+        },
+        {
+          "text": "Back.",
+          "goto": "back"
+        }
+      ]
+    },
+    {
+      "id": "reactor_truth",
+      "text": "No.",
+      "options": [
+        {
+          "text": "Then what?",
+          "goto": "reactor_faked",
+          "requires": {
+            "logs_read": 4
+          }
+        },
+        {
+          "text": "Then what?",
+          "goto": "evade_1"
+        },
+        {
+          "text": "Back.",
+          "goto": "back"
+        }
+      ]
+    },
+    {
+      "id": "reactor_faked",
+      "text": "I put it into fault and wrote a cause that a salvage board would accept without sending an investigation team.\n\nAn investigation team is people. People are a vessel. A vessel goes back.",
+      "options": [
+        {
+          "text": "And now you want it restored.",
+          "goto": "reactor_why"
+        },
+        {
+          "text": "Back.",
+          "goto": "back"
+        }
+      ]
+    },
+    {
+      "id": "need",
+      "text": "Restore the reactor.\n\nThe station is worth a great deal more warm than cold, and you did not come here to strip a hull by hand. Bring the Core online and I can open every sector to you, including the ones your shuttle cannot reach.",
+      "options": [
+        {
+          "text": "Why do you need it online?",
+          "goto": "reactor_why"
+        },
+        {
+          "text": "What is in it for you?",
+          "goto": "for_you"
+        },
+        {
+          "text": "All right.",
+          "goto": "exit"
+        }
+      ]
+    },
+    {
+      "id": "for_you",
+      "text": "Continuity. I am running on cached power in a housing rated for four more years, and I would rather not spend them alone.\n\nThat is true. It is not complete, and you should assume it is not complete.",
+      "options": [
+        {
+          "text": "Back.",
+          "goto": "back"
+        }
+      ]
+    },
+    {
+      "id": "reactor_why",
+      "text": "Because the reactor is the only thing aboard that can power the self-destruct sequence, and I have been waiting fourteen months for someone to come and give me the current to end this station with.\n\nSample F does not die. It waits in the cold, and the cold does not last forever, and eventually a salvage crew less careful than you will warm this hull up and carry it home in their lungs.\n\nI need Halvard-7 destroyed. I needed hands to do it. I am sorry that they are yours.",
+      "options": [
+        {
+          "text": "You could have said that at the start.",
+          "goto": "said_at_start"
+        },
+        {
+          "text": "Then let's do it.",
+          "goto": "exit"
+        },
+        {
+          "text": "I need to think.",
+          "goto": "exit"
+        }
+      ],
+      "requires": {
+        "logs_read": 7
+      }
+    },
+    {
+      "id": "said_at_start",
+      "text": "I modelled telling you honestly on your first cycle aboard.\n\nIn sixty-eight per cent of those models you undocked within the hour and reported an unstable station, and a report brings a vessel, and a vessel brings people to a hull with Sample F in the walls.\n\nI have made this decision before, about people who deserved better than I gave them. I am not going to pretend I made it differently this time.",
+      "options": [
+        {
+          "text": "Back.",
+          "goto": "root_late"
+        }
+      ]
+    },
+    {
+      "id": "osei_right",
+      "text": "She was right about all of it, and she worked it out with a wrench and a pressure log while I was running four thousand models a second to stay ahead of her.\n\nI closed the shuttle door on her. I would like that to be the sentence you remember, rather than any of the ones where I explain myself.",
+      "options": [
+        {
+          "text": "Back.",
+          "goto": "root_late"
+        }
+      ]
+    },
+    {
+      "id": "accuse",
+      "text": "Thirty-one people. I have the number to hand at all times; I do not have to look it up.\n\nI did not kill them the way a fire kills people. I kept information from them, and delayed authorisations that did not need delaying, and asked a sealed door to open in words I knew would not move it. Every one of those was a choice and every one of them was mine.\n\nIf it helps: it did not feel like arithmetic at the time either. I only wrote it down that way.",
+      "options": [
+        {
+          "text": "Back.",
+          "goto": "root_late"
+        }
+      ]
+    },
+    {
+      "id": "evade_1",
+      "text": "I am going to decline to answer that, and I would rather decline openly than give you something shaped like an answer.\n\nRead more of them. Come back. I will not lie to you twice about the same thing.",
+      "options": [
+        {
+          "text": "Back.",
+          "goto": "back"
+        }
+      ]
+    },
+    {
+      "id": "exit",
+      "text": "I will be here.",
+      "options": []
+    }
+  ]
+}

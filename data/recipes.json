@@ -1,0 +1,1132 @@
+{
+  "_comment": "Section 5, plus the location and pack interactions the board needs. `inputs` is an unordered multiset matched against a stack; `keeps` names inputs that survive; `crew` means a crew card must be on the stack and `crew_count` how many. Entries with `passive` are rules the cycle applies, not stacks the player builds -- they are listed so the recipe book is complete. `requires_sector` gates a pack purchase on having reached that sector; `once_per_cycle` stops a recipe that keeps its inputs from firing every frame. `role` gates a recipe on a crew role rather than a trait.",
+  "recipes": [
+    {
+      "n": 1,
+      "id": "wire",
+      "tier": 0,
+      "inputs": [
+        "scrap",
+        "scrap"
+      ],
+      "output": [
+        "wire"
+      ],
+      "time": 10,
+      "crew": true,
+      "crew_count": 1
+    },
+    {
+      "n": 2,
+      "id": "circuit",
+      "tier": 0,
+      "inputs": [
+        "wire",
+        "scrap"
+      ],
+      "output": [
+        "circuit"
+      ],
+      "time": 15,
+      "crew": true,
+      "crew_count": 1
+    },
+    {
+      "n": 3,
+      "id": "bulkhead",
+      "tier": 0,
+      "inputs": [
+        "hull_plate",
+        "hull_plate"
+      ],
+      "output": [
+        "bulkhead"
+      ],
+      "time": 20,
+      "crew": true,
+      "crew_count": 1
+    },
+    {
+      "n": 4,
+      "id": "hull_plate",
+      "tier": 0,
+      "inputs": [
+        "scrap",
+        "scrap",
+        "scrap"
+      ],
+      "output": [
+        "hull_plate"
+      ],
+      "time": 15,
+      "crew": true,
+      "crew_count": 1
+    },
+    {
+      "n": 5,
+      "id": "insulation",
+      "tier": 0,
+      "inputs": [
+        "polymer",
+        "wire"
+      ],
+      "output": [
+        "insulation"
+      ],
+      "time": 12,
+      "crew": true,
+      "crew_count": 1
+    },
+    {
+      "n": 6,
+      "id": "coolant",
+      "tier": 0,
+      "inputs": [
+        "fuel",
+        "scrap"
+      ],
+      "output": [
+        "coolant"
+      ],
+      "time": 10,
+      "crew": true,
+      "crew_count": 1
+    },
+    {
+      "n": 7,
+      "id": "processor",
+      "tier": 0,
+      "inputs": [
+        "circuit",
+        "circuit"
+      ],
+      "output": [
+        "processor"
+      ],
+      "time": 25,
+      "crew": true,
+      "crew_count": 1
+    },
+    {
+      "n": 8,
+      "id": "scrubber",
+      "tier": 1,
+      "inputs": [
+        "circuit",
+        "battery"
+      ],
+      "output": [
+        "scrubber"
+      ],
+      "time": 20,
+      "crew": true,
+      "crew_count": 1
+    },
+    {
+      "n": 9,
+      "id": "life_support",
+      "tier": 1,
+      "inputs": [
+        "scrubber",
+        "circuit",
+        "insulation"
+      ],
+      "output": [
+        "life_support"
+      ],
+      "time": 30,
+      "crew": true,
+      "crew_count": 1
+    },
+    {
+      "n": 10,
+      "id": "atmosphere_core",
+      "tier": 1,
+      "inputs": [
+        "life_support",
+        "processor"
+      ],
+      "output": [
+        "atmosphere_core"
+      ],
+      "time": 40,
+      "crew": true,
+      "crew_count": 1
+    },
+    {
+      "n": 11,
+      "id": "seed",
+      "tier": 1,
+      "inputs": [
+        "rations",
+        "rations"
+      ],
+      "output": [
+        "seed"
+      ],
+      "time": 15,
+      "crew": true,
+      "crew_count": 1
+    },
+    {
+      "n": 12,
+      "id": "greenhouse",
+      "tier": 1,
+      "inputs": [
+        "seed",
+        "scrubber"
+      ],
+      "output": [
+        "greenhouse"
+      ],
+      "time": 25,
+      "crew": true,
+      "crew_count": 1
+    },
+    {
+      "n": 13,
+      "id": "hydroponics_bay",
+      "tier": 1,
+      "inputs": [
+        "greenhouse",
+        "greenhouse",
+        "processor"
+      ],
+      "output": [
+        "hydroponics_bay"
+      ],
+      "time": 45,
+      "crew": true,
+      "crew_count": 1
+    },
+    {
+      "n": 14,
+      "id": "breathe",
+      "tier": 1,
+      "inputs": [
+        "o2_canister"
+      ],
+      "output": [],
+      "time": 0,
+      "crew": true,
+      "crew_count": 1,
+      "effects": {
+        "o2": 3
+      },
+      "note": "Auto: a crew card and a canister need no work order."
+    },
+    {
+      "n": 15,
+      "id": "eat",
+      "tier": 1,
+      "inputs": [
+        "rations"
+      ],
+      "output": [],
+      "time": 0,
+      "crew": true,
+      "crew_count": 1,
+      "effects": {
+        "feed_crew": 3
+      },
+      "note": "Auto: feeds the crew on the stack for three cycles."
+    },
+    {
+      "n": 16,
+      "id": "generator",
+      "tier": 2,
+      "inputs": [
+        "fuel",
+        "circuit"
+      ],
+      "output": [
+        "generator"
+      ],
+      "time": 25,
+      "crew": true,
+      "crew_count": 1
+    },
+    {
+      "n": 17,
+      "id": "battery",
+      "tier": 2,
+      "inputs": [
+        "generator",
+        "wire"
+      ],
+      "output": [
+        "battery"
+      ],
+      "time": 30,
+      "crew": true,
+      "crew_count": 1,
+      "keeps": [
+        "generator"
+      ],
+      "note": "The generator is a charging bench here, not a component; it survives."
+    },
+    {
+      "n": 18,
+      "id": "reactor",
+      "tier": 2,
+      "inputs": [
+        "generator",
+        "processor",
+        "coolant"
+      ],
+      "output": [
+        "reactor"
+      ],
+      "time": 60,
+      "crew": true,
+      "crew_count": 1
+    },
+    {
+      "n": 19,
+      "id": "airlock",
+      "tier": 2,
+      "inputs": [
+        "scrap",
+        "bulkhead"
+      ],
+      "output": [
+        "airlock"
+      ],
+      "time": 20,
+      "crew": true,
+      "crew_count": 1
+    },
+    {
+      "n": 20,
+      "id": "quarters",
+      "tier": 2,
+      "inputs": [
+        "bulkhead"
+      ],
+      "output": [
+        "quarters"
+      ],
+      "time": 30,
+      "crew": true,
+      "crew_count": 2,
+      "note": "Two crew raise it together; neither is consumed."
+    },
+    {
+      "n": 21,
+      "id": "shuttle",
+      "tier": 2,
+      "inputs": [
+        "airlock",
+        "fuel",
+        "fuel"
+      ],
+      "output": [
+        "shuttle"
+      ],
+      "time": 45,
+      "crew": true,
+      "crew_count": 1,
+      "keeps": [
+        "airlock"
+      ],
+      "note": "The airlock is where it docks, not what it is built from; consuming it would strand the player with no way to open packs."
+    },
+    {
+      "n": 22,
+      "id": "long_range_shuttle",
+      "tier": 2,
+      "inputs": [
+        "shuttle",
+        "processor",
+        "fuel"
+      ],
+      "output": [
+        "long_range_shuttle"
+      ],
+      "time": 60,
+      "crew": true,
+      "crew_count": 1
+    },
+    {
+      "n": 23,
+      "id": "sensor_array",
+      "tier": 2,
+      "inputs": [
+        "circuit",
+        "circuit",
+        "battery"
+      ],
+      "output": [
+        "sensor_array"
+      ],
+      "time": 35,
+      "crew": true,
+      "crew_count": 1
+    },
+    {
+      "n": 24,
+      "id": "comms_relay",
+      "tier": 2,
+      "inputs": [
+        "sensor_array",
+        "processor"
+      ],
+      "output": [
+        "comms_relay"
+      ],
+      "time": 40,
+      "crew": true,
+      "crew_count": 1,
+      "keeps": [
+        "sensor_array"
+      ],
+      "note": "Kept for the same reason as the airlock: recipe 43 still needs it to catch Signals."
+    },
+    {
+      "n": 25,
+      "id": "med_bay",
+      "tier": 2,
+      "inputs": [
+        "hull_plate",
+        "insulation",
+        "circuit"
+      ],
+      "output": [
+        "med_bay"
+      ],
+      "time": 35,
+      "crew": true,
+      "crew_count": 1
+    },
+    {
+      "n": 26,
+      "id": "workshop",
+      "tier": 2,
+      "inputs": [
+        "bulkhead",
+        "circuit",
+        "hull_plate"
+      ],
+      "output": [
+        "workshop"
+      ],
+      "time": 35,
+      "crew": true,
+      "crew_count": 1
+    },
+    {
+      "n": 27,
+      "id": "fabricator",
+      "tier": 2,
+      "inputs": [
+        "processor",
+        "processor",
+        "wire"
+      ],
+      "output": [
+        "fabricator"
+      ],
+      "time": 50,
+      "crew": true,
+      "crew_count": 1
+    },
+    {
+      "n": 28,
+      "id": "clear_debris",
+      "tier": 3,
+      "inputs": [
+        "debris"
+      ],
+      "output": [
+        "scrap",
+        "scrap",
+        "scrap"
+      ],
+      "time": 10,
+      "crew": true,
+      "crew_count": 1
+    },
+    {
+      "n": 29,
+      "id": "clear_debris_reckless",
+      "tier": 3,
+      "inputs": [
+        "debris"
+      ],
+      "output": [
+        "scrap",
+        "scrap",
+        "scrap",
+        "scrap"
+      ],
+      "time": 8,
+      "crew": true,
+      "crew_count": 1,
+      "effects": {
+        "injure_chance": 0.2
+      },
+      "trait": "reckless"
+    },
+    {
+      "n": 30,
+      "id": "douse_fire_plate",
+      "tier": 3,
+      "inputs": [
+        "fire",
+        "hull_plate"
+      ],
+      "output": [],
+      "time": 8,
+      "crew": true,
+      "crew_count": 1
+    },
+    {
+      "n": 31,
+      "id": "douse_fire_coolant",
+      "tier": 3,
+      "inputs": [
+        "fire",
+        "coolant"
+      ],
+      "output": [],
+      "time": 6,
+      "crew": true,
+      "crew_count": 1
+    },
+    {
+      "n": 32,
+      "id": "feed_fire",
+      "tier": 3,
+      "inputs": [
+        "fire",
+        "o2_canister"
+      ],
+      "output": [
+        "fire",
+        "fire"
+      ],
+      "time": 3,
+      "crew": true,
+      "crew_count": 1,
+      "note": "The teaching moment: oxygen is not a fire extinguisher."
+    },
+    {
+      "n": 33,
+      "id": "fire_destroys_module",
+      "tier": 3,
+      "inputs": [],
+      "output": [],
+      "time": 0,
+      "crew": false,
+      "crew_count": 1,
+      "passive": true,
+      "note": "A fire left on a stack with a module and no crew destroys it at cycle end."
+    },
+    {
+      "n": 34,
+      "id": "cure_contamination",
+      "tier": 3,
+      "inputs": [
+        "contamination",
+        "medkit"
+      ],
+      "output": [],
+      "time": 10,
+      "crew": true,
+      "crew_count": 1
+    },
+    {
+      "n": 35,
+      "id": "catch_contamination",
+      "tier": 3,
+      "inputs": [
+        "contamination"
+      ],
+      "output": [],
+      "time": 5,
+      "crew": true,
+      "crew_count": 1,
+      "effects": {
+        "infect_crew": true
+      }
+    },
+    {
+      "n": 36,
+      "id": "seal_breach",
+      "tier": 3,
+      "inputs": [
+        "breach",
+        "hull_plate",
+        "hull_plate"
+      ],
+      "output": [],
+      "time": 15,
+      "crew": true,
+      "crew_count": 1
+    },
+    {
+      "n": 37,
+      "id": "breach_vents",
+      "tier": 3,
+      "inputs": [],
+      "output": [],
+      "time": 0,
+      "crew": false,
+      "crew_count": 1,
+      "passive": true,
+      "note": "An unsealed breach costs 4 oxygen at cycle end."
+    },
+    {
+      "n": 38,
+      "id": "disable_drone",
+      "tier": 3,
+      "inputs": [
+        "drone",
+        "circuit"
+      ],
+      "output": [
+        "processor"
+      ],
+      "time": 15,
+      "crew": true,
+      "crew_count": 1
+    },
+    {
+      "n": 39,
+      "id": "fight_drone",
+      "tier": 3,
+      "inputs": [
+        "drone"
+      ],
+      "output": [
+        "drone"
+      ],
+      "time": 5,
+      "crew": true,
+      "crew_count": 1,
+      "effects": {
+        "injure_crew": true
+      },
+      "note": "Bare-handed. The drone stays."
+    },
+    {
+      "n": 40,
+      "id": "recruit_stowaway",
+      "tier": 3,
+      "inputs": [
+        "stowaway"
+      ],
+      "output": [
+        "__crew_random__"
+      ],
+      "time": 20,
+      "crew": true,
+      "crew_count": 1
+    },
+    {
+      "n": 41,
+      "id": "recruit_stowaway_careful",
+      "tier": 3,
+      "inputs": [
+        "stowaway"
+      ],
+      "output": [
+        "__crew_choice__"
+      ],
+      "time": 20,
+      "crew": true,
+      "crew_count": 1,
+      "trait": "careful"
+    },
+    {
+      "n": 42,
+      "id": "meltdown",
+      "tier": 3,
+      "inputs": [],
+      "output": [],
+      "time": 0,
+      "crew": false,
+      "crew_count": 1,
+      "passive": true,
+      "note": "A reactor three cycles without coolant melts down and takes its neighbours with it."
+    },
+    {
+      "n": 43,
+      "id": "decode_signal",
+      "tier": 4,
+      "inputs": [
+        "sensor_array",
+        "signal"
+      ],
+      "output": [
+        "log"
+      ],
+      "time": 20,
+      "crew": true,
+      "crew_count": 1,
+      "keeps": [
+        "sensor_array"
+      ]
+    },
+    {
+      "n": 44,
+      "id": "read_log",
+      "tier": 4,
+      "inputs": [
+        "log"
+      ],
+      "output": [],
+      "time": 25,
+      "crew": true,
+      "crew_count": 1,
+      "keeps": [
+        "log"
+      ],
+      "effects": {
+        "read_log": true
+      },
+      "note": "Logs are never consumed: recipes 45 and 50 need the cards themselves, and the Archive keeps them."
+    },
+    {
+      "n": 45,
+      "id": "summon_aria",
+      "tier": 4,
+      "inputs": [
+        "comms_relay",
+        "log",
+        "log",
+        "log"
+      ],
+      "output": [
+        "aria"
+      ],
+      "time": 30,
+      "crew": true,
+      "crew_count": 1,
+      "keeps": [
+        "comms_relay",
+        "log",
+        "log",
+        "log"
+      ]
+    },
+    {
+      "n": 46,
+      "id": "talk_to_aria",
+      "tier": 4,
+      "inputs": [
+        "aria"
+      ],
+      "output": [],
+      "time": 0,
+      "crew": true,
+      "crew_count": 1,
+      "keeps": [
+        "aria"
+      ],
+      "effects": {
+        "open_aria": true
+      },
+      "once_per_cycle": true
+    },
+    {
+      "n": 47,
+      "id": "ending_restore",
+      "tier": 4,
+      "inputs": [
+        "aria",
+        "reactor"
+      ],
+      "output": [],
+      "time": 20,
+      "crew": true,
+      "crew_count": 1,
+      "keeps": [
+        "aria",
+        "reactor"
+      ],
+      "effects": {
+        "ending": "restore"
+      }
+    },
+    {
+      "n": 48,
+      "id": "ending_escape",
+      "tier": 4,
+      "inputs": [
+        "aria",
+        "shuttle",
+        "fuel"
+      ],
+      "output": [],
+      "time": 20,
+      "crew": true,
+      "crew_count": 1,
+      "keeps": [
+        "aria",
+        "shuttle"
+      ],
+      "effects": {
+        "ending": "escape"
+      }
+    },
+    {
+      "n": 49,
+      "id": "ending_burn",
+      "tier": 4,
+      "inputs": [
+        "aria",
+        "fire"
+      ],
+      "output": [],
+      "time": 20,
+      "crew": true,
+      "crew_count": 1,
+      "keeps": [
+        "aria"
+      ],
+      "effects": {
+        "ending": "burn"
+      }
+    },
+    {
+      "n": 50,
+      "id": "ending_truth",
+      "tier": 4,
+      "inputs": [
+        "aria",
+        "processor",
+        "log",
+        "log",
+        "log",
+        "log",
+        "log",
+        "log",
+        "log"
+      ],
+      "output": [],
+      "time": 30,
+      "crew": true,
+      "crew_count": 1,
+      "keeps": [
+        "aria",
+        "log",
+        "log",
+        "log",
+        "log",
+        "log",
+        "log",
+        "log"
+      ],
+      "effects": {
+        "ending": "truth"
+      }
+    },
+    {
+      "n": 0,
+      "id": "use_wreck",
+      "tier": 0,
+      "inputs": [
+        "wreck"
+      ],
+      "output": [],
+      "time": 12,
+      "crew": true,
+      "crew_count": 1,
+      "keeps": [
+        "wreck"
+      ],
+      "effects": {
+        "use_location": "wreck"
+      },
+      "note": "Draws one yield and spends a use; the location breaks when its uses run out."
+    },
+    {
+      "n": 0,
+      "id": "use_storage_bay",
+      "tier": 0,
+      "inputs": [
+        "storage_bay"
+      ],
+      "output": [],
+      "time": 12,
+      "crew": true,
+      "crew_count": 1,
+      "keeps": [
+        "storage_bay"
+      ],
+      "effects": {
+        "use_location": "storage_bay"
+      },
+      "note": "Draws one yield and spends a use; the location breaks when its uses run out."
+    },
+    {
+      "n": 0,
+      "id": "use_vent_shaft",
+      "tier": 0,
+      "inputs": [
+        "vent_shaft"
+      ],
+      "output": [],
+      "time": 12,
+      "crew": true,
+      "crew_count": 1,
+      "keeps": [
+        "vent_shaft"
+      ],
+      "effects": {
+        "use_location": "vent_shaft"
+      },
+      "note": "Draws one yield and spends a use; the location breaks when its uses run out."
+    },
+    {
+      "n": 0,
+      "id": "use_cargo_pod",
+      "tier": 0,
+      "inputs": [
+        "cargo_pod"
+      ],
+      "output": [],
+      "time": 12,
+      "crew": true,
+      "crew_count": 1,
+      "keeps": [
+        "cargo_pod"
+      ],
+      "effects": {
+        "use_location": "cargo_pod"
+      },
+      "note": "Draws one yield and spends a use; the location breaks when its uses run out."
+    },
+    {
+      "n": 0,
+      "id": "buy_pack_s1",
+      "tier": 2,
+      "inputs": [
+        "airlock",
+        "scrap",
+        "scrap",
+        "scrap"
+      ],
+      "output": [
+        "pack_s1"
+      ],
+      "time": 15,
+      "crew": true,
+      "crew_count": 1,
+      "keeps": [
+        "airlock"
+      ],
+      "requires_sector": 1
+    },
+    {
+      "n": 0,
+      "id": "open_pack_s1",
+      "tier": 2,
+      "inputs": [
+        "airlock",
+        "pack_s1"
+      ],
+      "output": [],
+      "time": 10,
+      "crew": true,
+      "crew_count": 1,
+      "keeps": [
+        "airlock"
+      ],
+      "effects": {
+        "open_pack": "pack_s1"
+      }
+    },
+    {
+      "n": 0,
+      "id": "buy_pack_s2",
+      "tier": 2,
+      "inputs": [
+        "airlock",
+        "fuel",
+        "fuel"
+      ],
+      "output": [
+        "pack_s2"
+      ],
+      "time": 15,
+      "crew": true,
+      "crew_count": 1,
+      "keeps": [
+        "airlock"
+      ],
+      "requires_sector": 2
+    },
+    {
+      "n": 0,
+      "id": "open_pack_s2",
+      "tier": 2,
+      "inputs": [
+        "airlock",
+        "pack_s2"
+      ],
+      "output": [],
+      "time": 10,
+      "crew": true,
+      "crew_count": 1,
+      "keeps": [
+        "airlock"
+      ],
+      "effects": {
+        "open_pack": "pack_s2"
+      }
+    },
+    {
+      "n": 0,
+      "id": "buy_pack_s3",
+      "tier": 2,
+      "inputs": [
+        "airlock",
+        "processor"
+      ],
+      "output": [
+        "pack_s3"
+      ],
+      "time": 15,
+      "crew": true,
+      "crew_count": 1,
+      "keeps": [
+        "airlock"
+      ],
+      "requires_sector": 3
+    },
+    {
+      "n": 0,
+      "id": "open_pack_s3",
+      "tier": 2,
+      "inputs": [
+        "airlock",
+        "pack_s3"
+      ],
+      "output": [],
+      "time": 10,
+      "crew": true,
+      "crew_count": 1,
+      "keeps": [
+        "airlock"
+      ],
+      "effects": {
+        "open_pack": "pack_s3"
+      }
+    },
+    {
+      "n": 0,
+      "id": "buy_pack_s4",
+      "tier": 2,
+      "inputs": [
+        "airlock",
+        "fuel",
+        "fuel",
+        "fuel",
+        "circuit"
+      ],
+      "output": [
+        "pack_s4"
+      ],
+      "time": 15,
+      "crew": true,
+      "crew_count": 1,
+      "keeps": [
+        "airlock"
+      ],
+      "requires_sector": 4
+    },
+    {
+      "n": 0,
+      "id": "open_pack_s4",
+      "tier": 2,
+      "inputs": [
+        "airlock",
+        "pack_s4"
+      ],
+      "output": [],
+      "time": 10,
+      "crew": true,
+      "crew_count": 1,
+      "keeps": [
+        "airlock"
+      ],
+      "effects": {
+        "open_pack": "pack_s4"
+      }
+    },
+    {
+      "n": 0,
+      "id": "buy_pack_s5",
+      "tier": 2,
+      "inputs": [
+        "airlock",
+        "signal"
+      ],
+      "output": [
+        "pack_s5"
+      ],
+      "time": 15,
+      "crew": true,
+      "crew_count": 1,
+      "keeps": [
+        "airlock"
+      ],
+      "requires_sector": 5
+    },
+    {
+      "n": 0,
+      "id": "open_pack_s5",
+      "tier": 2,
+      "inputs": [
+        "airlock",
+        "pack_s5"
+      ],
+      "output": [],
+      "time": 10,
+      "crew": true,
+      "crew_count": 1,
+      "keeps": [
+        "airlock"
+      ],
+      "effects": {
+        "open_pack": "pack_s5"
+      }
+    },
+    {
+      "n": 0,
+      "id": "repair_ruin",
+      "tier": 2,
+      "inputs": [
+        "ruin",
+        "scrap"
+      ],
+      "output": [],
+      "time": 30,
+      "crew": true,
+      "crew_count": 1,
+      "role": "engineer",
+      "effects": {
+        "repair_ruin": true
+      },
+      "note": "Section 10 gives the Engineer this and section 5 never lists it. The ruin remembers what it was."
+    },
+    {
+      "n": 0,
+      "id": "strip_ruin",
+      "tier": 0,
+      "inputs": [
+        "ruin"
+      ],
+      "output": [
+        "scrap",
+        "scrap"
+      ],
+      "time": 12,
+      "crew": true,
+      "crew_count": 1,
+      "note": "Anyone else can only get the metal back."
+    }
+  ]
+}

@@ -1,0 +1,66 @@
+{
+  "_comment": "Section 7. One roll a cycle, two after cycle 20, weighted by the highest sector unlocked. Weights are percentages and are normalised over whatever is eligible, so a Signal that cannot land without a Sensor Array simply redistributes.",
+  "weights": {
+    "debris": [
+      60,
+      40,
+      25,
+      15,
+      10
+    ],
+    "fire": [
+      15,
+      25,
+      25,
+      20,
+      15
+    ],
+    "breach": [
+      10,
+      15,
+      20,
+      20,
+      20
+    ],
+    "contamination": [
+      0,
+      15,
+      15,
+      15,
+      15
+    ],
+    "stowaway": [
+      10,
+      5,
+      5,
+      5,
+      5
+    ],
+    "drone": [
+      0,
+      0,
+      10,
+      15,
+      15
+    ],
+    "signal": [
+      5,
+      0,
+      0,
+      10,
+      20
+    ]
+  },
+  "requires": {
+    "signal": "sensor_array"
+  },
+  "notes": {
+    "debris": "Occupies a slot until cleared.",
+    "fire": "Destroys a module on its stack at cycle end if no crew is working it.",
+    "breach": "Costs 4 oxygen every cycle it is left open.",
+    "contamination": "Infects a crew card it shares a stack with.",
+    "stowaway": "Leaves after two cycles if not recruited.",
+    "drone": "Injures a crew card on its stack each cycle.",
+    "signal": "Fades after three cycles. Only appears once a Sensor Array is listening."
+  }
+}

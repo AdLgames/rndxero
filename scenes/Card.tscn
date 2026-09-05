@@ -1,0 +1,59 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/Card.gd" id="1_card"]
+
+[node name="Card" type="Control"]
+custom_minimum_size = Vector2(84, 112)
+mouse_filter = 2
+script = ExtResource("1_card")
+
+[node name="Art" type="TextureRect" parent="."]
+anchor_right = 1.0
+anchor_bottom = 1.0
+texture_filter = 1
+expand_mode = 1
+stretch_mode = 5
+mouse_filter = 2
+
+[node name="NameLabel" type="Label" parent="."]
+anchor_right = 1.0
+offset_top = 2.0
+offset_bottom = 18.0
+theme_override_font_sizes/font_size = 9
+horizontal_alignment = 1
+clip_text = true
+mouse_filter = 2
+text = ""
+
+[node name="EffectLabel" type="Label" parent="."]
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -20.0
+offset_bottom = -4.0
+theme_override_font_sizes/font_size = 9
+horizontal_alignment = 1
+clip_text = true
+mouse_filter = 2
+text = ""
+
+[node name="Badge" type="Label" parent="."]
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -36.0
+offset_bottom = -22.0
+theme_override_font_sizes/font_size = 9
+horizontal_alignment = 1
+modulate = Color(0.91, 0.64, 0.25, 1)
+clip_text = true
+mouse_filter = 2
+text = ""
+
+[node name="Progress" type="ProgressBar" parent="."]
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -6.0
+show_percentage = false
+mouse_filter = 2

@@ -1,0 +1,47 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/RecipeBook.gd" id="1_o"]
+
+[node name="RecipeBook" type="CanvasLayer"]
+layer = 3
+script = ExtResource("1_o")
+
+[node name="Panel" type="PanelContainer" parent="."]
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -350.0
+offset_top = -250.0
+offset_right = 350.0
+offset_bottom = 250.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Margin" type="MarginContainer" parent="Panel"]
+theme_override_constants/margin_left = 20
+theme_override_constants/margin_top = 18
+theme_override_constants/margin_right = 20
+theme_override_constants/margin_bottom = 18
+
+[node name="Layout" type="VBoxContainer" parent="Panel/Margin"]
+theme_override_constants/separation = 12
+
+[node name="Title" type="Label" parent="Panel/Margin/Layout"]
+theme_override_font_sizes/font_size = 20
+text = "What you have worked out"
+
+[node name="Summary" type="Label" parent="Panel/Margin/Layout"]
+modulate = Color(0.7, 0.76, 0.86, 1)
+text = ""
+
+[node name="Scroll" type="ScrollContainer" parent="Panel/Margin/Layout"]
+size_flags_vertical = 3
+
+[node name="List" type="VBoxContainer" parent="Panel/Margin/Layout/Scroll"]
+size_flags_horizontal = 3
+theme_override_constants/separation = 4
+
+[node name="Close" type="Button" parent="Panel/Margin/Layout"]
+custom_minimum_size = Vector2(0, 38)
+text = "Close"
