@@ -1,0 +1,125 @@
+{
+  "_comment": "Rolled 1 night in 3, plus anything an encounter queued. `effects` is the same flat dictionary encounters use. `faction_at_most`/`faction_at_least` gate an event on standing, so section 4's punishments and rewards arrive as events rather than special cases. `blocked_by` names a building effect that prevents it. `tone` colours the line in the night report. `omen` is the warning the Free Road passes on when it is pleased with you.",
+  "events": [
+    {
+      "id": "theft",
+      "text": "Someone went through the stores in the dark. Five of your food and five of your water are gone, and nobody saw a thing.",
+      "tone": "bad",
+      "omen": "Cass says there are hands about at night. Watch the stores.",
+      "weight": 2.0,
+      "min_day": 2,
+      "faction_at_most": {
+        "freeroad": -3
+      },
+      "blocked_by": "blocks_theft",
+      "effects": {
+        "food": -5,
+        "water": -5
+      }
+    },
+    {
+      "id": "tax_raid",
+      "text": "A Crown column arrives before dawn with a writ and no interest in discussing it. They take a third of what is in the box.",
+      "tone": "bad",
+      "omen": "There is a revenue column on the highland road, moving fast.",
+      "weight": 2.0,
+      "min_day": 3,
+      "faction_at_most": {
+        "crown": -3
+      },
+      "effects": {
+        "coin_percent": -30
+      }
+    },
+    {
+      "id": "dry_night",
+      "text": "The ford runs thin overnight and what you drew comes up brackish.",
+      "tone": "bad",
+      "omen": "The highland streams are low. Water will be short.",
+      "weight": 1.0,
+      "min_day": 2,
+      "effects": {
+        "water": -4
+      }
+    },
+    {
+      "id": "spoiled_grain",
+      "text": "Damp got into the stores. What is left is fit for animals and little else.",
+      "tone": "bad",
+      "omen": "The air has turned. Anything not sealed will spoil.",
+      "weight": 1.0,
+      "min_day": 2,
+      "effects": {
+        "food": -4
+      }
+    },
+    {
+      "id": "traveller_dies",
+      "text": "A traveller who took a bed does not wake. Nobody knows his name, and the road takes the news with it.",
+      "tone": "bad",
+      "omen": "There is fever on the east road.",
+      "weight": 1.0,
+      "min_day": 4,
+      "effects": {
+        "reputation": -1,
+        "freeroad": -1
+      }
+    },
+    {
+      "id": "crown_inspector",
+      "text": "An inspector counts your beds, your stores and your walls, writes nothing down, and leaves before breakfast.",
+      "tone": "good",
+      "weight": 1.0,
+      "min_day": 3,
+      "effects": {
+        "crown": 1
+      }
+    },
+    {
+      "id": "tea_merchant",
+      "text": "A merchant who stopped here weeks ago leaves a crate on the step. No note, no name, good wine.",
+      "tone": "good",
+      "weight": 1.0,
+      "min_day": 2,
+      "effects": {
+        "wine": 2,
+        "guild": 1
+      }
+    },
+    {
+      "id": "quiet_night",
+      "text": "Nothing at all happens. The fires burn down, the road is empty, and the town sleeps.",
+      "tone": "good",
+      "weight": 1.2,
+      "min_day": 1,
+      "effects": {
+        "reputation": 1
+      }
+    },
+    {
+      "id": "stipend",
+      "text": "A Crown courier leaves a sealed purse: the season's stipend, for a crossing that has kept its side of the bargain.",
+      "tone": "good",
+      "weight": 2.0,
+      "min_day": 4,
+      "faction_at_least": {
+        "crown": 3
+      },
+      "effects": {
+        "coin": 15
+      }
+    },
+    {
+      "id": "first_of_the_column",
+      "text": "Three families come through in the dark without stopping. They will not say what is behind them, only that it is coming.",
+      "tone": "bad",
+      "omen": "The east road is filling up. Whatever is on it will reach the ford.",
+      "weight": 3.0,
+      "min_day": 7,
+      "effects": {
+        "flag": "warned_of_column",
+        "reputation": -1
+      }
+    }
+  ]
+}

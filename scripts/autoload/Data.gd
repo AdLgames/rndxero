@@ -3,9 +3,9 @@ extends Node
 ## Loads the JSON content at startup. Everything the game shows or balances
 ## lives in data/, so content scales without touching code.
 ##
-## All but night_events.json and rumors.json exist; those land at M5. Missing
-## files are reported once and left as empty collections rather than crashing,
-## so a half-built content set still runs.
+## Every content file now exists. A missing one is reported and left as an
+## empty collection rather than crashing, so a half-built content set still
+## runs and the game degrades to whatever data it does have.
 
 const FILES := {
 	"buildings": "res://data/buildings.json",
@@ -17,7 +17,7 @@ const FILES := {
 }
 
 ## Files whose absence is expected at this milestone, so it is not worth a warning.
-const NOT_YET_WRITTEN := ["night_events", "rumors"]
+const NOT_YET_WRITTEN := []
 
 var buildings: Array = []
 var buildings_by_id: Dictionary = {}
@@ -25,6 +25,8 @@ var caravans: Array = []
 var encounters_by_id: Dictionary = {}
 var goods_order: Array = []
 var prices: Dictionary = {}
+var night_events: Array = []
+var rumors: Array = []
 var plot_count: int = 12
 var base_lodging: int = 2
 
@@ -44,6 +46,8 @@ func _ready() -> void:
 	var price_doc := document("prices")
 	goods_order = price_doc.get("order", [])
 	prices = price_doc.get("goods", {})
+	night_events = document("night_events").get("events", [])
+	rumors = document("rumors").get("rumors", [])
 
 
 func document(key: String) -> Dictionary:
@@ -91,6 +95,13 @@ func definition(id: String) -> Dictionary:
 
 func encounter(id: String) -> Dictionary:
 	return encounters_by_id.get(id, {})
+
+
+func night_event(id: String) -> Dictionary:
+	for entry in night_events:
+		if entry["id"] == id:
+			return entry
+	return {}
 
 
 func price(good: String, column: String) -> int:

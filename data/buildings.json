@@ -1,6 +1,6 @@
 {
-  "_comment": "Adding a building is data-only. Effect keys marked (M4+) are read and stored now but nothing consumes them until the milestone named; see scripts/BuildLogic.gd for the keys applied at M2.",
-  "plot_count": 12,
+  "_comment": "Adding a building is data-only. `plot_count` is the only knob for map size: the strip, the ground run and the camera clamp are all derived from it, so raising it widens the town with no code change. Effect keys marked (M4+) are read and stored now but nothing consumes them until the milestone named; see scripts/BuildLogic.gd.",
+  "plot_count": 8,
   "base_lodging": 2,
   "buildings": [
     {
@@ -9,14 +9,18 @@
       "cost": 20,
       "desc": "+5 water each night",
       "sprite": "res://assets/buildings/well.png",
-      "effects": { "water_per_night": 5 },
+      "effects": {
+        "water_per_night": 5
+      },
       "upgrade": {
         "id": "deep_well",
         "name": "Deep Well",
         "cost": 40,
         "desc": "+10 water each night",
         "sprite": "res://assets/buildings/well_2.png",
-        "effects": { "water_per_night": 10 }
+        "effects": {
+          "water_per_night": 10
+        }
       }
     },
     {
@@ -25,14 +29,19 @@
       "cost": 40,
       "desc": "+3 lodging",
       "sprite": "res://assets/buildings/inn.png",
-      "effects": { "lodging": 3 },
+      "effects": {
+        "lodging": 3
+      },
       "upgrade": {
         "id": "great_inn",
         "name": "Great Inn",
         "cost": 60,
         "desc": "+6 lodging, lodged caravans give +1 extra faction",
         "sprite": "res://assets/buildings/inn_2.png",
-        "effects": { "lodging": 6, "lodging_faction_bonus": 1 }
+        "effects": {
+          "lodging": 6,
+          "lodging_faction_bonus": 1
+        }
       }
     },
     {
@@ -41,14 +50,21 @@
       "cost": 30,
       "desc": "Unlimited trade items, +10% sell prices",
       "sprite": "res://assets/buildings/market.png",
-      "effects": { "trade_unlimited": true, "sell_bonus": 0.10 },
+      "effects": {
+        "trade_unlimited": true,
+        "sell_bonus": 0.1
+      },
       "upgrade": {
         "id": "bazaar",
         "name": "Bazaar",
         "cost": 50,
         "desc": "+25% sell prices, attracts +1 Guild caravan a day",
         "sprite": "res://assets/buildings/market_2.png",
-        "effects": { "trade_unlimited": true, "sell_bonus": 0.25, "guild_caravans": 1 }
+        "effects": {
+          "trade_unlimited": true,
+          "sell_bonus": 0.25,
+          "guild_caravans": 1
+        }
       }
     },
     {
@@ -57,14 +73,18 @@
       "cost": 35,
       "desc": "+3 food each night",
       "sprite": "res://assets/buildings/farm.png",
-      "effects": { "food_per_night": 3 },
+      "effects": {
+        "food_per_night": 3
+      },
       "upgrade": {
         "id": "mill",
         "name": "Mill",
         "cost": 50,
         "desc": "+6 food each night",
         "sprite": "res://assets/buildings/mill.png",
-        "effects": { "food_per_night": 6 }
+        "effects": {
+          "food_per_night": 6
+        }
       }
     },
     {
@@ -73,14 +93,19 @@
       "cost": 25,
       "desc": "Halves animal water draw, unlocks horse encounters",
       "sprite": "res://assets/buildings/stable.png",
-      "effects": { "halve_animal_water": true },
+      "effects": {
+        "halve_animal_water": true
+      },
       "upgrade": {
         "id": "wagonworks",
         "name": "Wagonworks",
         "cost": 45,
         "desc": "Caravans with broken wagons pay 10 coin to repair",
         "sprite": "res://assets/buildings/stable_2.png",
-        "effects": { "halve_animal_water": true, "wagon_repair": 10 }
+        "effects": {
+          "halve_animal_water": true,
+          "wagon_repair": 10
+        }
       }
     },
     {
@@ -89,15 +114,22 @@
       "cost": 50,
       "desc": "Blocks theft events, +1 Crown",
       "sprite": "res://assets/buildings/palisade.png",
-      "effects": { "blocks_theft": true },
-      "on_build": { "crown": 1 },
+      "effects": {
+        "blocks_theft": true
+      },
+      "on_build": {
+        "crown": 1
+      },
       "upgrade": {
         "id": "gatehouse",
         "name": "Gatehouse",
         "cost": 80,
         "desc": "Toll refusals impossible; required for the Crossing Holds ending",
         "sprite": "res://assets/buildings/palisade_2.png",
-        "effects": { "blocks_theft": true, "gatehouse": true }
+        "effects": {
+          "blocks_theft": true,
+          "gatehouse": true
+        }
       }
     }
   ]

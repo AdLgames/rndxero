@@ -49,8 +49,16 @@ var goods: Dictionary = {}
 ## Animals the town itself keeps, from encounters. They drink every night.
 var town_animals: int = 0
 
-## Night events queued by an encounter's `event` effect. M5 drains this.
+## Night events queued by an encounter's `event` effect, drained at the next
+## night before any random roll.
 var queued_events: Array = []
+
+## Tomorrow's rolled event, chosen a night early so that a pleased Free Road
+## can warn you about it. Empty when tomorrow is quiet.
+var next_night_event: String = ""
+
+## Set when reputation runs out. Stops the phase machine dead.
+var over: bool = false
 
 
 func _ready() -> void:
@@ -65,6 +73,8 @@ func reset() -> void:
 	day = 1
 	town_animals = 0
 	queued_events = []
+	next_night_event = ""
+	over = false
 	goods = {}
 	for good in Data.goods_order:
 		goods[good] = 0
@@ -105,9 +115,9 @@ func add(name: String, amount: int) -> void:
 			push_warning("Game: unknown resource %s" % name)
 			return
 	Events.resource_changed.emit(name, get_resource(name))
-	if name == "reputation" and reputation <= 0:
-		# Handled from M5; the signal is emitted now so the rule lives in one place.
-		Events.game_over.emit("Ashford's name is worth nothing on the road.")
+	if name == "reputation" and reputation <= 0 and not over:
+		over = true
+		Events.game_over.emit("Ashford's name is worth nothing on the road. The caravans stop coming, and a crossing nobody stops at is not a town.")
 
 
 ## Returns false and changes nothing when the town cannot afford it, so callers
@@ -217,10 +227,21 @@ func apply_effects(effects: Dictionary) -> void:
 			BuildLogic.grant(str(value))
 		elif key == "event":
 			queued_events.append(str(value))
+		elif key == "coin_percent":
+			add("coin", _percent_of_coin(int(value)))
 		elif key == "animals_owned":
 			town_animals = maxi(0, town_animals + int(value))
 		else:
 			push_warning("Game: unknown effect key %s" % key)
+
+
+## A proportional levy or windfall, for the Crown's raid. Rounded away from
+## zero so a nearly empty purse is not immune.
+func _percent_of_coin(percent: int) -> int:
+	var amount := int(ceil(absf(coin * percent / 100.0)))
+	if percent < 0:
+		return -amount
+	return amount
 
 
 ## Section 5: `requires` gates a choice on a building, a flag, or a minimum of
@@ -268,8 +289,8 @@ func hidden_by_flag(requirements: Dictionary) -> bool:
 
 
 func broadcast_resources() -> void:
-	for name in ["coin", "food", "water", "reputation", "lodging"]:
-		Events.resource_changed.emit(name, get_resource(name))
+	for key in ["coin", "food", "water", "reputation", "lodging"]:
+		Events.resource_changed.emit(key, get_resource(key))
 
 
 # --- phases -----------------------------------------------------------------
@@ -281,13 +302,16 @@ func set_phase(next: int) -> void:
 
 ## MORNING -> BUILD -> NIGHT -> next day, or the ending once the season is out.
 func advance_phase() -> void:
+	if over:
+		return
 	match phase:
 		Phase.MORNING:
 			set_phase(Phase.BUILD)
 		Phase.BUILD:
+			# The night resolves immediately, but the day does not roll over
+			# until the player has read the report.
 			set_phase(Phase.NIGHT)
 			NightLogic.run()
-			_finish_night()
 		Phase.NIGHT:
 			_finish_night()
 		Phase.ENDING:
@@ -295,6 +319,8 @@ func advance_phase() -> void:
 
 
 func _finish_night() -> void:
+	if over:
+		return
 	if day >= SEASON_LENGTH:
 		# The Column and its outcomes are M6; for now the season simply stops.
 		set_phase(Phase.ENDING)

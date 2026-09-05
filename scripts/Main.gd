@@ -10,6 +10,10 @@ extends Node2D
 @onready var _card = $CaravanCard
 @onready var _trade = $TradePanel
 @onready var _dialogue = $Dialogue
+@onready var _report = $NightReport
+@onready var _game_over = $GameOver
+
+var _over_reason: String = ""
 
 
 func _ready() -> void:
@@ -30,6 +34,9 @@ func _ready() -> void:
 	_trade.closed.connect(_on_trade_closed)
 	_caravans.encounter_ready.connect(_on_encounter_ready)
 	_dialogue.finished.connect(_on_encounter_finished)
+	_report.continued.connect(_on_report_continued)
+	Events.night_report.connect(_on_night_report)
+	Events.game_over.connect(_on_game_over)
 	_hud.end_day_pressed.connect(_on_end_day)
 	Events.phase_changed.connect(_on_phase_changed)
 	Events.building_placed.connect(_on_town_changed)
@@ -61,6 +68,38 @@ func _on_encounter_ready(encounter: Dictionary) -> void:
 
 func _on_encounter_finished() -> void:
 	_caravans.finish_encounter()
+
+
+func _on_night_report(report: Dictionary) -> void:
+	_report.show_report(report)
+
+
+## The day does not roll over until the report is read, so the player always
+## sees what the night cost before the next one starts.
+func _on_report_continued() -> void:
+	if Game.over:
+		_game_over.show_over(_over_reason)
+		return
+	Game.advance_phase()
+
+
+## Reputation can run out mid-morning as easily as overnight. During the night
+## the report has not been shown yet -- it is emitted after consumption -- so
+## hold the end screen back and let the report's button lead into it. Any other
+## phase has nothing to explain, so it comes straight in.
+func _on_game_over(reason: String) -> void:
+	_over_reason = reason
+	if Game.phase == Game.Phase.NIGHT:
+		return
+	_close_all()
+	_game_over.show_over(reason)
+
+
+func _close_all() -> void:
+	_card.close()
+	_trade.close()
+	_dialogue.close()
+	_build_menu.close()
 
 
 func _on_morning_finished() -> void:

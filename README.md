@@ -18,19 +18,39 @@ Open the project folder in Godot 4.3 or newer and press play.
 
 ## Status
 
-**M1 to M4 of the seven milestones in §12 are built.** That is: the road strip
+**M1 to M5 of the seven milestones in §12 are built.** That is: the road strip
 with parallax and twelve plots, camera scrolling and the HUD; all six buildings
 with their upgrades, costs and nightly effects; the morning caravan queue with
-tolls, lodging and turning away; and trading plus the encounter system with
-effects, requirements and flags.
+tolls, lodging and turning away; trading plus the encounter system with
+effects, requirements and flags; and the night — events, rumours, the report
+screen and losing.
 
 Not built yet, in the order the spec sequences them:
 
 | Milestone | What is missing |
 |---|---|
-| M5 | Nights: night events, rumours, the full report screen, game over handling |
-| M6 | The Column: the day 10 event, its five outcomes, epilogue, restart |
-| M7 | Content: fill to 30 encounters, 10 night events, 10 rumours, phase transitions |
+| M6 | The Column: the day 10 event, its five outcomes, epilogue |
+| M7 | Content: fill to 30 encounters; phase tint transitions |
+
+### The pressure
+
+A run can now be lost, which is what makes building necessary rather than
+optional. Reputation starts at 5 and falls a point for every resource the town
+runs short of overnight, plus a point with every faction bedded down at the
+time. At zero the crossing empties and the run ends.
+
+Nights escalate. Roughly one in three carries an event, drawn by day and by
+faction standing, so §4's punishments arrive as things that happen rather than
+as numbers: the Free Road robs a town that has soured on it, unless a Palisade
+is up; the Crown takes a third of the coin box from a town it distrusts. The
+rumour ticker turns over the same ten days — plains prices, then smoke over the
+eastern passes, then *they are coming down the road, all of them*.
+
+Tomorrow's event is rolled tonight rather than tomorrow. That is deliberate: a
+Free Road at +3 or better passes on a warning about it, and a warning has to be
+about something already decided or it is not a warning.
+
+The Column itself lands at M6. Until then the season simply stops on day 10.
 
 **Both income streams are in.** Tolls of 0/5/10/20 per caravan, and the trade
 margin: you buy a caravan's cargo at the `buy` column of `data/prices.json` and
@@ -69,6 +89,29 @@ outcomes are what they act on:
   Bazaar 25%.
 - A Stable lets you take horses in from encounters; animals the town keeps then
   drink every night alongside the guests'.
+- A Palisade blocks the Free Road's theft outright. The Crown's raid has no
+  building that stops it — only standing.
+- The Crown at +3 sends a stipend; the Free Road at +3 warns you what tomorrow
+  night holds.
+
+## Where this is heading
+
+Notes on direction, recorded so they are not lost. None of this is built.
+
+- **Art.** The placeholders are flat shapes from one palette (§13). The target
+  is a Stardew-style pixel look. The seam is clean: every sprite is a file in
+  `assets/` at a fixed size, and `tools/gen_placeholder_art.py` is the only
+  thing that writes them, so replacing art means dropping in files and
+  retiring that script. Nothing in the game reads it at runtime.
+- **Tech trees, going deep.** Not in the MVP spec at all. `data/buildings.json`
+  already carries prereq-free upgrades one tier deep; a real tree needs a
+  `prereqs` array and a node graph rather than a per-building `upgrade` field.
+  Worth designing as its own data file before it grows.
+- **Map size.** `plot_count` in `data/buildings.json` is the single knob — the
+  strip width, the ground run, the parallax span and the camera clamp are all
+  derived from it, so raising it widens the town with no code change. It starts
+  at 8. Growing it *during a run* (buying land as the town spreads) would be a
+  new mechanic rather than a tuning change.
 
 ## Layout
 
