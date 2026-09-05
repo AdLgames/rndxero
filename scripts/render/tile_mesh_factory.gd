@@ -13,11 +13,13 @@ extends RefCounted
 const RING_SEGMENTS := 16
 
 ## Matches build_turf_mesh() in the Blender script: a shallow dome of three
-## rings over a dirt skirt. (fraction of the octagon radius, height, jitter)
+## rings over a dirt skirt. Each row is (fraction of the octagon radius, height
+## above the tile rim, jitter); heights are offsets from TilePalette.TILE_H so
+## this stays a plain literal, which is what `const` requires.
 const TURF_RINGS := [
-	[0.45, TilePalette.TILE_H + 0.018, 0.02],
-	[0.88, TilePalette.TILE_H - 0.012, 0.01],
-	[1.00, TilePalette.TILE_H, 0.0],
+	[0.45, 0.018, 0.02],
+	[0.88, -0.012, 0.01],
+	[1.00, 0.0, 0.0],
 ]
 
 var _material: StandardMaterial3D = TilePalette.make_material()
@@ -106,7 +108,7 @@ func build_turf_mesh(seed_value: int = 11) -> ArrayMesh:
 	var centre := Vector3(rng.randf_range(-0.02, 0.02), TilePalette.TILE_H + 0.03, rng.randf_range(-0.02, 0.02))
 	var rings: Array = []
 	for spec in TURF_RINGS:
-		rings.append(_ring(float(spec[0]), float(spec[1]), float(spec[2]), rng))
+		rings.append(_ring(float(spec[0]), TilePalette.TILE_H + float(spec[1]), float(spec[2]), rng))
 	var bottom := _ring(1.0, 0.0, 0.0, rng)
 
 	var st := SurfaceTool.new()

@@ -4,7 +4,8 @@ extends MeshInstance3D
 ## Octagon outline that follows the tile under the cursor. Drawn as unshaded
 ## line segments just above the turf so it reads over any tile colour.
 
-const LIFT := TilePalette.TILE_H + 0.045
+## Height above the tile rim; added to TilePalette.TILE_H at build time.
+const LIFT := 0.045
 const COLOUR := Color(1.0, 0.95, 0.65)
 
 
@@ -37,4 +38,4 @@ func _build_outline() -> ArrayMesh:
 func _corner(i: int) -> Vector3:
 	var a := i * PI / 8.0
 	var r := OctGrid.APOTHEM if i % 2 == 0 else OctGrid.RCORNER
-	return Vector3(cos(a) * r, LIFT, sin(a) * r)
+	return Vector3(cos(a) * r, TilePalette.TILE_H + LIFT, sin(a) * r)

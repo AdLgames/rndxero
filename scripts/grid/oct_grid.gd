@@ -25,10 +25,10 @@ const OCT_DIAG_LIMIT := 0.707106781186548
 
 ## Orthogonal neighbours share an octagon edge; diagonal neighbours are only
 ## connected through the gap square between them.
-const ORTHO_DIRS: Array[Vector2i] = [
+const ORTHO_DIRS := [
 	Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1),
 ]
-const DIAG_DIRS: Array[Vector2i] = [
+const DIAG_DIRS := [
 	Vector2i(1, 1), Vector2i(-1, -1), Vector2i(1, -1), Vector2i(-1, 1),
 ]
 
@@ -88,10 +88,11 @@ func gap_to_world(g: Vector2i) -> Vector3:
 ## The four octagons touching a gap. Entries may be out of bounds at the map
 ## border; callers should filter with in_bounds().
 func gap_neighbours(g: Vector2i) -> Array[Vector2i]:
-	return [
+	var out: Array[Vector2i] = [
 		Vector2i(g.x - 1, g.y - 1), Vector2i(g.x, g.y - 1),
 		Vector2i(g.x - 1, g.y), Vector2i(g.x, g.y),
 	]
+	return out
 
 
 ## The gap a diagonal step passes through. `dir` must be one of DIAG_DIRS.
@@ -105,15 +106,15 @@ func gap_for_diagonal(t: Vector2i, dir: Vector2i) -> Vector2i:
 func neighbours(t: Vector2i, blocked_gaps: PackedByteArray = PackedByteArray()) -> Array[Vector2i]:
 	var out: Array[Vector2i] = []
 	for d in ORTHO_DIRS:
-		var n := t + d
+		var n: Vector2i = t + d
 		if in_bounds(n):
 			out.append(n)
 	for d in DIAG_DIRS:
-		var n := t + d
+		var n: Vector2i = t + d
 		if not in_bounds(n):
 			continue
 		if not blocked_gaps.is_empty():
-			var gi := gap_index(gap_for_diagonal(t, d))
+			var gi := gap_index(gap_for_diagonal(t, n - t))
 			if gi < blocked_gaps.size() and blocked_gaps[gi] != 0:
 				continue
 		out.append(n)
