@@ -1,0 +1,115 @@
+{
+  "_comment": "Section 8. A pack spawns 4-6 cards, each rolled against the rarity split in balance.json. `unlocked_by` names the module that opens the sector.",
+  "sectors": [
+    {
+      "sector": 1,
+      "name": "Debris Field",
+      "flavour": "The outer hull. Twisted metal and old supply pods.",
+      "teaches": "Materials, the first Scrubber, board space.",
+      "unlocked_by": null,
+      "common": [
+        "scrap",
+        "scrap",
+        "hull_plate",
+        "wire"
+      ],
+      "uncommon": [
+        "o2_canister",
+        "rations",
+        "wreck"
+      ],
+      "rare": [
+        "battery",
+        "stowaway"
+      ]
+    },
+    {
+      "sector": 2,
+      "name": "Dead Lab",
+      "flavour": "The research wing. Something was grown here.",
+      "teaches": "Power, food, hazards that hurt people.",
+      "unlocked_by": "shuttle",
+      "common": [
+        "circuit",
+        "polymer",
+        "rations"
+      ],
+      "uncommon": [
+        "battery",
+        "seed",
+        "fuel",
+        "storage_bay"
+      ],
+      "rare": [
+        "scientist",
+        "log",
+        "contamination"
+      ]
+    },
+    {
+      "sector": 3,
+      "name": "Engineering",
+      "flavour": "Reactor deck. Warm, humming, wrong.",
+      "teaches": "The Reactor, sustained power, risk and reward.",
+      "unlocked_by": "shuttle",
+      "common": [
+        "fuel",
+        "coolant",
+        "circuit"
+      ],
+      "uncommon": [
+        "processor",
+        "vent_shaft",
+        "drone"
+      ],
+      "rare": [
+        "engineer",
+        "log",
+        "reactor_core"
+      ]
+    },
+    {
+      "sector": 4,
+      "name": "Crew Quarters",
+      "flavour": "Personal effects. Doors welded shut from the inside.",
+      "teaches": "Morale, relationships, the human story.",
+      "unlocked_by": "long_range_shuttle",
+      "common": [
+        "rations",
+        "polymer",
+        "insulation"
+      ],
+      "uncommon": [
+        "medkit",
+        "log",
+        "cargo_pod"
+      ],
+      "rare": [
+        "medic",
+        "signal",
+        "oseis_wrench",
+        "folded_photo"
+      ]
+    },
+    {
+      "sector": 5,
+      "name": "The Core",
+      "flavour": "ARIA's housing. The station's mind.",
+      "teaches": "Endgame, the truth.",
+      "unlocked_by": "long_range_shuttle",
+      "common": [
+        "processor",
+        "coolant"
+      ],
+      "uncommon": [
+        "signal",
+        "log"
+      ],
+      "rare": [
+        "atmosphere_core",
+        "fabricator",
+        "aria_fragment"
+      ]
+    }
+  ]
+}

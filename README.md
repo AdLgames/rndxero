@@ -1,170 +1,100 @@
-# Ashford Crossing
+# DERELICT
 
-A ford town on the only road between the highlands and the plains. Caravans
-arrive each morning with goods and problems; you set tolls, trade, build, and
-decide who gets to stay. After ten days something comes down the road.
+A card-stacking survival builder aboard a dead space station. Drag a card onto a
+card; everything else emerges. The oxygen runs out on a clock and the station's
+logs disagree with each other about what killed the last crew.
 
-Godot 4.3+, GDScript. Full design in [ASHFORD_MVP.md](ASHFORD_MVP.md).
+Godot 4.3+, GDScript. Full design in [DERELICT_GDD.md](DERELICT_GDD.md).
 
 ## Running
 
 Open the project folder in Godot 4.3 or newer and press play.
-`scenes/Main.tscn` is the main scene.
+`scenes/Title.tscn` is the main scene.
 
-- **Click a plot** to open the build menu; build, or upgrade what's there.
-- **A/D or arrows** scroll along the road; **right- or middle-drag** also pans.
-- **End Day** runs the night: buildings produce, the town eats, shortfalls cost
-  reputation. **Esc** closes the build menu.
+- **Drag a card onto another** to stack them. Picking a card up takes everything
+  above it, as in Stacklands.
+- A stack that matches a recipe works on its own, provided a **crew card** is on
+  it. The bar at the bottom of the top card is its progress.
+- **Space** or the Pause button stops the cycle clock. **Esc** closes an overlay.
+- **Recipes** lists what you have discovered, across all runs.
+
+You start with six oxygen and one Salvager who breathes one a cycle, so you have
+six cycles to build a Scrubber. The path is Scrap+Scrap → Wire, Wire+Scrap →
+Circuit, Circuit+Battery → Scrubber, which spends exactly the three Scrap and
+the Battery you begin with. That is deliberate (§4).
 
 ## Status
 
-**All seven milestones in §12 are built.** That is: the road strip
-with parallax and twelve plots, camera scrolling and the HUD; all six buildings
-with their upgrades, costs and nightly effects; the morning caravan queue with
-tolls, lodging and turning away; trading plus the encounter system with
-effects, requirements and flags; the night — events, rumours, the report screen
-and losing; the Column that ends the season; and the content fill.
+**M0 through M2 of the five milestones in §14 are built** — the prototype, the
+vertical slice and content complete. That is: all five sectors and their pack
+pools, all fifty recipes from §5, the hazard drift table, crew traits, morale
+and relationships, the twelve Logs, ARIA, the four endings, and
+meta-progression.
 
-Thirty encounters, ten per faction, five of them chained through flags — take
-Merrit's lame horse in and a later Guild caravan opens a line that only exists
-because you did; show the Assessor a doctored ledger and a clerk comes back for
-it days later. Ten night events, ten rumours. The world tints between phases:
-warm at the gate in the morning, plain in the afternoon, blue at night.
-
-Encounters are not tied to a caravan one-to-one. An entry naming a `caravan`
-belongs to it alone and is drawn first so its story gets told; everything else
-is a faction pool any caravan of that faction can pull from. Adding an
-encounter is one object in `data/encounters.json` and nothing else.
-
-### The pressure
-
-A run can now be lost, which is what makes building necessary rather than
-optional. Reputation starts at 5 and falls a point for every resource the town
-runs short of overnight, plus a point with every faction bedded down at the
-time. At zero the crossing empties and the run ends.
-
-Nights escalate. Roughly one in three carries an event, drawn by day and by
-faction standing, so §4's punishments arrive as things that happen rather than
-as numbers: the Free Road robs a town that has soured on it, unless a Palisade
-is up; the Crown takes a third of the coin box from a town it distrusts. The
-rumour ticker turns over the same ten days — plains prices, then smoke over the
-eastern passes, then *they are coming down the road, all of them*.
-
-Tomorrow's event is rolled tonight rather than tomorrow. That is deliberate: a
-Free Road at +3 or better passes on a warning about it, and a warning has to be
-about something already decided or it is not a warning.
-
-### The Column
-
-On the night of day 10 the column arrives with a Crown patrol behind it, and
-the run resolves into one of six endings. Shelter them and the outcome turns on
-whether the Free Road trusts you *and* whether the stores actually cover twelve
-people — that second condition is what the whole season of building has been
-for. Turn them away, hand them over, or, if you have a Gatehouse up and the
-Crown already alienated, shut the gate on both.
-
-§9 specifies five outcomes but offers "hand them to the Crown" unconditionally
-while naming a result only for Crown ≥ +2. Handing the column over from a worse
-standing resolves to a sixth, colder outcome rather than dead-ending. All six
-are reachable; nothing falls through.
-
-**Both income streams are in.** Tolls of 0/5/10/20 per caravan, and the trade
-margin: you buy a caravan's cargo at the `buy` column of `data/prices.json` and
-sell it on to a later caravan that wants it at `sell`, lifted by the Guild's
-goodwill (+20% at +3) and whatever market you have built. Goods are a stock of
-their own, separate from the five resources, shown on the HUD's Stock line.
-
-Without a Market you may trade only two items per caravan — that is this
-project's reading of §5's "requires a Market to trade more than 2 items", and
-it is what makes the Market worth its 30 coin.
-
-Nine encounters are written, one per caravan, including a two-step chain: take
-Merrit's lame horse in and a later Guild caravan offers you a choice that only
-appears because of it. Encounter effects are the flat dictionary §5 describes,
-so adding keys is one branch in `Game.apply_effects` and nothing in the data.
-Reputation reaching zero emits `Events.game_over`, which nothing listens to
-until M5, and an encounter's `event` effect queues a night event that M5 will
-drain.
-
-### What the meters already do
-
-Several faction and building rules are live now because M3's caravan count and
-outcomes are what they act on:
-
-- Reputation sets how many caravans arrive; a Guild boycott at -3 removes one,
-  a Bazaar adds one.
-- A 20-coin toll costs the caravan's faction a point, and a faction already
-  below zero will refuse it and leave with nothing paid — unless you have built
-  the Gatehouse, which makes refusals impossible.
-- Lodging a caravan gains a faction point; a Great Inn makes it two.
-- Running short of food or water overnight costs a point of reputation per
-  shortfall and a point with every faction bedded down at the time.
-- Doing business with a caravan gains a faction point, once per visit however
-  many units change hands.
-- The Guild at +3 pays 20% more for what you sell; a Market adds 10% and a
-  Bazaar 25%.
-- A Stable lets you take horses in from encounters; animals the town keeps then
-  drink every night alongside the guests'.
-- A Palisade blocks the Free Road's theft outright. The Crown's raid has no
-  building that stops it — only standing.
-- The Crown at +3 sends a stipend; the Free Road at +3 warns you what tomorrow
-  night holds.
-
-## Where this is heading
-
-Notes on direction, recorded so they are not lost. None of this is built.
-
-- **Art.** The placeholders are flat shapes from one palette (§13). The target
-  is a Stardew-style pixel look. The seam is clean: every sprite is a file in
-  `assets/` at a fixed size, and `tools/gen_placeholder_art.py` is the only
-  thing that writes them, so replacing art means dropping in files and
-  retiring that script. Nothing in the game reads it at runtime.
-- **Tech trees, going deep.** Not in the MVP spec at all. `data/buildings.json`
-  already carries prereq-free upgrades one tier deep; a real tree needs a
-  `prereqs` array and a node graph rather than a per-building `upgrade` field.
-  Worth designing as its own data file before it grows.
-- **Map size.** `plot_count` in `data/buildings.json` is the single knob — the
-  strip width, the ground run, the parallax span and the camera clamp are all
-  derived from it, so raising it widens the town with no code change. It starts
-  at 8. Growing it *during a run* (buying land as the town spreads) would be a
-  new mechanic rather than a tuning change.
+Not built: **M3 polish** (final art, audio, tutorial, accessibility, Steam page)
+and **M4 launch**. Also unbuilt, and called out separately because §13 lists it
+under Tech rather than a milestone: **per-cycle autosave of a run**. Meta
+progression does persist — recipes discovered, logs recovered, endings reached.
 
 ## Layout
 
 ```
-data/            buildings.json -- tuning and content live here, not in code
-scenes/          Main, Town, Plot, Building, ui/
+data/       eight content files -- cards, recipes, packs, hazards, traits,
+            balance, logs, aria. Section 13: designers add content without code.
+scenes/     Title, Main, Board, Card, ui/
 scripts/
-  autoload/      Events (signal bus), Data (JSON), Flags, Factions, Game
-  ui/            HUD, BuildMenu, Toast
-  *.gd           Town, Plot, Building, BuildLogic, NightLogic, CameraRig, Main
-tools/           placeholder art generator
-assets/          generated art
+  autoload/ Events (bus), Data (content), Meta (what survives a run), Game (the cycle)
+  ui/       HUD, Toast, ChoicePrompt, LogReader, AriaPanel, RecipeBook, EndingScreen, Title
+  *.gd      Board, Card, Stack, CraftLogic, CrewLogic, HazardLogic,
+            PackLogic, PowerLogic, StoryLogic, EndingLogic, Main
+tools/      placeholder art generator
 ```
 
-`Game.plots` is the single source of truth for what stands where; `Town.tscn`
-renders whatever it finds there, and `BuildLogic` is the only thing that writes
-to it.
+`Stack` is the unit of play: an ordered pile with a position. `CraftLogic`
+matches a pile's contents against the recipe table as an unordered multiset and
+requires an exact match — an extra card means no recipe, which is what makes
+clearing a stack a deliberate act.
+
+## Decisions the GDD left open
+
+Recorded here because each one is a real fork, and all are commented where they
+are implemented.
+
+- **What needs power.** §5 says a Generator "powers 3 modules" but never says
+  which modules require power. Requiring it of everything would strand a new run
+  — the Scrubber arrives long before any generator — so `needs_power` is set
+  only on the tier-2 and prototype modules. Life support never needs it.
+- **Benches are not ingredients.** A Workshop is something you stack *onto*, so
+  counting it in the recipe multiset would stop every recipe matching. Cards
+  with `craft_speed` are excluded from matching, like crew.
+- **Recipes that keep their inputs.** 17, 21, 24, 43, 45–50 keep some inputs, so
+  they would fire again the frame they finished. Reading a Log is gated on the
+  Log being unread; ARIA's dialogue is gated to once a cycle. The Airlock and
+  Sensor Array are *kept* rather than consumed by recipes 21 and 24, because
+  consuming them would strand the player with no way to open packs or catch
+  Signals.
+- **Ruins.** §10 gives the Engineer "Scrap + ruin → module" and §5's table never
+  lists it. Added, with a fallback that gets the metal back for anyone else. A
+  ruin remembers what it was.
+- **Two spec gaps in the numbers.** §2 lists four beats in a cycle; the crew
+  upkeep, hazard consequences and slot check in §§3, 6, 7 and 10 all also attach
+  to a cycle boundary, so the cycle runs nine steps in a documented order.
+
+## Content
+
+12 Logs at roughly 130 words each, not the ~300 §15 estimates — they are read on
+an overlay mid-run, and 300 words is a long time to be looking away from a board
+that is still burning. 32 ARIA dialogue nodes against §15's ~40. Both are
+complete as stories; neither hits the word count.
 
 ## Art
 
-Everything is a placeholder, per §13: flat coloured side-view shapes from one
-fixed palette, written by `tools/gen_placeholder_art.py`. Building names are
-drawn by a `Label` node rather than baked into the PNGs, so they stay legible at
-any zoom. Re-run the script any time; it writes straight into `assets/`.
+Everything is placeholder, from `tools/gen_placeholder_art.py`: §12's
+near-monochrome cold blue-grey with one warm amber accent for anything living or
+powered. Each of the 59 faces is a type silhouette plus an identicon derived
+from the card id, so the board reads without 59 hand-drawn icons. Card name and
+effect are Labels, not baked into the image, so they stay sharp and survive the
+art being replaced.
 
-Not yet sourced: the pixel font on the checklist. The game uses Godot's default.
-
-## Two deviations from the spec, and why
-
-- **Parallax is done in world space** in `Town.gd`, not with
-  `ParallaxBackground`. That node is a `CanvasLayer`, so its contents sit in
-  screen coordinates and have to be positioned against the viewport height and
-  camera zoom; a window resize pulls the horizon off the ground line. Three
-  sprites offset against the camera each frame stay welded to the world.
-- **`NightLogic.gd` exists at M2**, though §12 places it at M5. The buildings
-  M2 adds are only meaningful against the consumption rules, so those are here
-  in full; night events and rumours are still M5's.
-
-> This repository previously held three unrelated projects (ClaimTrail,
-> Giantfall and LANES); all remain in git history.
+> This repository previously held four unrelated projects (ClaimTrail,
+> Giantfall, LANES and Ashford Crossing); all remain in git history.

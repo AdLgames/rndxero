@@ -1,0 +1,54 @@
+{
+  "_comment": "Section 10. `work_speed` multiplies craft time. Behavioural flags are read by the systems named in their comments.",
+  "traits": [
+    {
+      "id": "careful",
+      "name": "Careful",
+      "work_speed": 0.8,
+      "never_accident": true,
+      "picks_stowaway_trait": true,
+      "blurb": "Slower, but nothing goes wrong on their watch."
+    },
+    {
+      "id": "reckless",
+      "name": "Reckless",
+      "work_speed": 1.3,
+      "accident_chance": 0.15,
+      "blurb": "Fast hands. Occasional consequences."
+    },
+    {
+      "id": "curious",
+      "name": "Curious",
+      "work_speed": 1.0,
+      "log_speed": 2.0,
+      "log_bonus_clue": true,
+      "wanders": true,
+      "blurb": "Reads everything. Drifts toward whatever is interesting."
+    },
+    {
+      "id": "hoarder",
+      "name": "Hoarder",
+      "work_speed": 1.0,
+      "holds_resources": true,
+      "pack_bonus_rations": 1,
+      "blurb": "Will not let go of a stack they are standing on."
+    },
+    {
+      "id": "steady",
+      "name": "Steady",
+      "work_speed": 1.0,
+      "immune_to_grief": true,
+      "adjacent_morale": 1,
+      "blurb": "Has seen worse. Others are calmer nearby."
+    },
+    {
+      "id": "haunted",
+      "name": "Haunted",
+      "work_speed": 1.0,
+      "morale_start": 3,
+      "story_speed": 1.5,
+      "aria_morale": -1,
+      "blurb": "Something followed them aboard. Reads the dead crew's logs like letters."
+    }
+  ]
+}

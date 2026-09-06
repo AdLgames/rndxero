@@ -1,9 +1,10 @@
 [gd_scene load_steps=2 format=3]
 
-[ext_resource type="Script" path="res://scripts/ui/Toast.gd" id="1_toast"]
+[ext_resource type="Script" path="res://scripts/ui/Toast.gd" id="1_t"]
 
 [node name="Toast" type="PanelContainer"]
-script = ExtResource("1_toast")
+script = ExtResource("1_t")
 
 [node name="Label" type="Label" parent="."]
-text = "toast"
+autowrap_mode = 3
+text = ""

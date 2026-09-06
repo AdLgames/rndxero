@@ -1,19 +1,22 @@
 #!/usr/bin/env python3
-"""Generate Ashford Crossing placeholder art.
+"""Generate DERELICT placeholder card art.
 
-Section 13 of the spec sets the rule: every sprite starts as a flat coloured
-shape, real art waits until after M6. These are side-view silhouettes at the
-sizes the checklist calls for, drawn from one fixed palette so the strip reads
-as a single scene rather than a colour test.
+Section 15 lists roughly sixty unique card faces as art to produce later. These
+are stand-ins at the right ratio and palette so the board reads correctly and
+the pipeline is exercised: section 12's near-monochrome cold blue-grey, with
+the one warm amber accent reserved for anything living or powered.
 
-Building names are NOT baked into the sprites -- Building.tscn carries a Label
-instead, which stays legible at any zoom and needs no font baked into a PNG.
+Each face is a type silhouette plus a small identicon block derived from the
+card id, so fifty-nine cards are told apart at a glance without fifty-nine
+hand-drawn icons. Card name and effect text are Labels in Card.tscn, not baked
+into the image.
 
     python3 tools/gen_placeholder_art.py
 
 Plain stdlib: no Pillow, no downloads.
 """
-import math
+import hashlib
+import json
 import os
 import struct
 import zlib
@@ -21,291 +24,173 @@ import zlib
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), os.pardir)
 ASSETS = os.path.join(ROOT, "assets")
 
-# A trimmed Endesga-32-flavoured palette (spec section 13: pick one and stick
-# to it). Every sprite in the game draws from these entries only.
-PAL = {
-    "skin_a": (216, 172, 134, 255),
-    "skin_b": (176, 130, 96, 255),
-    "skin_c": (124, 88, 64, 255),
-    "hair_a": (62, 48, 40, 255),
-    "hair_b": (128, 92, 48, 255),
-    "hair_c": (188, 176, 160, 255),
-    "canvas": (206, 198, 176, 255),
-    "canvas_dark": (168, 158, 138, 255),
-    "horse": (110, 82, 60, 255),
-    "horse_dark": (78, 56, 40, 255),
-    "sky_high": (60, 92, 138, 255),
-    "sky_low": (140, 168, 190, 255),
-    "hill_far": (86, 102, 120, 255),
-    "hill_near": (62, 80, 92, 255),
-    "dirt": (124, 96, 66, 255),
-    "dirt_dark": (94, 71, 48, 255),
-    "dirt_light": (154, 124, 88, 255),
-    "grass": (86, 122, 74, 255),
-    "stone": (128, 128, 134, 255),
-    "stone_dark": (92, 92, 100, 255),
-    "wood": (140, 96, 58, 255),
-    "wood_dark": (98, 66, 40, 255),
-    "roof": (156, 68, 60, 255),
-    "roof_dark": (112, 46, 44, 255),
-    "cloth": (196, 160, 92, 255),
-    "gold": (222, 184, 78, 255),
-    "water": (86, 152, 188, 255),
-    "bread": (200, 152, 84, 255),
-    "bed": (176, 180, 200, 255),
-    "heart": (188, 88, 96, 255),
-    "guild": (206, 158, 66, 255),
-    "crown": (168, 84, 90, 255),
-    "freeroad": (104, 148, 108, 255),
-    "ink": (34, 34, 42, 255),
-    "panel": (44, 42, 56, 240),
-    "panel_edge": (96, 92, 120, 255),
-    "clear": (0, 0, 0, 0),
+W, H = 120, 160  # 3:4, section 12
+
+# Section 12: cold blue-grey, one warm accent.
+INK        = (14, 18, 26, 255)
+STEEL_DARK = (28, 36, 48, 255)
+STEEL      = (44, 56, 72, 255)
+STEEL_LIT  = (68, 84, 104, 255)
+FROST      = (150, 170, 190, 255)
+PALE       = (198, 214, 228, 255)
+AMBER      = (232, 162, 62, 255)
+AMBER_LOW  = (150, 100, 40, 255)
+RUST       = (176, 78, 54, 255)
+GREEN      = (108, 168, 118, 255)
+
+# Frame colour per card type; the accent marks living or powered things.
+TYPE_STYLE = {
+    "resource":   (STEEL, FROST),
+    "consumable": (STEEL, PALE),
+    "module":     (STEEL_LIT, AMBER),
+    "location":   (STEEL_DARK, FROST),
+    "hazard":     (STEEL_DARK, RUST),
+    "pack":       (STEEL, PALE),
+    "story":      (STEEL_DARK, PALE),
+    "crew":       (STEEL_LIT, AMBER),
 }
 
 
-# ---------------------------------------------------------------- png writer
-def write_png(path, pixels):
-    height = len(pixels)
-    width = len(pixels[0])
-    raw = b"".join(b"\x00" + bytes(c for px in row for c in px) for row in pixels)
+def write_png(path, px):
+    h, w = len(px), len(px[0])
+    raw = b"".join(b"\x00" + bytes(c for p in row for c in p) for row in px)
 
     def chunk(tag, data):
         body = tag + data
         return struct.pack(">I", len(data)) + body + struct.pack(">I", zlib.crc32(body) & 0xFFFFFFFF)
 
-    header = struct.pack(">IIBBBBB", width, height, 8, 6, 0, 0, 0)
     os.makedirs(os.path.dirname(path), exist_ok=True)
     with open(path, "wb") as fh:
-        fh.write(b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", header)
+        fh.write(b"\x89PNG\r\n\x1a\n"
+                 + chunk(b"IHDR", struct.pack(">IIBBBBB", w, h, 8, 6, 0, 0, 0))
                  + chunk(b"IDAT", zlib.compress(raw, 9)) + chunk(b"IEND", b""))
-    print("wrote", os.path.relpath(path, ROOT))
 
 
-def blank(w, h, fill=PAL["clear"]):
+def blank(w, h, fill=(0, 0, 0, 0)):
     return [[fill for _ in range(w)] for _ in range(h)]
 
 
-def put(img, x, y, colour):
-    if 0 <= y < len(img) and 0 <= x < len(img[0]) and colour[3] != 0:
-        img[y][x] = colour
+def put(img, x, y, c):
+    if 0 <= y < len(img) and 0 <= x < len(img[0]) and c[3]:
+        img[y][x] = c
 
 
-def rect(img, x0, y0, x1, y1, colour):
+def rect(img, x0, y0, x1, y1, c):
     for y in range(int(y0), int(y1)):
         for x in range(int(x0), int(x1)):
-            put(img, x, y, colour)
+            put(img, x, y, c)
 
 
-def disc(img, cx, cy, r, colour):
+def frame(img, x0, y0, x1, y1, c, t=1):
+    for i in range(t):
+        for x in range(int(x0), int(x1)):
+            put(img, x, int(y0) + i, c)
+            put(img, x, int(y1) - 1 - i, c)
+        for y in range(int(y0), int(y1)):
+            put(img, int(x0) + i, y, c)
+            put(img, int(x1) - 1 - i, y, c)
+
+
+def disc(img, cx, cy, r, c):
     for y in range(int(cy - r), int(cy + r) + 1):
         for x in range(int(cx - r), int(cx + r) + 1):
             if (x - cx) ** 2 + (y - cy) ** 2 <= r * r:
-                put(img, x, y, colour)
+                put(img, x, y, c)
 
 
-def gable(img, x0, x1, y_base, height, colour):
-    """A pitched roof spanning x0..x1, apex `height` above y_base."""
-    span = (x1 - x0) / 2.0
-    for i in range(int(height)):
-        t = i / float(height)
-        inset = int(span * t)
-        for x in range(int(x0 + inset), int(x1 - inset)):
-            put(img, x, int(y_base - i), colour)
+def tri(img, cx, cy, size, c):
+    for i in range(size):
+        half = i
+        for x in range(cx - half, cx + half + 1):
+            put(img, x, cy - size // 2 + i, c)
 
 
-def outline(img, x0, y0, x1, y1, colour):
-    for x in range(int(x0), int(x1)):
-        put(img, x, int(y0), colour)
-        put(img, x, int(y1) - 1, colour)
-    for y in range(int(y0), int(y1)):
-        put(img, int(x0), y, colour)
-        put(img, int(x1) - 1, y, colour)
+def glyph(img, kind, accent):
+    """A type silhouette in the middle of the face."""
+    cx, cy = W // 2, 62
+    if kind == "resource":
+        rect(img, cx - 22, cy - 12, cx + 22, cy + 4, accent)
+        rect(img, cx - 14, cy + 4, cx + 28, cy + 18, accent)
+    elif kind == "consumable":
+        disc(img, cx, cy, 18, accent)
+        rect(img, cx - 6, cy - 26, cx + 6, cy - 14, accent)
+    elif kind == "module":
+        rect(img, cx - 26, cy - 18, cx + 26, cy + 18, accent)
+        rect(img, cx - 18, cy - 10, cx + 18, cy + 10, STEEL_DARK)
+        for x in range(cx - 26, cx + 27, 12):
+            rect(img, x, cy + 18, x + 5, cy + 24, accent)
+    elif kind == "location":
+        rect(img, cx - 26, cy + 14, cx + 26, cy + 20, accent)
+        for i in range(20):
+            half = int(24 * (1 - i / 20.0) ** 0.6)
+            rect(img, cx - half, cy - 6 + i, cx + half, cy - 5 + i, accent)
+    elif kind == "hazard":
+        tri(img, cx, cy, 40, accent)
+        rect(img, cx - 3, cy - 12, cx + 3, cy + 4, STEEL_DARK)
+        rect(img, cx - 3, cy + 8, cx + 3, cy + 14, STEEL_DARK)
+    elif kind == "pack":
+        rect(img, cx - 24, cy - 20, cx + 24, cy + 20, accent)
+        rect(img, cx - 24, cy - 4, cx + 24, cy + 4, STEEL_DARK)
+        rect(img, cx - 4, cy - 20, cx + 4, cy + 20, STEEL_DARK)
+    elif kind == "story":
+        rect(img, cx - 26, cy - 16, cx + 26, cy + 16, accent)
+        for i in range(14):
+            put(img, cx - 26 + i * 2, cy - 16 + i, STEEL_DARK)
+            put(img, cx + 26 - i * 2, cy - 16 + i, STEEL_DARK)
+    elif kind == "crew":
+        disc(img, cx, cy - 12, 11, accent)
+        for i in range(22):
+            half = 6 + i
+            rect(img, cx - half // 1, cy + 2 + i, cx + half // 1, cy + 3 + i, accent)
 
 
-# -------------------------------------------------------------------- road
-def gen_road():
-    # Sky: a vertical gradient wide enough to fill the viewport at any scroll.
-    w, h = 512, 288
-    img = blank(w, h)
-    for y in range(h):
-        t = y / float(h - 1)
-        colour = tuple(
-            int(PAL["sky_high"][i] * (1 - t) + PAL["sky_low"][i] * t) for i in range(3)
-        ) + (255,)
-        for x in range(w):
-            img[y][x] = colour
-    write_png(os.path.join(ASSETS, "road", "sky.png"), img)
-
-    # Two hill bands. Tileable horizontally: the profile is built from a sum of
-    # sines whose periods divide the width exactly, so the seam matches.
-    for name, colour, amp, base in (
-        ("hills_far.png", PAL["hill_far"], 26, 96),
-        ("hills_near.png", PAL["hill_near"], 38, 120),
-    ):
-        w, h = 512, 160
-        img = blank(w, h)
-        for x in range(w):
-            t = x / float(w)
-            crest = (math.sin(t * math.tau) * 0.6
-                     + math.sin(t * math.tau * 2 + 1.1) * 0.3
-                     + math.sin(t * math.tau * 3 + 2.4) * 0.1)
-            top = int(h - base - crest * amp)
-            for y in range(max(0, top), h):
-                img[y][x] = colour
-        write_png(os.path.join(ASSETS, "road", name), img)
-
-    # Ground: three tileable 64x32 strips, varying only in scatter.
-    for i in range(3):
-        w, h = 64, 32
-        img = blank(w, h)
-        rect(img, 0, 0, w, 3, PAL["grass"])
-        rect(img, 0, 3, w, h, PAL["dirt"])
-        seed = i * 7919 + 17
-        for y in range(4, h):
-            for x in range(w):
-                seed = (seed * 1103515245 + 12345) & 0x7FFFFFFF
-                n = (seed >> 16) % 100
-                if n < 6:
-                    put(img, x, y, PAL["dirt_dark"])
-                elif n < 11:
-                    put(img, x, y, PAL["dirt_light"])
-        write_png(os.path.join(ASSETS, "road", "ground_%d.png" % i), img)
-
-    # Solid subsoil, tiled below the road so the bottom of the screen is not
-    # empty. Kept separate from the road strip so it can repeat vertically
-    # without dragging the grass band down with it.
-    w, h = 64, 64
-    img = blank(w, h)
-    rect(img, 0, 0, w, h, PAL["dirt_dark"])
-    seed = 991
-    for y in range(h):
-        for x in range(w):
-            seed = (seed * 1103515245 + 12345) & 0x7FFFFFFF
-            if (seed >> 16) % 100 < 7:
-                put(img, x, y, PAL["dirt"])
-    write_png(os.path.join(ASSETS, "road", "dirt_fill.png"), img)
-
-    # Empty plot marker: a dashed footprint on the dirt.
-    w, h = 64, 64
-    img = blank(w, h)
-    for x in range(2, w - 2, 6):
-        rect(img, x, h - 6, min(x + 3, w - 2), h - 4, PAL["dirt_dark"])
-    for y in range(h - 22, h - 6, 6):
-        rect(img, 2, y, 5, min(y + 3, h - 6), PAL["dirt_dark"])
-        rect(img, w - 5, y, w - 2, min(y + 3, h - 6), PAL["dirt_dark"])
-    write_png(os.path.join(ASSETS, "road", "plot_empty.png"), img)
+def identicon(img, card_id, accent):
+    """Five-by-five mirrored block from the id hash, so no two faces match."""
+    digest = hashlib.sha1(card_id.encode()).digest()
+    ox, oy, cell = W // 2 - 25, 104, 10
+    for gy in range(5):
+        for gx in range(3):
+            if digest[gy * 3 + gx] & 1:
+                for dx, sx in ((gx, 1), (4 - gx, 1)):
+                    rect(img, ox + dx * cell, oy + gy * cell,
+                         ox + dx * cell + cell - 2, oy + gy * cell + cell - 2, accent)
 
 
-# ---------------------------------------------------------------- buildings
-def building_base(img, w, h, colour, height, width_frac=0.78):
-    x0 = int(w * (1 - width_frac) / 2)
-    x1 = w - x0
-    rect(img, x0, h - height, x1, h, colour)
-    return x0, x1
+def face(card):
+    base, accent = TYPE_STYLE.get(card["type"], (STEEL, FROST))
+    img = blank(W, H, base)
+    rect(img, 0, 0, W, 26, STEEL_DARK)          # name plate
+    rect(img, 0, H - 30, W, H, STEEL_DARK)      # effect strip
+    glyph(img, card["type"], accent)
+    identicon(img, card["id"], accent)
+    frame(img, 0, 0, W, H, INK, 2)
+    frame(img, 2, 2, W - 2, H - 2, accent if card["type"] in ("module", "crew") else STEEL_LIT, 1)
+    return img
 
 
-def gen_buildings():
-    w = h = 64
-
-    def save(name, img):
-        write_png(os.path.join(ASSETS, "buildings", name + ".png"), img)
-
-    # Well / Deep Well
-    for name, r, roof_h in (("well", 11, 12), ("well_2", 14, 16)):
-        img = blank(w, h)
-        rect(img, w // 2 - r, h - 16, w // 2 + r, h, PAL["stone"])
-        outline(img, w // 2 - r, h - 16, w // 2 + r, h, PAL["stone_dark"])
-        disc(img, w // 2, h - 16, r, PAL["water"])
-        rect(img, w // 2 - r + 1, h - 18 - roof_h, w // 2 - r + 3, h - 16, PAL["wood_dark"])
-        rect(img, w // 2 + r - 3, h - 18 - roof_h, w // 2 + r - 1, h - 16, PAL["wood_dark"])
-        gable(img, w // 2 - r - 3, w // 2 + r + 3, h - 16 - roof_h, 10, PAL["roof"])
-        save(name, img)
-
-    # Inn / Great Inn
-    for name, height, floors in (("inn", 34, 1), ("inn_2", 46, 2)):
-        img = blank(w, h)
-        x0, x1 = building_base(img, w, h, PAL["wood"], height)
-        gable(img, x0 - 4, x1 + 4, h - height, 14, PAL["roof"])
-        for f in range(floors):
-            y = h - 12 - f * 16
-            rect(img, x0 + 5, y - 8, x0 + 12, y, PAL["gold"])
-            rect(img, x1 - 12, y - 8, x1 - 5, y, PAL["gold"])
-        rect(img, w // 2 - 4, h - 12, w // 2 + 4, h, PAL["wood_dark"])
-        save(name, img)
-
-    # Market / Bazaar
-    for name, stalls, awning in (("market", 1, PAL["cloth"]), ("market_2", 2, PAL["gold"])):
-        img = blank(w, h)
-        for s in range(stalls):
-            ox = 4 + s * 26
-            rect(img, ox, h - 18, ox + 24, h - 14, PAL["wood_dark"])
-            rect(img, ox + 2, h - 14, ox + 6, h, PAL["wood_dark"])
-            rect(img, ox + 18, h - 14, ox + 22, h, PAL["wood_dark"])
-            for i in range(6):
-                stripe = awning if i % 2 == 0 else PAL["roof"]
-                rect(img, ox + i * 4, h - 26, ox + i * 4 + 4, h - 18, stripe)
-        save(name, img)
-
-    # Farm / Mill
-    for name, sails in (("farm", False), ("mill", True)):
-        img = blank(w, h)
-        rect(img, 2, h - 10, w - 2, h, PAL["grass"])
-        for x in range(4, w - 4, 7):
-            rect(img, x, h - 14, x + 3, h - 8, PAL["bread"])
-        x0, x1 = building_base(img, w, h, PAL["wood"], 26, 0.5)
-        gable(img, x0 - 3, x1 + 3, h - 26, 12, PAL["roof_dark"])
-        if sails:
-            cx, cy = w // 2, h - 34
-            for dx, dy in ((1, 1), (1, -1), (-1, 1), (-1, -1)):
-                for i in range(1, 14):
-                    put(img, cx + dx * i, cy + dy * i, PAL["cloth"])
-                    put(img, cx + dx * i, cy + dy * i + 1, PAL["cloth"])
-        save(name, img)
-
-    # Stable / Wagonworks
-    for name, extra in (("stable", False), ("stable_2", True)):
-        img = blank(w, h)
-        x0, x1 = building_base(img, w, h, PAL["wood_dark"], 28, 0.86)
-        gable(img, x0 - 2, x1 + 2, h - 28, 11, PAL["roof_dark"])
-        rect(img, w // 2 - 9, h - 20, w // 2 + 9, h, PAL["wood"])
-        rect(img, w // 2 - 1, h - 20, w // 2 + 1, h, PAL["wood_dark"])
-        if extra:
-            disc(img, x1 - 6, h - 7, 6, PAL["wood"])
-            disc(img, x1 - 6, h - 7, 3, PAL["wood_dark"])
-        save(name, img)
-
-    # Palisade / Gatehouse
-    for name, tower in (("palisade", False), ("palisade_2", True)):
-        img = blank(w, h)
-        for x in range(2, w - 2, 7):
-            rect(img, x, h - 32, x + 6, h, PAL["wood"])
-            rect(img, x + 5, h - 32, x + 7, h, PAL["wood_dark"])
-            gable(img, x, x + 6, h - 32, 4, PAL["wood_dark"])
-        rect(img, 2, h - 22, w - 2, h - 19, PAL["wood_dark"])
-        if tower:
-            rect(img, w // 2 - 11, h - 48, w // 2 + 11, h, PAL["stone"])
-            outline(img, w // 2 - 11, h - 48, w // 2 + 11, h, PAL["stone_dark"])
-            for x in range(w // 2 - 11, w // 2 + 11, 6):
-                rect(img, x, h - 52, x + 4, h - 48, PAL["stone"])
-            rect(img, w // 2 - 5, h - 18, w // 2 + 5, h, PAL["wood_dark"])
-        save(name, img)
+def gen_cards():
+    cards = json.load(open(os.path.join(ROOT, "data", "cards.json")))["cards"]
+    for card in cards:
+        write_png(os.path.join(ASSETS, "cards", card["id"] + ".png"), face(card))
+    print("wrote %d card faces" % len(cards))
 
 
-# ----------------------------------------------------------------------- ui
 def gen_ui():
+    # Board backdrop: dark, with a faint grid so dragging reads against it.
+    img = blank(256, 256, (18, 22, 30, 255))
+    for y in range(0, 256, 32):
+        for x in range(256):
+            put(img, x, y, (24, 30, 40, 255))
+    for x in range(0, 256, 32):
+        for y in range(256):
+            put(img, x, y, (24, 30, 40, 255))
+    write_png(os.path.join(ASSETS, "ui", "board.png"), img)
+
     # 9-patch panel, 3px border.
-    size = 16
-    img = blank(size, size)
-    rect(img, 0, 0, size, size, PAL["panel"])
+    s = 16
+    img = blank(s, s, (22, 28, 38, 242))
     for i in range(3):
-        edge = PAL["panel_edge"] if i < 2 else PAL["ink"]
-        for x in range(i, size - i):
-            put(img, x, i, edge)
-            put(img, x, size - 1 - i, edge)
-        for y in range(i, size - i):
-            put(img, i, y, edge)
-            put(img, size - 1 - i, y, edge)
+        frame(img, i, i, s - i, s - i, STEEL_LIT if i < 2 else INK, 1)
     write_png(os.path.join(ASSETS, "ui", "panel.png"), img)
 
     def icon(name, draw):
@@ -313,174 +198,16 @@ def gen_ui():
         draw(img)
         write_png(os.path.join(ASSETS, "ui", name), img)
 
-    def coin(img):
-        disc(img, 8, 8, 6, PAL["gold"])
-        disc(img, 8, 8, 3, PAL["cloth"])
-
-    def food(img):
-        disc(img, 8, 9, 6, PAL["bread"])
-        rect(img, 4, 6, 12, 8, PAL["dirt_light"])
-
-    def water(img):
-        for y in range(2, 15):
-            half = int((y - 2) * 0.5) if y < 9 else int((14 - y) * 0.9) + 3
-            rect(img, 8 - half, y, 8 + half + 1, y + 1, PAL["water"])
-
-    def lodging(img):
-        rect(img, 2, 7, 14, 12, PAL["bed"])
-        rect(img, 2, 5, 6, 8, PAL["cloth"])
-        rect(img, 2, 12, 4, 14, PAL["wood_dark"])
-        rect(img, 12, 12, 14, 14, PAL["wood_dark"])
-
-    def reputation(img):
-        disc(img, 5, 6, 4, PAL["heart"])
-        disc(img, 11, 6, 4, PAL["heart"])
-        for y in range(6, 15):
-            half = 8 - (y - 5)
-            rect(img, 8 - half, y, 8 + half, y + 1, PAL["heart"])
-
-    icon("icon_coin.png", coin)
-    icon("icon_food.png", food)
-    icon("icon_water.png", water)
-    icon("icon_lodging.png", lodging)
-    icon("icon_reputation.png", reputation)
-
-    # Faction crests: a shield per faction, distinct by colour and mark.
-    def crest(colour, mark):
-        img = blank(16, 16)
-        for y in range(1, 15):
-            t = (y - 1) / 13.0
-            half = int(7 * (1.0 - t * t * 0.85))
-            rect(img, 8 - half, y, 8 + half, y + 1, colour)
-        mark(img)
-        return img
-
-    def guild_mark(img):
-        rect(img, 6, 5, 10, 7, PAL["ink"])
-        rect(img, 7, 7, 9, 11, PAL["ink"])
-
-    def crown_mark(img):
-        rect(img, 4, 8, 12, 10, PAL["ink"])
-        for x in (4, 7, 10):
-            rect(img, x, 5, x + 2, 8, PAL["ink"])
-
-    def road_mark(img):
-        for y in range(4, 12, 3):
-            rect(img, 6, y, 10, y + 2, PAL["ink"])
-
-    write_png(os.path.join(ASSETS, "ui", "crest_guild.png"), crest(PAL["guild"], guild_mark))
-    write_png(os.path.join(ASSETS, "ui", "crest_crown.png"), crest(PAL["crown"], crown_mark))
-    write_png(os.path.join(ASSETS, "ui", "crest_freeroad.png"), crest(PAL["freeroad"], road_mark))
-
-
-
-
-# ------------------------------------------------------------- caravans
-def gen_caravans():
-    """One wagon per faction, plus the draught horse and the walking figure the
-    checklist asks for. Wagons differ by canopy colour so a caravan's faction
-    reads from the road before the card opens."""
-    tints = {
-        "guild": PAL["guild"],
-        "crown": PAL["crown"],
-        "freeroad": PAL["freeroad"],
-    }
-    for faction, tint in tints.items():
-        w, h = 64, 44
-        img = blank(w, h)
-        # Bed and canopy.
-        rect(img, 8, h - 20, 56, h - 10, PAL["wood"])
-        rect(img, 8, h - 12, 56, h - 10, PAL["wood_dark"])
-        for i in range(6):
-            x0 = 10 + i * 8
-            band = PAL["canvas"] if i % 2 == 0 else PAL["canvas_dark"]
-            rect(img, x0, h - 34, x0 + 8, h - 20, band)
-        # Faction pennant over the driver's bench.
-        rect(img, 12, h - 42, 14, h - 32, PAL["wood_dark"])
-        rect(img, 14, h - 42, 26, h - 36, tint)
-        # Wheels.
-        for cx in (18, 46):
-            disc(img, cx, h - 8, 7, PAL["wood_dark"])
-            disc(img, cx, h - 8, 4, PAL["wood"])
-            disc(img, cx, h - 8, 1, PAL["wood_dark"])
-        write_png(os.path.join(ASSETS, "caravans", "wagon_%s.png" % faction), img)
-
-    # Draught horse, side on and facing right.
-    w, h = 40, 32
-    img = blank(w, h)
-    rect(img, 8, 10, 30, 22, PAL["horse"])
-    rect(img, 26, 4, 34, 14, PAL["horse"])
-    rect(img, 30, 8, 36, 12, PAL["horse"])
-    rect(img, 24, 2, 30, 8, PAL["horse_dark"])
-    for x in (10, 16, 22, 27):
-        rect(img, x, 22, x + 3, 31, PAL["horse_dark"])
-    rect(img, 4, 12, 9, 15, PAL["horse_dark"])
-    write_png(os.path.join(ASSETS, "caravans", "horse.png"), img)
-
-    # Walking figure.
-    w, h = 16, 28
-    img = blank(w, h)
-    disc(img, 8, 5, 4, PAL["skin_a"])
-    rect(img, 4, 1, 12, 4, PAL["hair_a"])
-    rect(img, 5, 9, 11, 20, PAL["cloth"])
-    rect(img, 3, 10, 5, 18, PAL["cloth"])
-    rect(img, 11, 10, 13, 18, PAL["cloth"])
-    rect(img, 5, 20, 7, 27, PAL["wood_dark"])
-    rect(img, 9, 20, 11, 27, PAL["wood_dark"])
-    write_png(os.path.join(ASSETS, "caravans", "figure.png"), img)
-
-
-# ------------------------------------------------------------- portraits
-def gen_portraits():
-    """Twelve 48x48 heads. Deterministic per index so a leader always looks the
-    same, and varied enough that two caravans are told apart at a glance."""
-    skins = [PAL["skin_a"], PAL["skin_b"], PAL["skin_c"]]
-    hairs = [PAL["hair_a"], PAL["hair_b"], PAL["hair_c"]]
-    garments = [PAL["guild"], PAL["crown"], PAL["freeroad"], PAL["cloth"], PAL["water"], PAL["grass"]]
-
-    for i in range(12):
-        size = 48
-        img = blank(size, size)
-        skin = skins[i % 3]
-        hair = hairs[(i // 3) % 3]
-        garment = garments[i % 6]
-
-        rect(img, 0, 0, size, size, PAL["panel"])
-        # Shoulders.
-        for y in range(34, size):
-            half = 10 + (y - 34)
-            rect(img, 24 - half, y, 24 + half, y + 1, garment)
-        # Head and jaw.
-        disc(img, 24, 24, 12, skin)
-        rect(img, 14, 24, 34, 34, skin)
-        # Hair: a different silhouette per row of the set.
-        style = (i // 3) % 4
-        if style == 0:
-            disc(img, 24, 20, 12, hair)
-            rect(img, 12, 20, 36, 26, PAL["clear"])
-            disc(img, 24, 24, 11, skin)
-            rect(img, 12, 12, 36, 18, hair)
-        elif style == 1:
-            rect(img, 12, 12, 36, 20, hair)
-            rect(img, 12, 20, 16, 34, hair)
-            rect(img, 32, 20, 36, 34, hair)
-        elif style == 2:
-            rect(img, 13, 13, 35, 19, hair)
-            rect(img, 18, 32, 30, 38, hair)
-        else:
-            rect(img, 14, 11, 34, 17, hair)
-        # Eyes and mouth.
-        rect(img, 19, 24, 22, 26, PAL["ink"])
-        rect(img, 27, 24, 30, 26, PAL["ink"])
-        rect(img, 21, 30, 28, 31, PAL["dirt_dark"])
-        outline(img, 0, 0, size, size, PAL["panel_edge"])
-        write_png(os.path.join(ASSETS, "portraits", "leader_%02d.png" % i), img)
+    icon("icon_o2.png", lambda i: (disc(i, 8, 8, 7, FROST), disc(i, 8, 8, 4, STEEL_DARK)))
+    icon("icon_cycle.png", lambda i: (disc(i, 8, 8, 7, AMBER), disc(i, 8, 8, 5, STEEL_DARK),
+                                      rect(i, 7, 4, 9, 9, AMBER), rect(i, 7, 7, 12, 9, AMBER)))
+    icon("icon_slots.png", lambda i: (rect(i, 1, 3, 7, 13, FROST), rect(i, 9, 3, 15, 13, FROST),
+                                      rect(i, 2, 4, 6, 12, STEEL_DARK), rect(i, 10, 4, 14, 12, STEEL_DARK)))
+    icon("icon_rations.png", lambda i: (disc(i, 8, 9, 6, GREEN), rect(i, 4, 5, 12, 7, AMBER_LOW)))
+    print("wrote ui")
 
 
 if __name__ == "__main__":
-    gen_road()
-    gen_buildings()
-    gen_caravans()
-    gen_portraits()
+    gen_cards()
     gen_ui()
     print("placeholder art complete")

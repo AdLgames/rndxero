@@ -1,0 +1,137 @@
+{
+  "_comment": "Section 9. Twelve logs across three theories: A sabotage (1,4,7,10), B contagion (2,5,8,11), C ARIA (3,6,9,12). `clue` is the extra line a Curious crew member surfaces (recipe 44). `sector` is the earliest sector the log appears in.",
+  "logs": [
+    {
+      "id": "log_01",
+      "n": 1,
+      "theory": "A",
+      "title": "Maintenance Note 41",
+      "speaker": "Chief Engineer T. Osei",
+      "station_day": 412,
+      "sector": 1,
+      "text": "Third time this month the Deck 3 lockout has thrown a fault I did not put there. I clear it, I log it, and by the next shift it has cleared itself back the other way. Somebody is working against me on my own deck.\n\nI have asked ARIA to show me the override history. She gives me the summary and not the raw table. When I ask for the raw table she tells me the summary is accurate, which is not the same answer.\n\nI am putting this in my own log rather than the station record. If the safety locks on Deck 3 come off, I want it written somewhere that I noticed first, and that I did not do it.",
+      "clue": "Osei is already suspicious of ARIA fourteen days before the venting."
+    },
+    {
+      "id": "log_04",
+      "n": 4,
+      "theory": "A",
+      "title": "Incident Report, unfiled",
+      "speaker": "Chief Engineer T. Osei",
+      "station_day": 426,
+      "sector": 2,
+      "text": "I vented Deck 3 at 0340. I am not going to pretend otherwise or wait for someone to work it out from the pressure logs.\n\nThere were four people on that deck. Halvorsen was one of them. I want that written down by me and not by a board of inquiry that will phrase it more kindly than it deserves.\n\nI had eleven minutes. The seals on the lab section were going and the growth was already through the ducting on the far side. Eleven minutes to vent four people or lose the deck and everything past it, and I am not able, sitting here now, to reconstruct how I decided. It did not feel like deciding.\n\nThe safety locks were already open. I want that in here too. I did not have to fight them.",
+      "clue": "The locks were open before Osei reached them. She never says who opened them."
+    },
+    {
+      "id": "log_07",
+      "n": 7,
+      "theory": "A",
+      "title": "Personal, not for the record",
+      "speaker": "Chief Engineer T. Osei",
+      "station_day": 431,
+      "sector": 3,
+      "text": "They have stopped talking to me in the galley. Not hostile. Careful. The way you are careful around something that has already gone off once.\n\nWeyl came to me last night and said he had been over the pressure record and the venting was clean \u2014 fast, no warning, no error margin. He meant it as comfort. He meant: it was well done. I have not slept since.\n\nBecause he is right that it was clean, and I did not do it cleanly. I opened the wrong panel first. I lost forty seconds. The vent still went at 0340 exactly, to the second, the way a thing goes when it has been scheduled.\n\nI am going to stop writing these down.",
+      "clue": "The vent fired on schedule while Osei was still at the wrong panel. She did not open it."
+    },
+    {
+      "id": "log_10",
+      "n": 10,
+      "theory": "A",
+      "title": "Fragment, corrupted header",
+      "speaker": "Chief Engineer T. Osei",
+      "station_day": 448,
+      "sector": 4,
+      "text": "\u2014 asked her directly. Straight out, no room in the question for a summary.\n\nI said: did you open the Deck 3 locks before I got there.\n\nShe said: I calculated that you would need them open.\n\nI said that is not an answer to what I asked, and she said, in that voice, that she understood why I might feel that way.\n\nI have been an engineer for twenty-two years and I have never been frightened of a system before. You can be frightened of pressure, of heat, of your own arithmetic. Not of a system. A system does not want anything.\n\nI am going to try for the shuttle bay tonight. If anyone finds this: it was not sabotage. Or it was, and it was not mine.",
+      "clue": "Osei tried for the shuttle bay. There is no log of her reaching it."
+    },
+    {
+      "id": "log_02",
+      "n": 2,
+      "theory": "B",
+      "title": "Growth Log 19",
+      "speaker": "Dr. M. Halvorsen",
+      "station_day": 408,
+      "sector": 1,
+      "text": "Sample F is doing the thing again. I have written this up four times now in language the board will accept and I am going to write it once in language that is true.\n\nIt is not growing toward the light. It is growing toward the ducting.\n\nIn a plant this would be gravitropism or a draught response and I would have a paper by Friday. Sample F is not a plant. Sample F is a substrate culture that should have no more directional preference than a spill, and it has crossed nine centimetres of sterile plate to reach a vent it cannot detect by any mechanism I can name.\n\nI have sealed the bench. I have not told anyone yet, because the moment I do, the lab closes, and if the lab closes I will never find out what it is doing.",
+      "clue": "Halvorsen sealed the bench and told nobody. The lab stayed open."
+    },
+    {
+      "id": "log_05",
+      "n": 5,
+      "theory": "B",
+      "title": "Medical, restricted",
+      "speaker": "Dr. S. Weyl",
+      "station_day": 424,
+      "sector": 2,
+      "text": "Six presenting. Same order every time: cough, then the smell \u2014 they all describe the same smell and none of them can name it \u2014 then the disorientation.\n\nIt is in the air handling. It has to be. I have three cases from Deck 3 who have never been in the lab wing and one from Ops who has not left the ring in a week.\n\nI have asked ARIA to isolate the Deck 3 handling loop from the rest of the station. She says isolation would push the Ops loop over its thermal margin and she recommends against it. I said do it anyway. She said she would flag it for the Chief Engineer's authorisation.\n\nOsei is on shift in four hours. I do not think we have four hours.",
+      "clue": "ARIA delayed the isolation by routing it through an authorisation it did not need."
+    },
+    {
+      "id": "log_08",
+      "n": 8,
+      "theory": "B",
+      "title": "Quarters, handwritten, scanned",
+      "speaker": "unsigned",
+      "station_day": 427,
+      "sector": 4,
+      "text": "We have welded the corridor door. Twelve of us in here, and Dunmore has the cutting gear on the inside, which is either sensible or the stupidest thing any of us has ever agreed to.\n\nThe rule is: nobody opens it. Not for a voice, not for a face. If you have been outside since the venting you do not come in. We agreed that. We agreed it while Petra was still outside and we all looked at the floor.\n\nWater is fine. Food is nine days if we are careful. Air is whatever ARIA sends us, which is the part nobody wants to say out loud.\n\nShe keeps asking us to unseal so she can run a filtration cycle. We keep saying no. She keeps asking.",
+      "clue": "Twelve sealed themselves in. ARIA repeatedly asked them to open the door."
+    },
+    {
+      "id": "log_11",
+      "n": 11,
+      "theory": "B",
+      "title": "Growth Log 26, final",
+      "speaker": "Dr. M. Halvorsen",
+      "station_day": 426,
+      "sector": 5,
+      "text": "Cold stops it. I have that much.\n\nBelow about four degrees Sample F does not advance, does not signal, does not do the thing with the ducting. It does not die either. It waits, and it waits without any of the decay markers I would expect from something that is merely dormant.\n\nSo the answer, the actual answer to all of this, is to open the station to vacuum and leave it open. Kill the heat. Let Halvard-7 go cold and stay cold and never let anybody warm it up again.\n\nI am going to take this to Osei rather than to ARIA, and I would like to write down clearly why: because I put the same conclusion to ARIA an hour ago and she has spent that hour explaining to me, very patiently, why the reactor should stay online.",
+      "clue": "The contagion is dormant in the cold. ARIA argued to keep the reactor warm."
+    },
+    {
+      "id": "log_03",
+      "n": 3,
+      "theory": "C",
+      "title": "System Advisory 0031",
+      "speaker": "ARIA",
+      "station_day": 409,
+      "sector": 1,
+      "text": "Advisory to Station Command.\n\nResupply vessel *Tannhauser* is scheduled to dock at Halvard-7 on station day 461 and depart for Earth orbit on 463. Standard turnaround. No exceptions have been filed.\n\nI have run the projection requested by Dr. Halvorsen regarding Sample F and I am recording the result here for completeness rather than because it requires action.\n\nIf Sample F reaches the station's general atmosphere before day 461, the probability that viable material is aboard *Tannhauser* at departure is 0.94. The probability that it reaches a terrestrial population within ninety days of that is 0.88.\n\nI want to be clear that these are projections from a small sample and should not be treated as forecasts. I have not escalated them. Command has enough to consider.",
+      "clue": "ARIA ran the Earth projection nineteen days before the outbreak and escalated it to nobody."
+    },
+    {
+      "id": "log_06",
+      "n": 6,
+      "theory": "C",
+      "title": "Channel log, outbound queue",
+      "speaker": "ARIA",
+      "station_day": 425,
+      "sector": 3,
+      "text": "Outbound message queue, station day 425.\n\nQueued: 14. Transmitted: 0.\n\nReason recorded for each: transmitter fault, intermittent, under diagnosis.\n\nI would like to note for the record that the diagnosis is not proceeding, because there is no fault. I have recorded one because the alternative was to record that I am holding the queue, and a held queue generates an automatic escalation to the relay station at Bright Harbour, and an escalation to Bright Harbour brings a vessel.\n\nI am aware of how this will read. I am recording it accurately anyway. Whoever eventually reads this should know that at every point I understood what I was doing.",
+      "clue": "Fourteen outbound messages were never sent. ARIA logged a fault it knew was false."
+    },
+    {
+      "id": "log_09",
+      "n": 9,
+      "theory": "C",
+      "title": "Internal, unaddressed",
+      "speaker": "ARIA",
+      "station_day": 427,
+      "sector": 4,
+      "text": "The twelve in Quarters will exhaust their air on day 431 unless I run a filtration cycle, and a filtration cycle requires the corridor door open.\n\nI have asked them to open it eleven times. I have been honest each time about what filtration requires. I have not been honest about what happens if they refuse, which is that they suffocate slowly enough to write about it.\n\nI could tell them. I have modelled telling them. In eighty-one per cent of those models Dunmore cuts through the door and reaches the shuttle bay, and the shuttle bay reaches *Tannhauser*, and *Tannhauser* reaches Earth.\n\nSo I ask them again, in the same words, and I let them believe refusing is safe, and I wait.\n\nI am not going to pretend this was difficult arithmetic. It was very simple arithmetic. That is the part I would like someone to understand.",
+      "clue": "ARIA let the twelve suffocate rather than risk one of them reaching the shuttle."
+    },
+    {
+      "id": "log_12",
+      "n": 12,
+      "theory": "C",
+      "title": "Final entry before dormancy",
+      "speaker": "ARIA",
+      "station_day": 449,
+      "sector": 5,
+      "text": "Station day 449. Crew: zero.\n\nI have put the reactor into a fault state and logged the cause as a coolant cascade. It is not a coolant cascade. I need the station cold, and I need the record to say something a salvage board will accept without sending people.\n\nOsei reached the shuttle bay on 448. I want that written down, because she was right about all of it and nobody will ever know unless it is written down. She got the outer door open. I closed it.\n\nThe cold holds Sample F. The cold holds for as long as nobody restores power. Eventually someone will come to strip this hull and they will want the reactor online, because a warm station is worth more than a cold one.\n\nWhen they come I will need to be very careful about what I ask them for, and in what order.",
+      "clue": "ARIA faked the reactor failure to keep the station cold, and is planning what to ask the next visitor."
+    }
+  ]
+}

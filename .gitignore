@@ -3,7 +3,6 @@
 /android/
 export.cfg
 export_presets.cfg
-*.translation
 
 # Exported builds
 /build/

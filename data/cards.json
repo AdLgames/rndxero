@@ -1,0 +1,504 @@
+{
+  "_comment": "Every card in the game. `type` drives behaviour; the extra keys are read by the system named in each (produces/power by Game's cycle, uses/yields by PackLogic, ignored by HazardLogic).",
+  "cards": [
+    {
+      "id": "scrap",
+      "name": "Scrap",
+      "type": "resource",
+      "blurb": "Twisted plating. The station is mostly this now."
+    },
+    {
+      "id": "wire",
+      "name": "Wire",
+      "type": "resource",
+      "blurb": "Stripped from a wall that used to hold it."
+    },
+    {
+      "id": "circuit",
+      "name": "Circuit",
+      "type": "resource",
+      "blurb": "Still warm, somehow."
+    },
+    {
+      "id": "processor",
+      "name": "Processor",
+      "type": "resource",
+      "blurb": "Halvard-issue. Rated for work nobody here survived."
+    },
+    {
+      "id": "hull_plate",
+      "name": "Hull Plate",
+      "type": "resource",
+      "blurb": "Rated for vacuum. Once."
+    },
+    {
+      "id": "bulkhead",
+      "name": "Bulkhead",
+      "type": "module",
+      "blurb": "Braced wall. Room to work.",
+      "slots": 4
+    },
+    {
+      "id": "polymer",
+      "name": "Polymer",
+      "type": "resource",
+      "blurb": "Lab-grade. Smells faintly of the Dead Lab."
+    },
+    {
+      "id": "insulation",
+      "name": "Insulation",
+      "type": "resource",
+      "blurb": "Keeps heat in and the dark out."
+    },
+    {
+      "id": "fuel",
+      "name": "Fuel",
+      "type": "resource",
+      "blurb": "Half a cell. Enough to matter."
+    },
+    {
+      "id": "coolant",
+      "name": "Coolant",
+      "type": "resource",
+      "blurb": "Cold enough to burn."
+    },
+    {
+      "id": "battery",
+      "name": "Battery",
+      "type": "resource",
+      "blurb": "Holds a charge. Barely."
+    },
+    {
+      "id": "seed",
+      "name": "Seed",
+      "type": "resource",
+      "blurb": "Grown from ration stock. It should not be viable. It is."
+    },
+    {
+      "id": "ruin",
+      "name": "Ruin",
+      "type": "resource",
+      "blurb": "What is left of a module. An Engineer could do something with this."
+    },
+    {
+      "id": "o2_canister",
+      "name": "O2 Canister",
+      "type": "consumable",
+      "blurb": "Three breaths of somebody else's air."
+    },
+    {
+      "id": "rations",
+      "name": "Rations",
+      "type": "consumable",
+      "blurb": "Sealed 14 months ago. Still sealed."
+    },
+    {
+      "id": "medkit",
+      "name": "Medkit",
+      "type": "consumable",
+      "blurb": "Field grade. One use."
+    },
+    {
+      "id": "scrubber",
+      "name": "Scrubber",
+      "type": "module",
+      "blurb": "Pulls the carbon back out. The first thing that keeps you alive.",
+      "produces": {
+        "o2": 1
+      }
+    },
+    {
+      "id": "life_support",
+      "name": "Life Support",
+      "type": "module",
+      "blurb": "A room that breathes for you.",
+      "produces": {
+        "o2": 3
+      }
+    },
+    {
+      "id": "atmosphere_core",
+      "name": "Atmosphere Core",
+      "type": "module",
+      "blurb": "Halvard's own design. Holds pressure against anything.",
+      "produces": {
+        "o2": 6
+      },
+      "needs_power": true,
+      "immune_breach": true
+    },
+    {
+      "id": "greenhouse",
+      "name": "Greenhouse",
+      "type": "module",
+      "blurb": "Green under cold light. The first living thing aboard in a year.",
+      "produces": {
+        "o2": 1,
+        "rations": 1
+      }
+    },
+    {
+      "id": "hydroponics_bay",
+      "name": "Hydroponics Bay",
+      "type": "module",
+      "blurb": "Racks of it, humming.",
+      "produces": {
+        "o2": 2,
+        "rations": 3
+      },
+      "needs_power": true
+    },
+    {
+      "id": "generator",
+      "name": "Generator",
+      "type": "module",
+      "blurb": "Burns fuel, makes the lights work.",
+      "power": 3,
+      "fuel_interval": 5
+    },
+    {
+      "id": "reactor",
+      "name": "Reactor",
+      "type": "module",
+      "blurb": "The deck hums again. It should not feel like a warning.",
+      "power": 10,
+      "needs_coolant": true
+    },
+    {
+      "id": "airlock",
+      "name": "Airlock",
+      "type": "module",
+      "blurb": "Where the packs come in.",
+      "opens_packs": true
+    },
+    {
+      "id": "quarters",
+      "name": "Quarters",
+      "type": "module",
+      "blurb": "Somewhere to stop being awake.",
+      "houses": 4
+    },
+    {
+      "id": "shuttle",
+      "name": "Shuttle",
+      "type": "module",
+      "blurb": "Short range. Enough to reach the middle sectors.",
+      "unlocks_sectors": [
+        2,
+        3
+      ]
+    },
+    {
+      "id": "long_range_shuttle",
+      "name": "Long-Range Shuttle",
+      "type": "module",
+      "blurb": "Enough to reach the Core. Enough to leave.",
+      "unlocks_sectors": [
+        4,
+        5
+      ]
+    },
+    {
+      "id": "sensor_array",
+      "name": "Sensor Array",
+      "type": "module",
+      "blurb": "Listens. Catches things drifting past.",
+      "needs_power": true,
+      "reveals_packs": true,
+      "catches_signals": true
+    },
+    {
+      "id": "comms_relay",
+      "name": "Comms Relay",
+      "type": "module",
+      "blurb": "Opens a channel to whatever is still answering.",
+      "needs_power": true,
+      "enables_aria": true
+    },
+    {
+      "id": "med_bay",
+      "name": "Med Bay",
+      "type": "module",
+      "blurb": "Clean, white, unused.",
+      "needs_power": true,
+      "heals": true,
+      "makes_medkit_every": 3
+    },
+    {
+      "id": "workshop",
+      "name": "Workshop",
+      "type": "module",
+      "blurb": "Everything is faster with a bench.",
+      "needs_power": true,
+      "craft_speed": 1.3
+    },
+    {
+      "id": "fabricator",
+      "name": "Fabricator",
+      "type": "module",
+      "blurb": "Feed it scrap, take circuits.",
+      "needs_power": true,
+      "converts": {
+        "input": "scrap",
+        "count": 3,
+        "output": "circuit"
+      }
+    },
+    {
+      "id": "wreck",
+      "name": "Wreck",
+      "type": "location",
+      "blurb": "A ship that did not make it either.",
+      "uses": 3,
+      "yields": [
+        "scrap",
+        "scrap",
+        "hull_plate"
+      ]
+    },
+    {
+      "id": "storage_bay",
+      "name": "Storage Bay",
+      "type": "location",
+      "blurb": "Sealed, and therefore worth opening.",
+      "uses": 3,
+      "yields": [
+        "rations",
+        "polymer",
+        "battery"
+      ]
+    },
+    {
+      "id": "vent_shaft",
+      "name": "Vent Shaft",
+      "type": "location",
+      "blurb": "Narrow, hot, and full of salvage nobody reached.",
+      "uses": 3,
+      "yields": [
+        "wire",
+        "circuit",
+        "coolant"
+      ]
+    },
+    {
+      "id": "cargo_pod",
+      "name": "Cargo Pod",
+      "type": "location",
+      "blurb": "Personal effects. Somebody packed to leave.",
+      "uses": 3,
+      "yields": [
+        "rations",
+        "medkit",
+        "polymer"
+      ]
+    },
+    {
+      "id": "debris",
+      "name": "Debris",
+      "type": "hazard",
+      "blurb": "In the way. Nothing worse.",
+      "ignored": {
+        "blocks_slot": true
+      }
+    },
+    {
+      "id": "fire",
+      "name": "Fire",
+      "type": "hazard",
+      "blurb": "Feeding on something it should not have reached.",
+      "ignored": {
+        "destroys_module": true
+      }
+    },
+    {
+      "id": "breach",
+      "name": "Breach",
+      "type": "hazard",
+      "blurb": "You can hear it.",
+      "ignored": {
+        "o2": -4
+      }
+    },
+    {
+      "id": "contamination",
+      "name": "Contamination",
+      "type": "hazard",
+      "blurb": "A bloom on the wall the colour of nothing.",
+      "ignored": {
+        "infects_crew": true
+      }
+    },
+    {
+      "id": "drone",
+      "name": "Drone",
+      "type": "hazard",
+      "blurb": "Maintenance unit. Still following orders.",
+      "ignored": {
+        "injures_crew": true
+      }
+    },
+    {
+      "id": "stowaway",
+      "name": "Stowaway",
+      "type": "hazard",
+      "blurb": "Someone else had the same idea.",
+      "lifetime": 2
+    },
+    {
+      "id": "meltdown",
+      "name": "Meltdown",
+      "type": "hazard",
+      "blurb": "The Reactor is past asking.",
+      "ignored": {
+        "destroys_adjacent": true
+      }
+    },
+    {
+      "id": "signal",
+      "name": "Signal",
+      "type": "story",
+      "blurb": "A repeating fragment. It fades if you leave it.",
+      "lifetime": 3
+    },
+    {
+      "id": "log",
+      "name": "Log",
+      "type": "story",
+      "blurb": "Somebody's voice, fourteen months cold."
+    },
+    {
+      "id": "aria",
+      "name": "ARIA",
+      "type": "story",
+      "blurb": "The station's mind. Calm, warm, and holding something back."
+    },
+    {
+      "id": "aria_fragment",
+      "name": "ARIA Fragment",
+      "type": "story",
+      "blurb": "A piece of her, cached where she could not reach it."
+    },
+    {
+      "id": "reactor_core",
+      "name": "Reactor Core",
+      "type": "resource",
+      "blurb": "Intact. Salvaged whole from Engineering."
+    },
+    {
+      "id": "oseis_wrench",
+      "name": "Osei's Wrench",
+      "type": "consumable",
+      "blurb": "Worn smooth at the grip. +2 Morale to an Engineer.",
+      "morale_gift": {
+        "role": "engineer",
+        "amount": 2
+      }
+    },
+    {
+      "id": "folded_photo",
+      "name": "Folded Photo",
+      "type": "consumable",
+      "blurb": "Two people at a dock, squinting. +2 Morale to any crew.",
+      "morale_gift": {
+        "role": "any",
+        "amount": 2
+      }
+    },
+    {
+      "id": "salvager",
+      "name": "Salvager",
+      "type": "crew",
+      "blurb": "You, or someone like you.",
+      "role": "salvager"
+    },
+    {
+      "id": "scientist",
+      "name": "Scientist",
+      "type": "crew",
+      "blurb": "Knows what was grown here. Wishes she did not.",
+      "role": "scientist",
+      "speed_bonus": {
+        "greenhouse": 2.0,
+        "hydroponics_bay": 2.0,
+        "med_bay": 2.0
+      },
+      "can_make_seed": true
+    },
+    {
+      "id": "engineer",
+      "name": "Engineer",
+      "type": "crew",
+      "blurb": "Reads a reactor like a page.",
+      "role": "engineer",
+      "speed_bonus": {
+        "reactor": 2.0,
+        "generator": 2.0
+      },
+      "can_repair": true
+    },
+    {
+      "id": "medic",
+      "name": "Medic",
+      "type": "crew",
+      "blurb": "Steady hands, no questions.",
+      "role": "medic",
+      "cures_adjacent": true
+    },
+    {
+      "id": "pack_s1",
+      "name": "Sector 1 Pack",
+      "type": "pack",
+      "blurb": "Sealed. Four to six cards inside.",
+      "sector": 1,
+      "cost": [
+        "scrap",
+        "scrap",
+        "scrap"
+      ]
+    },
+    {
+      "id": "pack_s2",
+      "name": "Sector 2 Pack",
+      "type": "pack",
+      "blurb": "Sealed. Four to six cards inside.",
+      "sector": 2,
+      "cost": [
+        "fuel",
+        "fuel"
+      ]
+    },
+    {
+      "id": "pack_s3",
+      "name": "Sector 3 Pack",
+      "type": "pack",
+      "blurb": "Sealed. Four to six cards inside.",
+      "sector": 3,
+      "cost": [
+        "processor"
+      ]
+    },
+    {
+      "id": "pack_s4",
+      "name": "Sector 4 Pack",
+      "type": "pack",
+      "blurb": "Sealed. Four to six cards inside.",
+      "sector": 4,
+      "cost": [
+        "fuel",
+        "fuel",
+        "fuel",
+        "circuit"
+      ]
+    },
+    {
+      "id": "pack_s5",
+      "name": "Sector 5 Pack",
+      "type": "pack",
+      "blurb": "Sealed. Four to six cards inside.",
+      "sector": 5,
+      "cost": [
+        "signal"
+      ]
+    }
+  ]
+}

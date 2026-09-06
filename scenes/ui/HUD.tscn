@@ -1,58 +1,54 @@
 [gd_scene load_steps=2 format=3]
 
-[ext_resource type="Script" path="res://scripts/ui/HUD.gd" id="1_hud"]
+[ext_resource type="Script" path="res://scripts/ui/HUD.gd" id="1_h"]
 
 [node name="HUD" type="CanvasLayer"]
-script = ExtResource("1_hud")
+script = ExtResource("1_h")
 
-[node name="TopBar" type="PanelContainer" parent="."]
+[node name="Bar" type="PanelContainer" parent="."]
 anchor_right = 1.0
-offset_bottom = 92.0
+offset_bottom = 48.0
 grow_horizontal = 2
 
-[node name="Margin" type="MarginContainer" parent="TopBar"]
+[node name="Margin" type="MarginContainer" parent="Bar"]
 theme_override_constants/margin_left = 14
-theme_override_constants/margin_top = 8
+theme_override_constants/margin_top = 6
 theme_override_constants/margin_right = 14
-theme_override_constants/margin_bottom = 8
+theme_override_constants/margin_bottom = 6
 
-[node name="Layout" type="VBoxContainer" parent="TopBar/Margin"]
-theme_override_constants/separation = 6
+[node name="Row" type="HBoxContainer" parent="Bar/Margin"]
+theme_override_constants/separation = 18
 
-[node name="Line1" type="HBoxContainer" parent="TopBar/Margin/Layout"]
-theme_override_constants/separation = 14
+[node name="O2" type="Label" parent="Bar/Margin/Row"]
+custom_minimum_size = Vector2(88, 0)
+text = "O2  6"
 
-[node name="Resources" type="HBoxContainer" parent="TopBar/Margin/Layout/Line1"]
+[node name="Cycle" type="Label" parent="Bar/Margin/Row"]
+custom_minimum_size = Vector2(88, 0)
+text = "Cycle 1"
+
+[node name="Clock" type="ProgressBar" parent="Bar/Margin/Row"]
+custom_minimum_size = Vector2(150, 0)
+show_percentage = false
+
+[node name="Slots" type="Label" parent="Bar/Margin/Row"]
 size_flags_horizontal = 3
-theme_override_constants/separation = 16
+text = "Manifest 0 / 12"
 
-[node name="Day" type="Label" parent="TopBar/Margin/Layout/Line1"]
-custom_minimum_size = Vector2(96, 0)
-text = "Day 1 / 10"
+[node name="Pause" type="Button" parent="Bar/Margin/Row"]
+text = "Pause"
 
-[node name="Phase" type="Label" parent="TopBar/Margin/Layout/Line1"]
-custom_minimum_size = Vector2(96, 0)
-text = "Afternoon"
+[node name="Book" type="Button" parent="Bar/Margin/Row"]
+text = "Recipes"
 
-[node name="EndDay" type="Button" parent="TopBar/Margin/Layout/Line1"]
-text = "End Day"
-
-[node name="Factions" type="HBoxContainer" parent="TopBar/Margin/Layout"]
-theme_override_constants/separation = 20
-
-[node name="Stock" type="Label" parent="TopBar/Margin/Layout"]
-theme_override_font_sizes/font_size = 12
-text = ""
-
-[node name="LastNight" type="Label" parent="TopBar/Margin/Layout"]
-theme_override_font_sizes/font_size = 12
-text = ""
+[node name="Archive" type="Button" parent="Bar/Margin/Row"]
+text = "Archive"
 
 [node name="Toasts" type="VBoxContainer" parent="."]
 anchor_top = 1.0
 anchor_bottom = 1.0
 offset_left = 16.0
-offset_top = -200.0
+offset_top = -240.0
 offset_right = 430.0
 offset_bottom = -16.0
 grow_vertical = 0

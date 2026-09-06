@@ -1,0 +1,41 @@
+{
+  "_comment": "Section 6. Every number the simulation reads lives here so a playtest tune is a data edit.",
+  "cycle_seconds": 120,
+  "starting_o2": 6,
+  "o2_per_crew": 1,
+  "rations_interval": 3,
+  "board_slots_base": 12,
+  "board_slots_per_bulkhead": 4,
+  "board_slots_max": 48,
+  "morale_min": 0,
+  "morale_max": 10,
+  "morale_start": 6,
+  "injured_speed": 0.5,
+  "breach_o2_loss": 4,
+  "hazards_per_cycle": [
+    {
+      "from_cycle": 1,
+      "count": 1
+    },
+    {
+      "from_cycle": 20,
+      "count": 1,
+      "extra_chance": 0.5
+    },
+    {
+      "from_cycle": 40,
+      "count": 2
+    }
+  ],
+  "signal_lifetime": 3,
+  "stowaway_lifetime": 2,
+  "reactor_meltdown_cycles": 3,
+  "generator_fuel_interval": 5,
+  "logs_for_truth": 7,
+  "logs_for_aria": 3,
+  "pack_rarity": {
+    "common": 0.6,
+    "uncommon": 0.3,
+    "rare": 0.1
+  }
+}
