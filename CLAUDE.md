@@ -2,7 +2,7 @@
 
 # ClaimTrail
 
-Read `PLAN.md` before working on this repo — it is the original build plan. Read `BOARD-PLAN.md` next — it supersedes `PLAN.md`'s capture/cost/evidence/export architecture (Phases 2–5) with a project-workstream board, weekly submissions, uncertainty tracking, planning, and locking. Where the two disagree, `BOARD-PLAN.md` wins. Build one phase at a time; each phase ends with a checklist that must pass before moving to the next.
+Read `PLAN.md` before working on this repo — it is the original build plan. Read `BOARD-PLAN.md` next — it supersedes `PLAN.md`'s capture/cost/evidence/export architecture (Phases 2–5) with a project-workstream board, weekly submissions, uncertainty tracking, planning, and locking. Where the two disagree, `BOARD-PLAN.md` wins. Read `VISUAL-PLAN.md` last — it extends `BOARD-PLAN.md`'s planner and board phases with the views that display the captured record, and wins over both on what a view should look like (but never on schema, permissions, capture or locking). Build one phase at a time; each phase ends with a checklist that must pass before moving to the next.
 
 ## Conventions
 
